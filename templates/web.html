@@ -4,8 +4,8 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Flintel — Your buyers are on Reddit, talking about your competitors right now.</title>
-<link rel="icon" href="/favicon.ico" type="image/x-icon">
-<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
+<link rel="icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
+<link rel="shortcut icon" href="{{ url_for('static', filename='favicon.ico') }}" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&family=Fustat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -62,7 +62,9 @@
 
   /* ---------------- site header ---------------- */
   .site-header{
-    position: relative;
+    position: sticky;
+    top: 0;
+    z-index: 50;
     display:flex;
     align-items:center;
     justify-content: space-between;
@@ -70,6 +72,7 @@
     margin: 0 auto;
     padding: 22px clamp(20px, 4vw, 64px);
     flex: none;
+    background: var(--bg);
   }
 
   .logo{
@@ -275,14 +278,15 @@
     color: var(--accent-ink);
     border: none;
     border-radius: var(--radius-pill);
-    padding: 12px 20px;
-    font-size: clamp(13.5px, 1vw, 15px);
+    padding: 12px 16px;
+    font-size: clamp(13px, 1vw, 14px);
     font-weight: 700;
     font-family: inherit;
     cursor: pointer;
     white-space: nowrap;
     transition: background 0.15s ease, transform 0.1s ease;
   }
+  button#analyze-btn span{ display: inline-block; }
   button#analyze-btn:hover{ background: #bdec2c; }
   button#analyze-btn:active{ transform: scale(0.98); }
   button#analyze-btn:disabled{ background: var(--muted-2); color: #fff; cursor: not-allowed; }
@@ -517,7 +521,7 @@
 <header class="site-header">
   <div class="logo">
     <span class="logo-mark">
-      <img src="/favicon.ico" alt="Flintel logo" width="20" height="20">
+      <img src="{{ url_for('static', filename='favicon.ico') }}" alt="Flintel logo" width="20" height="20">
     </span>
     <span class="logo-text">Flintel</span>
   </div>
@@ -563,7 +567,7 @@
         />
         <button id="analyze-btn" type="submit">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-          <span>Analyze My Market</span>
+          <span>Analyze</span>
         </button>
       </form>
     </div>
@@ -730,7 +734,7 @@
   function setBusy(isBusy){
     btn.disabled = isBusy;
     input.disabled = isBusy;
-    btn.querySelector('span').textContent = isBusy ? 'Analyzing…' : 'Analyze My Market';
+    btn.querySelector('span').textContent = isBusy ? 'Analyzing…' : 'Analyze';
   }
 
   function renderList(container, items, builder){

@@ -195,11 +195,21 @@
     align-items:center;
     background: var(--ink);
     border-radius: var(--radius-pill);
+    width: 205px;
+    height: 53px;
+    box-sizing: border-box;
     padding: 5px;
     font-size: clamp(12.5px, 1vw, 15px);
     font-weight: 600;
     margin-bottom: clamp(16px, 2.4vh, 28px);
     box-shadow: var(--shadow-soft);
+  }
+  .eyebrow-badge .seg-dark,
+  .eyebrow-badge .seg-light{
+    flex: 1;
+    display:flex;
+    align-items:center;
+    justify-content:center;
   }
   .eyebrow-badge .seg-dark{
     color: #fff;
@@ -252,18 +262,6 @@
     margin: 0 auto;
     padding: 8px;
   }
-  .search-shell .corner{
-    position: absolute;
-    width: 18px;
-    height: 18px;
-    border: 2px solid var(--ink);
-    opacity: 0.55;
-  }
-  .search-shell .corner.tl{ top: 0; left: 0; border-right:none; border-bottom:none; border-top-left-radius: 4px; }
-  .search-shell .corner.tr{ top: 0; right: 0; border-left:none; border-bottom:none; border-top-right-radius: 4px; }
-  .search-shell .corner.bl{ bottom: 0; left: 0; border-right:none; border-top:none; border-bottom-left-radius: 4px; }
-  .search-shell .corner.br{ bottom: 0; right: 0; border-left:none; border-top:none; border-bottom-right-radius: 4px; }
-
   form#analyze-form{
     display:flex;
     align-items:center;
@@ -273,7 +271,7 @@
     box-sizing: border-box;
     background: #fff;
     border: 1px solid var(--border);
-    border-radius: var(--radius-pill);
+    border-radius: 4px;
     padding: 5px 5px 5px 20px;
     box-shadow: var(--shadow-soft);
   }
@@ -298,7 +296,7 @@
     background: var(--accent);
     color: var(--accent-ink);
     border: none;
-    border-radius: var(--radius-pill);
+    border-radius: 3px;
     padding: 12px 16px;
     font-size: clamp(13px, 1vw, 14px);
     font-weight: 700;
@@ -575,10 +573,6 @@
     <p class="sub">Enter your website. Flintel learns your business, identifies your best prospects, and runs outreach automatically.</p>
 
     <div class="search-shell">
-      <span class="corner tl"></span>
-      <span class="corner tr"></span>
-      <span class="corner bl"></span>
-      <span class="corner br"></span>
       <form id="analyze-form" autocomplete="off">
         <input
           id="url-input"

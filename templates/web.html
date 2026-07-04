@@ -4,14 +4,15 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Flintel — Your buyers are on Reddit, talking about your competitors right now.</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiByeD0iNiIgZmlsbD0iIzBiMGYxOSIvPjxwYXRoIGQ9Ik01IDNoMTNsLTQgNSA0IDVINXY4SDNWM2gyeiIgZmlsbD0iI2NkZmEzZiIvPjwvc3ZnPg==">
+<link rel="icon" href="/favicon.ico" type="image/x-icon">
+<link rel="shortcut icon" href="/favicon.ico" type="image/x-icon">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg: #ffffff;
-    --ink: #0b0f19;
+    --ink: #262b38;
     --muted: #6b7280;
     --muted-2: #9ca3af;
     --accent: #cdfa3f;
@@ -226,7 +227,7 @@
 
   .search-shell{
     position: relative;
-    max-width: 680px;
+    max-width: 560px;
     margin: 0 auto;
     padding: 14px;
   }
@@ -286,13 +287,6 @@
   button#analyze-btn:active{ transform: scale(0.98); }
   button#analyze-btn:disabled{ background: var(--muted-2); color: #fff; cursor: not-allowed; }
   button#analyze-btn svg{ width:16px; height:16px; display:none; }
-
-  .fine-print{
-    margin: 14px 0 0;
-    font-size: 12.5px;
-    color: var(--muted-2);
-  }
-  .fine-print .sep{ margin: 0 8px; color: #d7d8de; }
 
   /* ---------- error banner ---------- */
   #error-banner{
@@ -575,8 +569,6 @@
         </button>
       </form>
     </div>
-
-    <p class="fine-print">Free market report<span class="sep">·</span>No signup required<span class="sep">·</span>Ready in under a minute</p>
 
     <div id="error-banner"></div>
   </header>

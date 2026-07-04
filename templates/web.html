@@ -126,22 +126,23 @@
 
   /* ---------------- hero frame ---------------- */
   .page-frame{
-    max-width: 1180px;
-    margin: 0 12px 12px;
+    max-width: 1600px;
+    margin: 0 16px 16px;
     border: 1px solid var(--border);
-    border-radius: 22px;
+    border-radius: 24px;
     overflow: hidden;
     background-image: radial-gradient(circle at 1px 1px, #e9eaf0 1.4px, transparent 1.6px);
     background-size: 24px 24px;
+    min-height: 780px;
   }
-  @media (min-width: 1204px){
-    .page-frame{ margin: 0 auto 12px; }
+  @media (min-width: 1632px){
+    .page-frame{ margin: 0 auto 16px; }
   }
 
   .wrap{
-    max-width: 920px;
+    max-width: 1080px;
     margin: 0 auto;
-    padding: clamp(72px, 9vw, 120px) 24px 96px;
+    padding: clamp(90px, 11vw, 150px) 24px 120px;
   }
 
   header.hero{
@@ -172,26 +173,26 @@
 
   h1{
     font-family: var(--font-display);
-    font-size: clamp(32px, 4.6vw, 60px);
-    line-height: 1.2;
+    font-size: clamp(34px, 5.2vw, 72px);
+    line-height: 1.18;
     font-weight: 700;
     letter-spacing: -0.02em;
-    max-width: 900px;
-    margin: 0 auto clamp(16px, 2vw, 28px);
+    max-width: 1020px;
+    margin: 0 auto clamp(18px, 2.2vw, 32px);
     color: var(--ink);
   }
 
   .sub{
     color: var(--muted);
-    font-size: clamp(15px, 1.15vw, 19px);
+    font-size: clamp(16px, 1.3vw, 21px);
     line-height: 1.55;
-    max-width: 620px;
-    margin: 0 auto clamp(28px, 3vw, 44px);
+    max-width: 660px;
+    margin: 0 auto clamp(30px, 3.2vw, 48px);
   }
 
   .search-shell{
     position: relative;
-    max-width: 660px;
+    max-width: 720px;
     margin: 0 auto;
     padding: 16px;
   }

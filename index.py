@@ -20,6 +20,7 @@ Run:
 """
 
 import json
+import logging
 import os
 import re
 from datetime import datetime, timezone
@@ -36,6 +37,8 @@ from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, field_validator
 
 load_dotenv()
+
+logger = logging.getLogger("flintel")
 
 # --------------------------------------------------------------------------
 # Configuration
@@ -310,9 +313,10 @@ async def analyze(payload: AnalyzeRequest):
     try:
         result = await reports_collection.insert_one(document)
         report_id = str(result.inserted_id)
-    except Exception:
-        # Storage is a nice-to-have; never fail the user's analysis because of it.
-        pass
+    except Exception as exc:
+        # Storage is a nice-to-have; never fail the user's analysis because of it,
+        # but log it loudly so a broken DB connection doesn't go unnoticed.
+        logger.error("MongoDB insert_one failed for domain=%s: %s", domain, exc)
 
     return JSONResponse({"id": report_id, "domain": domain, "url": url, "report": report})
 
@@ -330,4 +334,10 @@ async def get_reports(domain: str):
 
 @app.get("/api/health")
 async def health():
-    return {"status": "ok"}
+    mongo_status = "unknown"
+    try:
+        await mongo_client.admin.command("ping")
+        mongo_status = "connected"
+    except Exception as exc:
+        mongo_status = f"error: {exc}"
+    return {"status": "ok", "mongodb": mongo_status}

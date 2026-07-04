@@ -7,7 +7,7 @@
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCI+PHJlY3Qgd2lkdGg9IjI0IiBoZWlnaHQ9IjI0IiByeD0iNiIgZmlsbD0iIzBiMGYxOSIvPjxwYXRoIGQ9Ik01IDNoMTNsLTQgNSA0IDVINXY4SDNWM2gyeiIgZmlsbD0iI2NkZmEzZiIvPjwvc3ZnPg==">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root{
     --bg: #ffffff;
@@ -26,8 +26,8 @@
     --radius-md: 12px;
     --radius-pill: 999px;
     --shadow-soft: 0 1px 2px rgba(15,23,42,0.04), 0 8px 24px rgba(15,23,42,0.06);
-    --font-display: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-    --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-display: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    --font-body: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   }
 
   *{ box-sizing: border-box; }
@@ -294,30 +294,6 @@
   }
   .fine-print .sep{ margin: 0 8px; color: #d7d8de; }
 
-  .stats{
-    display:flex;
-    justify-content: center;
-    gap: 0;
-    margin-top: clamp(24px, 4vh, 44px);
-    border-top: 1px solid var(--border);
-    padding-top: clamp(18px, 3vh, 30px);
-  }
-  .stat{
-    flex: 1;
-    text-align: center;
-    padding: 0 12px;
-    position: relative;
-  }
-  .stat + .stat::before{
-    content:'';
-    position:absolute;
-    left:0; top:6px; bottom:6px;
-    width:1px;
-    background: var(--border);
-  }
-  .stat .num{ font-family: var(--font-display); font-size: clamp(20px, 2vw, 26px); font-weight: 800; letter-spacing: -0.01em; }
-  .stat .label{ margin-top: 5px; font-size: 12px; color: var(--muted); }
-
   /* ---------- error banner ---------- */
   #error-banner{
     display:none;
@@ -495,10 +471,7 @@
   }
   @media (max-width: 640px){
     .grid-2{ grid-template-columns: 1fr; }
-    .stats{ flex-wrap: wrap; row-gap: 22px; }
-    .stat{ flex: 1 1 45%; }
-    .stat + .stat::before{ display:none; }
-    h1{ font-size: 30px; }
+    h1{ font-size: 26px; }
   }
 
   .persona-list{ list-style:none; margin:0; padding:0; }
@@ -579,7 +552,7 @@
       <span class="seg-light">Flintel.ai</span>
     </div>
 
-    <h1>Your buyers are on Reddit, talking about your competitors right now.</h1>
+    <h1>Your buyers are on Reddit,<br>talking about your competitors<br>right now.</h1>
 
     <p class="sub">Enter your website. Flintel learns your business, identifies your best prospects, and runs outreach automatically.</p>
 
@@ -606,13 +579,6 @@
     <p class="fine-print">Free market report<span class="sep">·</span>No signup required<span class="sep">·</span>Ready in under a minute</p>
 
     <div id="error-banner"></div>
-
-    <div class="stats">
-      <div class="stat"><div class="num">6</div><div class="label">Pages scanned per site</div></div>
-      <div class="stat"><div class="num">&lt;60s</div><div class="label">Time to first report</div></div>
-      <div class="stat"><div class="num">100%</div><div class="label">Free, no signup</div></div>
-      <div class="stat"><div class="num">DFY</div><div class="label">Zero ongoing effort</div></div>
-    </div>
   </header>
 
   <section id="loading-panel">
@@ -715,7 +681,6 @@
     <p class="confidence" id="r-confidence"></p>
   </section>
 
-  <footer>Flintel reads only what's publicly visible on your site. Nothing is shared.</footer>
 </div>
 </div>
 
@@ -730,7 +695,6 @@
   const stepsList = document.getElementById('steps-list');
   const progressFill = document.getElementById('progress-fill');
   const loadingDomain = document.getElementById('loading-domain');
-  const stats = document.querySelector('.stats');
   const againBtn = document.getElementById('again-btn');
 
   const STEP_ITEMS = Array.from(stepsList.querySelectorAll('li'));
@@ -851,7 +815,6 @@
 
     setBusy(true);
     resultsSection.style.display = 'none';
-    stats.style.display = 'none';
     loadingPanel.style.display = 'block';
     loadingDomain.textContent = rawUrl.replace(/^https?:\/\//i, '');
     resetSteps();
@@ -881,7 +844,6 @@
     } catch (err) {
       clearInterval(stepTimer);
       loadingPanel.style.display = 'none';
-      stats.style.display = 'flex';
       showError(err.message || 'Something went wrong. Please try again.');
     } finally {
       setBusy(false);
@@ -890,7 +852,6 @@
 
   againBtn.addEventListener('click', function(){
     resultsSection.style.display = 'none';
-    stats.style.display = 'flex';
     input.value = '';
     input.focus();
     window.scrollTo({ top: 0, behavior: 'smooth' });

@@ -32,6 +32,7 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import BaseModel, Field, field_validator
@@ -69,6 +70,11 @@ reports_collection = db["reports"]
 
 app = FastAPI(title="Flintel — Website Market Intelligence", version="1.0.0")
 templates = Jinja2Templates(directory="templates")
+
+# Serve static assets (favicon.ico, logo, css/js if ever split out) from a
+# top-level "static" folder, sibling to "templates". Mounted as "static" so
+# templates can reference files via {{ request.url_for('static', path=...) }}.
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 # --------------------------------------------------------------------------

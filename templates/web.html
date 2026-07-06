@@ -1027,6 +1027,26 @@
         link.textContent = 'View post ↗';
         meta.appendChild(link);
       }
+      // Show matched keywords / match timestamp from flintel_web_data or web_data
+      const matched = signal.flintel_web_data || signal.web_data;
+      if (matched) {
+        if (matched.matched_keywords && Array.isArray(matched.matched_keywords) && matched.matched_keywords.length) {
+          const mk = document.createElement('span');
+          mk.textContent = 'Matched: ' + matched.matched_keywords.slice(0,5).join(', ');
+          mk.style.fontWeight = '700';
+          mk.style.color = 'var(--muted)';
+          meta.appendChild(mk);
+        }
+        if (matched.matched_at) {
+          try {
+            const d = new Date(matched.matched_at);
+            const at = document.createElement('span');
+            at.textContent = (matched.matched_keywords && matched.matched_keywords.length ? ' • ' : '') + 'Matched at ' + d.toLocaleString();
+            at.style.color = 'var(--muted-2)';
+            meta.appendChild(at);
+          } catch (e) {}
+        }
+      }
       card.appendChild(meta);
 
       if (signal.reply_draft) {

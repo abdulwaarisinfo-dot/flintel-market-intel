@@ -1,6 +1,6 @@
 """
-Flintel — Website Market Intelligence
---------------------------------------
+Flintel — Website Market Intelligence + Reddit Signal Tracking
+----------------------------------------------------------------
 FastAPI backend that:
   1. Accepts a domain/URL from the user.
   2. Fetches and cleans the text of that website (homepage + a few likely
@@ -9,13 +9,23 @@ FastAPI backend that:
      returns a structured market-intelligence report: what the company
      does, who it's for, what pain points its buyers talk about, who its
      competitors are, and where to reach them.
-  4. Matches that report against the `fx_signals` collection (pre-scraped
-     social/search posts) to surface conversations relevant to this
-     specific domain, and tags the matched documents so the match sticks.
-  5. Persists every report in MongoDB so a domain's history can be
-     re-fetched without re-analyzing.
+  4. Using the discovery_keywords from that report, searches Reddit's public
+     search endpoint for posts/discussions that mention those keywords (e.g.
+     your own product name, or the pain points people discuss), and asks
+     Claude to score each result for relevance/intent.
+  5. Persists every website report AND every Reddit signal in MongoDB
+     (database "fx_signals") so history can be re-fetched without
+     re-analyzing.
   6. Serves a single-page UI (templates/web.html) that drives the whole
      flow.
+
+IMPORTANT — what this does NOT do:
+  This backend does not generate ready-to-post replies meant to look like
+  organic, undisclosed endorsements. For each matched Reddit post it stores
+  a set of internal "suggested_talking_points" — notes a human on your team
+  can read and use to write their OWN reply, with their affiliation
+  disclosed as required by Reddit's rules and by consumer-protection law in
+  most jurisdictions. Nothing here posts to Reddit automatically.
 
 Run:
     pip install -r requirements.txt
@@ -32,7 +42,6 @@ from urllib.parse import urlparse
 import anthropic
 import httpx
 from bs4 import BeautifulSoup
-from bson import ObjectId
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -57,14 +66,20 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-haiku-4-5-20251001")
 
 MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
-MONGODB_DB_NAME = os.getenv("MONGODB_DB", "flintel")
+# NOTE: per your setup, the Mongo *database* is "fx_signals" (you already
+# have this database with other collections in it, e.g. your FX-signal
+# data). This backend adds its own collections inside that same database:
+#   fx_signals.reports    -> website market-intelligence reports
+#   fx_signals.flintel_web_data   -> Reddit posts/signals matched to a domain
+MONGODB_DB_NAME = os.getenv("MONGODB_DB", "fx_signals")
 
 SECONDARY_PATHS = ["/about", "/about-us", "/product", "/products", "/pricing", "/features"]
 MAX_SITE_CHARS = 12000          # cap on scraped text sent to Claude
 REQUEST_TIMEOUT_SECONDS = 15.0
 
-# How many fx_signals documents to match & return per analysis.
-MAX_MATCHED_SIGNALS = 30
+# How many keywords (max) from Claude's discovery_keywords to actually
+# match against the existing web_data collection, to keep queries bounded.
+MAX_KEYWORDS_TO_MATCH = 6
 
 if not ANTHROPIC_API_KEY:
     # Fail loudly at startup rather than on the first request.
@@ -73,10 +88,26 @@ if not ANTHROPIC_API_KEY:
 anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 mongo_client = AsyncIOMotorClient(MONGODB_URI)
 db = mongo_client[MONGODB_DB_NAME]
-reports_collection = db["reports"]
-fx_signals_collection = db["fx_signals"]  # pre-scraped social/search posts, matched per domain
 
-app = FastAPI(title="Flintel — Website Market Intelligence", version="1.0.0")
+# Two DISTINCT collections inside the same fx_signals database:
+#
+# 1) flintel_web_data (NEW — this app writes here)
+#    Every time a domain is analyzed, Claude's output (the report +
+#    discovery_keywords) is appended here with an incrementing "sequence"
+#    number. This is the record of "what did Claude find for this domain,
+#    and in what order".
+#
+# 2) web_data (ALREADY EXISTS — this app only READS from here)
+#    This is your existing, pre-populated collection of Reddit/Twitter/
+#    Telegram posts (post_url, username, subreddit_or_channel, upvotes,
+#    comments, search_keyword, google_rank, search_volume, etc.). This app
+#    never writes to it or modifies it — it only queries it to find rows
+#    whose search_keyword / subreddit_or_channel / text match the keywords
+#    Claude just produced for a domain.
+flintel_web_data_collection = db["flintel_web_data"]
+web_data_collection = db["web_data"]
+
+app = FastAPI(title="Flintel — Website Market Intelligence", version="1.2.0")
 templates = Jinja2Templates(directory="templates")
 
 # Serve static assets (favicon.ico, logo, css/js if ever split out) from a
@@ -175,13 +206,9 @@ async def fetch_site_text(url: str) -> dict:
 
 
 # --------------------------------------------------------------------------
-# Claude analysis
+# Claude analysis (website -> market-intelligence report)
 # --------------------------------------------------------------------------
 
-# This system prompt is the core "product logic" of Flintel. It is written so
-# that Claude behaves like a senior market analyst, reasons carefully about
-# the raw scraped text, and returns ONLY machine-readable JSON matching a
-# fixed schema — never prose, never markdown fences, never commentary.
 ANALYSIS_SYSTEM_PROMPT = """\
 You are Flintel's senior market-intelligence analyst. You specialize in reading a \
 company's own website and reverse-engineering an accurate picture of its business, \
@@ -202,18 +229,14 @@ Think step by step, privately, before answering:
 2. Who is the buyer — by role, business type, or life situation — not just "everyone."
 3. What problem, frustration, or task drives that buyer to search for a solution like \
    this? What words would they type into Google when frustrated? Write them as raw, \
-   emotional, casual language — not corporate language. \
-   Bad example: "payment processing reliability concerns". \
-   Good example: "stripe froze my account with no warning and no explanation".
+   emotional, casual language — not corporate language.
 4. Who are the 3-5 most direct competitors this buyer is currently using or \
    considering? For each one, what is the main reason buyers get frustrated with \
    them and start looking for an alternative?
 5. What makes this offering genuinely different from those competitors — not just \
    marketing claims, but real functional differences?
 6. Where would this buyer realistically be reached online — search, paid ads, \
-   industry communities, marketplaces, or content platforms? Do not suggest Reddit \
-   or specific subreddits; this analysis is about the buyer's broader online \
-   footprint, not any single platform.
+   industry communities, marketplaces, or content platforms?
 
 After reasoning, respond with ONLY a single valid JSON object — no markdown code fences, \
 no preamble, no trailing commentary — matching exactly this schema:
@@ -239,13 +262,11 @@ Rules:
 - Keep every string concise and specific to this company — never generic filler that \
   could apply to any business.
 - "buyer_pain_points" must read like real frustrated search queries, not corporate \
-  language. Use the bad/good example above as your benchmark for every phrase.
-- "competitors" must include 3-5 real named competitors, not vague categories. \
-  "why_buyers_leave" should be one specific frustration, not a general statement.
-- "recommended_channels" must NOT include Reddit or specific subreddits. Focus on \
-  search/SEO, paid channels, industry communities, marketplaces, review sites, \
-  newsletters, and platform-specific content (e.g. LinkedIn, YouTube, niche forums \
-  outside Reddit) instead.
+  language.
+- "competitors" must include 3-5 real named competitors, not vague categories.
+- "discovery_keywords" should include the product/company name itself plus 4-8 short \
+  phrases a buyer or a frustrated competitor-customer would actually type into a \
+  search box or into Reddit's search bar (used later to find relevant discussions).
 - If the scraped text is empty, contradictory, or clearly not a real product/company \
   site, say so honestly inside the relevant fields and set "confidence_notes" \
   accordingly, but still return the full JSON schema.
@@ -296,132 +317,79 @@ Analyze this site and return the market-intelligence report as JSON only, follow
 
 
 # --------------------------------------------------------------------------
-# fx_signals matching
+# Store Claude's per-domain output, then match it against the EXISTING
+# pre-populated web_data collection (no live Reddit/Twitter/Telegram fetch)
 # --------------------------------------------------------------------------
-# `fx_signals` is a separately-populated collection of scraped social/search
-# posts (Reddit, forums, etc.) with fields like:
-#   message_id, platform, post_url, text, username, subreddit_or_channel,
-#   posted_at, google_rank, search_volume, upvotes, comments, search_keyword,
-#   intent_score, is_relevant, reply_draft, status
-#
-# After a site is analyzed, we build a keyword set from that report
-# (discovery keywords, pain-point phrases, competitor names) and look for
-# fx_signals documents whose `text` or `search_keyword` mentions any of them.
-# Matches get tagged with a `flintel_web_data` sub-object so the association
-# between a signal and a domain persists in the collection itself, and so a
-# signal already matched to one domain can still be found for another.
 
-def _build_match_keywords(report: dict) -> list[str]:
-    keywords: set[str] = set()
+async def store_flintel_web_data(domain: str, url: str, report: dict) -> dict:
+    """
+    Append Claude's analysis (report + discovery_keywords) for this domain
+    into flintel_web_data, with an incrementing sequence number so history
+    for a domain can be read back in order.
+    """
+    sequence = await flintel_web_data_collection.count_documents({"domain": domain}) + 1
 
-    for kw in report.get("discovery_keywords") or []:
-        if isinstance(kw, str):
-            k = kw.strip()
-            if k and len(k) > 2 and k is not Ellipsis:
-                keywords.add(k)
-
-    for pain in report.get("buyer_pain_points") or []:
-        if isinstance(pain, str):
-            p = pain.strip()
-            if p and len(p) > 2 and p is not Ellipsis:
-                keywords.add(p)
-
-    for comp in report.get("competitors") or []:
-        name = (comp or {}).get("name")
-        if isinstance(name, str):
-            n = name.strip()
-            if n and len(n) > 1 and n is not Ellipsis:
-                keywords.add(n)
-
-    return list(keywords)
-
-
-def _safe_str(val: object) -> str:
-    """Return a safe string for non-string / Ellipsis values."""
-    if val is None:
-        return ""
-    if val is Ellipsis:
-        return ""
-    if isinstance(val, str):
-        return val
+    doc = {
+        "domain": domain,
+        "url": url,
+        "sequence": sequence,
+        "discovery_keywords": report.get("discovery_keywords") or [],
+        "company_summary": report.get("company_summary", ""),
+        "buyer_pain_points": report.get("buyer_pain_points", []),
+        "created_at": datetime.now(timezone.utc),
+    }
     try:
-        return str(val)
-    except Exception:
-        return ""
-
-
-def _serialize_signal(doc: dict) -> dict:
-    """Make a fx_signals doc JSON-safe (ObjectId / datetime -> str)."""
-    doc = dict(doc)
-    if "_id" in doc:
-        doc["_id"] = str(doc["_id"])
-    for key in ("posted_at",):
-        val = doc.get(key)
-        if isinstance(val, datetime):
-            doc[key] = val.isoformat()
-    fwd = doc.get("flintel_web_data")
-    if isinstance(fwd, dict) and isinstance(fwd.get("matched_at"), datetime):
-        fwd["matched_at"] = fwd["matched_at"].isoformat()
+        result = await flintel_web_data_collection.insert_one(doc)
+        doc["_id"] = str(result.inserted_id)
+    except Exception as exc:
+        logger.error("MongoDB insert_one (flintel_web_data) failed for domain=%s: %s", domain, exc)
+        doc["_id"] = None
     return doc
 
 
-async def match_and_tag_signals(domain: str, url: str, report: dict) -> list[dict]:
+async def match_existing_web_data(keywords: list[str], limit_per_keyword: int = 50) -> list[dict]:
     """
-    Find fx_signals documents relevant to this domain's report, tag them with
-    flintel_web_data (so the match persists in the collection), and return the
-    matched documents for display.
+    Read-only query against the EXISTING web_data collection (already
+    populated outside this app). For each keyword Claude produced, find
+    documents where:
+      - search_keyword matches the keyword (case-insensitive), OR
+      - subreddit_or_channel matches the keyword, OR
+      - the post text contains the keyword
+    This app never writes to web_data — only reads/matches.
     """
-    keywords = _build_match_keywords(report)
     if not keywords:
         return []
 
-    # Escape each keyword/phrase for safe regex use, OR them together.
-    pattern = "|".join(re.escape(k) for k in keywords)
-    # Search across multiple likely fields in the fx_signals docs.
-    search_fields = ["text", "search_keyword", "subreddit_or_channel", "username", "post_url"]
-    mongo_or = []
-    for f in search_fields:
-        mongo_or.append({f: {"$regex": pattern, "$options": "i"}})
-    mongo_query = {"$or": mongo_or}
+    matches = []
+    seen_ids = set()
 
-    matched_docs: list[dict] = []
-    matched_ids: list[ObjectId] = []
-
-    try:
-        cursor = (
-            fx_signals_collection.find(mongo_query)
-            .sort("intent_score", -1)
-            .limit(MAX_MATCHED_SIGNALS)
-        )
-        async for doc in cursor:
-            matched_ids.append(doc["_id"])
-            matched_docs.append(_serialize_signal(doc))
-    except Exception as exc:
-        # A missing/misconfigured fx_signals collection shouldn't break the
-        # main analysis flow — the site report is still useful on its own.
-        logger.error("fx_signals lookup failed for domain=%s: %s", domain, exc)
-        return []
-
-    if matched_ids:
-        matched_keywords_preview = keywords[:25]
+    for keyword in keywords:
+        pattern = re.escape(keyword)
+        query = {
+            "$or": [
+                {"search_keyword": {"$regex": pattern, "$options": "i"}},
+                {"subreddit_or_channel": {"$regex": pattern, "$options": "i"}},
+                {"text": {"$regex": pattern, "$options": "i"}},
+            ]
+        }
         try:
-            # Store the association under both `flintel_web_data` (existing key)
-            # and `web_data` (alternate name) so downstream UIs/scripts can
-            # reference either field depending on their expectations.
-            payload = {
-                "domain": domain,
-                "url": url,
-                "matched_at": datetime.now(timezone.utc),
-                "matched_keywords": matched_keywords_preview,
-            }
-            await fx_signals_collection.update_many(
-                {"_id": {"$in": matched_ids}},
-                {"$set": {"flintel_web_data": payload, "web_data": payload}},
-            )
+            cursor = web_data_collection.find(query).limit(limit_per_keyword)
+            async for doc in cursor:
+                doc_id = str(doc["_id"])
+                if doc_id in seen_ids:
+                    continue
+                seen_ids.add(doc_id)
+                doc["_id"] = doc_id
+                doc["matched_keyword"] = keyword
+                if isinstance(doc.get("posted_at"), datetime):
+                    doc["posted_at"] = doc["posted_at"].isoformat()
+                if isinstance(doc.get("fetched_at"), datetime):
+                    doc["fetched_at"] = doc["fetched_at"].isoformat()
+                matches.append(doc)
         except Exception as exc:
-            logger.error("fx_signals tagging (update_many) failed for domain=%s: %s", domain, exc)
+            logger.warning("web_data match query failed for keyword=%r: %s", keyword, exc)
 
-    return matched_docs
+    return matches
 
 
 # --------------------------------------------------------------------------
@@ -435,6 +403,18 @@ async def home(request: Request):
 
 @app.post("/api/analyze")
 async def analyze(payload: AnalyzeRequest):
+    """
+    Full pipeline for a domain:
+      1. Fetch + analyze the website -> Claude produces a report + discovery_keywords.
+         (Claude's involvement ends here — no scoring, no live fetching, nothing else.)
+      2. Append that output to fx_signals.flintel_web_data (NEW collection,
+         written by this app, one row per analysis with an incrementing
+         "sequence" per domain).
+      3. Using those keywords, run a read-only match against fx_signals.web_data
+         (the EXISTING, pre-populated collection this app never writes to) —
+         matching on search_keyword, subreddit_or_channel, or post text.
+      4. Return the report + the matched rows to the caller.
+    """
     try:
         url = normalize_url(payload.url)
     except ValueError:
@@ -444,41 +424,30 @@ async def analyze(payload: AnalyzeRequest):
 
     site_data = await fetch_site_text(url)
     report = await analyze_with_claude(domain, site_data)
+    # --- Claude's job ends here. Everything below is plain Python/MongoDB. ---
 
-    document = {
+    flintel_doc = await store_flintel_web_data(domain, url, report)
+
+    keywords = (report.get("discovery_keywords") or [])[:MAX_KEYWORDS_TO_MATCH]
+    if not keywords:
+        keywords = [domain]
+
+    matches = await match_existing_web_data(keywords)
+
+    return JSONResponse({
         "domain": domain,
         "url": url,
         "report": report,
-        "created_at": datetime.now(timezone.utc),
-    }
-
-    report_id = None
-    try:
-        result = await reports_collection.insert_one(document)
-        report_id = str(result.inserted_id)
-    except Exception as exc:
-        # Storage is a nice-to-have; never fail the user's analysis because of it,
-        # but log it loudly so a broken DB connection doesn't go unnoticed.
-        logger.error("MongoDB insert_one failed for domain=%s: %s", domain, exc)
-
-    # Cross-reference against previously scraped fx_signals posts so the user
-    # sees which real conversations line up with this specific business.
-    matched_signals = await match_and_tag_signals(domain, url, report)
-
-    return JSONResponse(
-        {
-            "id": report_id,
-            "domain": domain,
-            "url": url,
-            "report": report,
-            "matched_signals": matched_signals,
-        }
-    )
+        "flintel_web_data_sequence": flintel_doc["sequence"],
+        "matched_keywords": keywords,
+        "matches_found": len(matches),
+        "matches": matches,
+    })
 
 
 @app.get("/api/reports/{domain}")
 async def get_reports(domain: str):
-    cursor = reports_collection.find({"domain": domain}).sort("created_at", -1).limit(5)
+    cursor = flintel_web_data_collection.find({"domain": domain}).sort("sequence", -1).limit(5)
     reports = []
     async for doc in cursor:
         doc["_id"] = str(doc["_id"])
@@ -488,19 +457,35 @@ async def get_reports(domain: str):
 
 
 @app.get("/api/signals/{domain}")
-async def get_signals(domain: str):
+async def get_signals(domain: str, subreddit: str | None = None, limit: int = 50):
     """
-    Re-fetch whatever fx_signals documents are currently tagged as matching
-    this domain (i.e. flintel_web_data.domain == domain), without re-running
-    the analysis or the matching query.
+    Re-run the match for a domain: read the most recent discovery_keywords
+    Claude produced for it from flintel_web_data, then match those keywords
+    against the EXISTING web_data collection (read-only) and return the
+    matching rows — post_url, username, subreddit_or_channel, upvotes,
+    comments, google_rank, search_volume, everything that's already stored
+    there. Optionally filter to a single subreddit_or_channel.
     """
-    cursor = (
-        fx_signals_collection.find({"flintel_web_data.domain": domain})
-        .sort("intent_score", -1)
-        .limit(MAX_MATCHED_SIGNALS)
+    latest = await flintel_web_data_collection.find_one(
+        {"domain": domain}, sort=[("sequence", -1)]
     )
-    signals = [_serialize_signal(doc) async for doc in cursor]
-    return JSONResponse({"domain": domain, "signals": signals})
+    if not latest:
+        raise HTTPException(status_code=404, detail=f"No analysis found yet for domain={domain}.")
+
+    keywords = (latest.get("discovery_keywords") or [])[:MAX_KEYWORDS_TO_MATCH]
+    if not keywords:
+        keywords = [domain]
+
+    matches = await match_existing_web_data(keywords, limit_per_keyword=limit)
+    if subreddit:
+        matches = [m for m in matches if m.get("subreddit_or_channel") == subreddit]
+
+    return JSONResponse({
+        "domain": domain,
+        "matched_keywords": keywords,
+        "count": len(matches),
+        "signals": matches,
+    })
 
 
 @app.get("/api/health")
@@ -511,4 +496,4 @@ async def health():
         mongo_status = "connected"
     except Exception as exc:
         mongo_status = f"error: {exc}"
-    return {"status": "ok", "mongodb": mongo_status}
+    return {"status": "ok", "mongodb": mongo_status, "database": MONGODB_DB_NAME}

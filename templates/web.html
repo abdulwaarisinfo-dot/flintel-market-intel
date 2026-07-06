@@ -16,10 +16,9 @@
    FLINTEL — SIGNAL SYSTEM
    Four colors only: 0A0A0A ink · 6863FC signal (info/active) ·
    B6FF1E strike (the one "go" color — CTAs, wins, live) · FFFFFF.
-   Everything else is a black/white tint of those four.
 ═══════════════════════════════════════════════════════════════ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
-html{-webkit-text-size-adjust:100%;overflow-x:hidden;width:100%;}
+html{-webkit-text-size-adjust:100%;overflow-x:hidden;width:100%;scroll-behavior:smooth;}
 body{
   font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Inter","Segoe UI",Roboto,sans-serif;
   -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
@@ -33,9 +32,9 @@ img,svg{max-width:100%;}
 a{color:inherit;text-decoration:none;}
 ::selection{background:rgba(104,99,252,.18);}
 
-h1,h2,h3,h4,h5,h6,
-.logo-text,.home-h1,.panel-title,.card h3 .card-h3-inner,
-.persona-name,.signal-source .platform-chip,.result-domain{
+h1,h2,h3,h4,h5,h6,.logo-text,.home-h1,.panel-title,.persona-name,
+.hp-sec-title,.hp-outcome-h,.hp-report-h,.hp-price-num,.hp-cost-title,
+.hp-final h2,.hp-foot-mark-name,.hp-step-h,.hp-viz-r-title,.hp-serp-title{
   font-family:"Fustat","Inter",-apple-system,BlinkMacSystemFont,sans-serif;
 }
 
@@ -72,12 +71,18 @@ h1,h2,h3,h4,h5,h6,
   --r-lg: 20px;
   --r-xl: 24px;
   --font-num: "Fustat","Inter",-apple-system,sans-serif;
+  --tk-xl:  -0.038em;
+  --tk-lg:  -0.028em;
+  --tk-md:  -0.020em;
+  --tk-sm:  -0.010em;
   --cap-size:     11px;
   --cap-weight:   600;
   --cap-tracking: 0.09em;
 }
 
 :focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:var(--r-sm);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.45;transform:scale(1.25);}}
 
 /* ═══════ NAV ═══════ */
 .site-header{
@@ -89,37 +94,19 @@ h1,h2,h3,h4,h5,h6,
   border-bottom:1px solid var(--hair);
   flex:none;
 }
-.logo{
-  grid-column:1;display:inline-flex;align-items:center;gap:10px;
-  font-size:16px;font-weight:600;color:var(--ink);letter-spacing:-.02em;
-  justify-self:start;
-}
-.logo-mark{
-  width:30px;height:30px;background:var(--lime);border-radius:var(--r-sm);
-  display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;
-}
+.logo{grid-column:1;display:inline-flex;align-items:center;gap:10px;font-size:16px;font-weight:600;color:var(--ink);letter-spacing:-.02em;justify-self:start;}
+.logo-mark{width:30px;height:30px;background:var(--lime);border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;}
 .logo-mark img{width:15px;height:15px;object-fit:contain;}
 .logo-text{font-size:16px;font-weight:700;letter-spacing:-.02em;}
-
 .site-nav{grid-column:2;display:flex;align-items:center;gap:34px;justify-self:center;}
 .site-nav a{font-size:14px;font-weight:400;color:var(--g2);transition:color .18s;white-space:nowrap;}
 .site-nav a:hover{color:var(--ink);}
-
 .header-actions{grid-column:3;display:flex;align-items:center;gap:10px;justify-self:end;flex-shrink:0;}
-.login-btn{
-  font-size:13.5px;font-weight:600;color:#fff;background:var(--ink);border:none;cursor:pointer;
-  padding:11px 20px;min-height:44px;border-radius:980px;display:inline-flex;align-items:center;
-  transition:opacity .18s;
-}
+.login-btn{font-size:13.5px;font-weight:600;color:#fff;background:var(--ink);border:none;cursor:pointer;padding:11px 20px;min-height:44px;border-radius:980px;display:inline-flex;align-items:center;transition:opacity .18s;}
 .login-btn:hover{opacity:.85;}
-.menu-btn{
-  width:44px;height:44px;border-radius:50%;border:1px solid var(--g5);background:#fff;
-  display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink);
-  transition:background .18s;
-}
+.menu-btn{width:44px;height:44px;border-radius:50%;border:1px solid var(--g5);background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--ink);transition:background .18s;}
 .menu-btn:hover{background:var(--g6);}
 .menu-btn svg{width:16px;height:16px;}
-
 @media(max-width:820px){ .site-nav{display:none;} }
 @media(max-width:420px){
   .site-header{padding:0 16px;}
@@ -128,63 +115,48 @@ h1,h2,h3,h4,h5,h6,
   .menu-btn{width:40px;height:40px;}
 }
 
-/* ═══════ PAGE FRAME (dot-grid canvas) ═══════ */
-.page-frame{
-  flex:1 1 auto;position:relative;overflow-x:clip;
+/* ═══════ PAGE FRAME / HERO (real form lives here) ═══════ */
+.page-frame{position:relative;overflow-x:clip;background:#fff;}
+.home-hero{
+  padding:calc(var(--navh) + 40px) 24px 88px;
+  position:relative;text-align:center;
   background:#fff;
   background-image:radial-gradient(rgba(10,10,10,.08) 1px,transparent 1px);
-  background-size:22px 22px;background-position:0 0;
+  background-size:22px 22px;
 }
-.page-frame::before{
+.home-hero::before{
   content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
-  background:radial-gradient(ellipse 60% 45% at 50% 12%,transparent 0%,rgba(255,255,255,.55) 70%,#fff 100%);
+  background:radial-gradient(ellipse 60% 50% at 50% 25%,transparent 0%,rgba(255,255,255,.55) 70%,#fff 100%);
 }
-.wrap{
-  position:relative;z-index:1;max-width:760px;margin:0 auto;width:100%;
-  padding:clamp(48px,7vh,88px) 24px 96px;
-}
+.wrap{position:relative;z-index:1;max-width:760px;margin:0 auto;width:100%;padding:0 24px;}
 
-/* ═══════ HERO ═══════ */
 header.hero{text-align:center;}
 .eyebrow-badge{
-  display:inline-flex;align-items:center;gap:0;
-  font-size:12.5px;font-weight:600;letter-spacing:.01em;
-  border-radius:980px;background:var(--g6);
-  padding:3px;margin-bottom:26px;
+  display:inline-flex;align-items:center;gap:0;font-size:12.5px;font-weight:600;letter-spacing:.01em;
+  border-radius:980px;background:var(--g6);padding:3px;margin-bottom:26px;
 }
-.eyebrow-badge .seg-dark{
-  color:#fff;background:var(--ink);border-radius:980px;padding:7px 15px;font-weight:600;
-}
+.eyebrow-badge .seg-dark{color:#fff;background:var(--ink);border-radius:980px;padding:7px 15px;font-weight:600;}
 .eyebrow-badge .seg-light{color:var(--g2);padding:7px 15px;font-weight:500;}
-
 .home-h1{
-  font-size:clamp(30px,4.6vw,46px);font-weight:600;letter-spacing:-.045em;
-  line-height:1.18;color:var(--ink);margin:0 auto 20px;max-width:640px;
+  font-size:clamp(30px,4.6vw,46px);font-weight:600;letter-spacing:-.045em;line-height:1.18;
+  color:var(--ink);margin:0 auto 20px;max-width:660px;
 }
 .home-h1 em{
   font-style:normal;
   background:linear-gradient(100deg,var(--bluedeep) 10%,var(--limedeep) 90%);
   -webkit-background-clip:text;background-clip:text;color:transparent;
 }
-.sub{
-  font-size:clamp(15px,1.4vw,17px);font-weight:400;color:var(--g2);line-height:1.55;
-  max-width:460px;margin:0 auto 36px;
-}
+.sub{font-size:clamp(15px,1.4vw,17px);font-weight:400;color:var(--g2);line-height:1.55;max-width:460px;margin:0 auto 36px;}
 
-/* url search box */
 .search-shell{width:100%;max-width:460px;margin:0 auto;}
 #analyze-form{
   display:flex;align-items:center;gap:8px;width:100%;
   border:1px solid var(--g4);border-radius:980px;background:#fff;overflow:clip;
-  padding:5px 5px 5px 20px;
-  box-shadow:0 2px 10px rgba(10,10,10,.04);
+  padding:5px 5px 5px 20px;box-shadow:0 2px 10px rgba(10,10,10,.04);
   transition:border-color .2s,box-shadow .2s;
 }
 #analyze-form:focus-within{border-color:var(--ink);box-shadow:0 2px 14px rgba(10,10,10,.08);}
-#url-input{
-  flex:1;min-width:0;border:none;outline:none;background:transparent;
-  font-size:14.5px;color:var(--ink);padding:12px 8px 12px 0;
-}
+#url-input{flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:14.5px;color:var(--ink);padding:12px 8px 12px 0;}
 #url-input::placeholder{color:var(--g3);}
 button#analyze-btn{
   background:var(--lime);color:#0A0A0A;border:none;cursor:pointer;
@@ -197,6 +169,7 @@ button#analyze-btn svg{width:13px;height:13px;flex-shrink:0;}
 button#analyze-btn:hover{background:var(--limedeep);box-shadow:0 6px 20px rgba(182,255,30,.35);}
 button#analyze-btn:active{transform:scale(.98);}
 button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none;cursor:not-allowed;}
+.home-note{font-size:12px;color:var(--g3);font-weight:400;margin-top:14px;}
 
 #error-banner{
   display:none;max-width:460px;margin:20px auto 0;text-align:left;
@@ -210,40 +183,26 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
   display:none;margin-top:56px;text-align:left;
   background:#fff;border:1px solid var(--g5);border-radius:var(--r-xl);
   box-shadow:0 20px 48px rgba(10,10,10,.06);
-  padding:34px 34px 30px;
-  animation:fadeUp .5s var(--ease2);
+  padding:34px 34px 30px;animation:fadeUp .5s var(--ease2);
 }
-@keyframes fadeUp{from{opacity:0;transform:translateY(10px);}to{opacity:1;transform:translateY(0);}}
 .panel-eyebrow{
   display:inline-flex;align-items:center;gap:8px;font-size:12.5px;color:var(--g2);
-  border:1px solid var(--g5);border-radius:980px;padding:7px 14px;background:var(--g6);
-  margin-bottom:22px;
+  border:1px solid var(--g5);border-radius:980px;padding:7px 14px;background:var(--g6);margin-bottom:22px;
 }
 .panel-eyebrow svg{width:12px;height:12px;color:var(--g3);flex-shrink:0;}
 .panel-title{font-size:24px;font-weight:600;letter-spacing:-.025em;color:var(--ink);margin-bottom:6px;}
-#loading-panel .sub{
-  font-size:14.5px;color:var(--g2);margin:0 0 28px;max-width:none;text-align:left;
-}
+#loading-panel .sub{font-size:14.5px;color:var(--g2);margin:0 0 28px;max-width:none;text-align:left;}
 .progress-track{height:3px;background:var(--g5);border-radius:980px;overflow:clip;margin-bottom:6px;}
 .progress-fill{height:100%;width:6%;background:var(--blue);border-radius:980px;transition:width .6s var(--ease);}
 
 .steps{list-style:none;margin:24px 0 0;padding:0;}
-.steps li{
-  display:flex;align-items:flex-start;gap:15px;padding:15px 0;
-  border-bottom:1px solid var(--g6);opacity:.4;transition:opacity .3s;
-}
+.steps li{display:flex;align-items:flex-start;gap:15px;padding:15px 0;border-bottom:1px solid var(--g6);opacity:.4;transition:opacity .3s;}
 .steps li:last-child{border-bottom:none;}
 .steps li.active,.steps li.done{opacity:1;}
-.step-marker{
-  width:24px;height:24px;border-radius:980px;flex-shrink:0;margin-top:1px;
-  border:2px solid var(--g4);position:relative;background:var(--g6);
-}
+.step-marker{width:24px;height:24px;border-radius:980px;flex-shrink:0;margin-top:1px;border:2px solid var(--g4);position:relative;background:var(--g6);}
 .steps li.active .step-marker{border-color:var(--blue);border-top-color:transparent;background:rgba(104,99,252,.08);animation:spin .8s linear infinite;}
 .steps li.done .step-marker{border:none;background:var(--gbg);}
-.steps li.done .step-marker::after{
-  content:'';position:absolute;left:7px;top:4px;width:6px;height:10px;
-  border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:rotate(40deg);
-}
+.steps li.done .step-marker::after{content:'';position:absolute;left:7px;top:4px;width:6px;height:10px;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:rotate(40deg);}
 @keyframes spin{to{transform:rotate(360deg);}}
 .step-copy .title{font-size:15px;font-weight:500;color:var(--g3);line-height:1.4;transition:color .3s;}
 .steps li.active .step-copy .title,.steps li.done .step-copy .title{color:var(--ink);}
@@ -252,118 +211,319 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
 
 /* ═══════ RESULTS ═══════ */
 #results{display:none;margin-top:64px;}
-.result-header{
-  display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
-  margin-bottom:24px;
-}
+.result-header{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:24px;}
 .result-header-left{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
-.domain-tag{
-  display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;
-  background:var(--lime);color:var(--ink);padding:7px 14px;border-radius:980px;
-  font-family:var(--font-num);letter-spacing:-.01em;
-}
-.sequence-tag{
-  font-size:12.5px;color:var(--g2);background:#fff;border:1px solid var(--g5);
-  padding:7px 14px;border-radius:980px;
-}
-#again-btn{
-  background:var(--g6);border:none;border-radius:980px;padding:10px 18px;
-  font-size:13px;font-weight:500;color:var(--ink);cursor:pointer;transition:background .18s;
-}
+.domain-tag{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;background:var(--lime);color:var(--ink);padding:7px 14px;border-radius:980px;font-family:var(--font-num);letter-spacing:-.01em;}
+.sequence-tag{font-size:12.5px;color:var(--g2);background:#fff;border:1px solid var(--g5);padding:7px 14px;border-radius:980px;}
+#again-btn{background:var(--g6);border:none;border-radius:980px;padding:10px 18px;font-size:13px;font-weight:500;color:var(--ink);cursor:pointer;transition:background .18s;}
 #again-btn:hover{background:var(--g5);}
 
-.card{
-  background:#fff;border:1px solid var(--g5);border-radius:var(--r-lg);
-  padding:26px 28px;margin-bottom:16px;
-  box-shadow:0 1px 3px rgba(10,10,10,.03);
-}
-.card h3{
-  font-size:var(--cap-size);font-weight:var(--cap-weight);letter-spacing:var(--cap-tracking);
-  text-transform:uppercase;color:#fff;background:var(--ink);
-  display:inline-flex;padding:6px 13px;border-radius:var(--r-sm);margin-bottom:14px;
-}
+.card{background:#fff;border:1px solid var(--g5);border-radius:var(--r-lg);padding:26px 28px;margin-bottom:16px;box-shadow:0 1px 3px rgba(10,10,10,.03);}
+.card h3{font-size:var(--cap-size);font-weight:var(--cap-weight);letter-spacing:var(--cap-tracking);text-transform:uppercase;color:#fff;background:var(--ink);display:inline-flex;padding:6px 13px;border-radius:var(--r-sm);margin-bottom:14px;}
 .card p{margin:0;font-size:15.5px;line-height:1.65;color:var(--g1);}
-
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
 @media(max-width:640px){ .grid-2{grid-template-columns:1fr;} }
-
 .persona-list{list-style:none;margin:0;padding:0;}
 .persona-list li{padding:14px 0;border-top:1px solid var(--g6);}
 .persona-list li:first-child{border-top:none;padding-top:0;}
 .persona-name{font-family:var(--font-num);font-weight:600;font-size:14.5px;color:var(--ink);letter-spacing:-.01em;}
 .persona-desc{font-size:13.5px;color:var(--g2);margin-top:3px;line-height:1.5;}
-
 .pain-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:10px;}
-.pain-list li{
-  font-size:14px;color:var(--g1);line-height:1.55;
-  background:var(--g6);border-radius:var(--r-md);padding:12px 15px;
-}
+.pain-list li{font-size:14px;color:var(--g1);line-height:1.55;background:var(--g6);border-radius:var(--r-md);padding:12px 15px;}
 .pain-list li::before{content:'\201C';color:var(--g3);margin-right:2px;}
 .pain-list li::after{content:'\201D';color:var(--g3);margin-left:1px;}
-
 .chip-row{display:flex;flex-wrap:wrap;gap:8px;}
-.chip{
-  font-size:12.5px;font-weight:600;padding:6px 13px;border-radius:980px;
-  background:var(--abg);color:var(--bluedeep);
-}
+.chip{font-size:12.5px;font-weight:600;padding:6px 13px;border-radius:980px;background:var(--abg);color:var(--bluedeep);}
 .chip.channel{background:var(--g6);color:var(--ink);font-weight:500;}
 .chip.keyword{background:var(--ink);color:#fff;}
-
 .confidence{font-size:12.5px;color:var(--g3);text-align:center;margin-top:6px;line-height:1.5;}
 
 /* ═══════ MATCHED SIGNALS ═══════ */
 #signals-section{display:none;margin-top:44px;}
-.section-heading{
-  display:flex;align-items:baseline;justify-content:space-between;gap:8px;
-  margin-bottom:10px;flex-wrap:wrap;
-}
-.section-heading h2{
-  font-family:var(--font-num);font-size:19px;font-weight:600;color:var(--ink);letter-spacing:-.015em;
-}
+.section-heading{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+.section-heading h2{font-family:var(--font-num);font-size:19px;font-weight:600;color:var(--ink);letter-spacing:-.015em;}
 .section-heading .count-tag{font-size:12.5px;color:var(--g3);}
 .matched-keywords-row{margin-bottom:20px;}
-
-#signals-empty{
-  display:none;font-size:13.5px;color:var(--g2);
-  background:var(--g6);border:none;border-radius:var(--r-md);padding:16px 18px;
-}
-
-.signal-card{
-  background:#fff;border:1px solid var(--g5);border-left:3px solid var(--g4);
-  border-radius:var(--r-lg);padding:22px 24px;margin-bottom:14px;
-  transition:border-color .25s,box-shadow .25s,transform .25s;
-}
+#signals-empty{display:none;font-size:13.5px;color:var(--g2);background:var(--g6);border:none;border-radius:var(--r-md);padding:16px 18px;}
+.signal-card{background:#fff;border:1px solid var(--g5);border-left:3px solid var(--g4);border-radius:var(--r-lg);padding:22px 24px;margin-bottom:14px;transition:border-color .25s,box-shadow .25s,transform .25s;}
 .signal-card:hover{border-color:var(--g4);box-shadow:0 10px 28px rgba(10,10,10,.06);transform:translateY(-2px);}
-.signal-top{
-  display:flex;align-items:center;justify-content:space-between;gap:10px;
-  margin-bottom:11px;flex-wrap:wrap;
-}
+.signal-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:11px;flex-wrap:wrap;}
 .signal-source{display:flex;align-items:center;gap:9px;font-size:12.5px;color:var(--g2);flex-wrap:wrap;}
-.signal-source .platform-chip{
-  font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;
-  background:var(--gbg);color:var(--ink);padding:4px 10px;border-radius:980px;
-}
-.keyword-chip{
-  font-size:11.5px;font-weight:600;background:var(--abg);color:var(--bluedeep);
-  padding:4px 11px;border-radius:980px;
-}
+.signal-source .platform-chip{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;background:var(--gbg);color:var(--ink);padding:4px 10px;border-radius:980px;}
+.keyword-chip{font-size:11.5px;font-weight:600;background:var(--abg);color:var(--bluedeep);padding:4px 11px;border-radius:980px;}
 .signal-text{font-size:14.5px;line-height:1.6;color:var(--g1);margin:0 0 14px;}
 .signal-meta{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--g3);}
 .signal-meta a{color:var(--bluedeep);font-weight:600;}
 .signal-meta a:hover{text-decoration:underline;}
 
-footer{text-align:center;margin-top:56px;padding-bottom:8px;font-size:12px;color:var(--g3);}
-
 @media(max-width:768px){
   input,textarea,select{font-size:16px!important;}
   #loading-panel{padding:26px 22px 24px;}
   .card{padding:22px 20px;}
-  .wrap{padding:40px 18px 72px;}
 }
 @media(max-width:480px){
   #analyze-form{flex-direction:column;padding:8px;border-radius:24px;gap:8px;}
   #url-input{width:100%;text-align:center;padding:12px;}
   button#analyze-btn{width:100%;justify-content:center;}
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MARKETING SECTIONS — static content below the working form
+═══════════════════════════════════════════════════════════════ */
+.hp-sec{padding:88px 24px;border-top:1px solid var(--g5);text-align:left;}
+.hp-sec.hp-sec-alt{background:linear-gradient(180deg,#fafafa 0%,#fff 100%);}
+.hp-sec-in{max-width:1080px;margin:0 auto;width:100%;}
+.hp-sec-head{margin-bottom:52px;max-width:720px;text-align:left;}
+.hp-sec-head.center{margin-left:auto;margin-right:auto;text-align:center;}
+.hp-sec-head.center .hp-sec-title,.hp-sec-head.center .hp-sec-lede{margin-left:auto;margin-right:auto;}
+.hp-sec-num{
+  font-family:var(--font-num);font-size:11px;font-weight:600;letter-spacing:.14em;
+  color:var(--g3);margin-bottom:14px;display:flex;align-items:center;gap:12px;
+}
+.hp-sec-num::before{content:"";width:24px;height:1px;background:var(--g4);}
+.hp-sec-num.on-dark{color:rgba(255,255,255,.35);}
+.hp-sec-num.on-dark::before{background:rgba(255,255,255,.15);}
+.hp-sec-title{
+  font-size:clamp(26px,3.4vw,40px);font-weight:600;color:var(--ink);
+  letter-spacing:-.028em;line-height:1.15;margin:0 0 16px 0;max-width:680px;
+}
+.hp-sec-lede{font-size:clamp(15px,1.6vw,17px);color:var(--g2);line-height:1.65;max-width:600px;letter-spacing:var(--tk-sm);margin:0;}
+
+/* ── LIVE PROOF STRIP (dark) ─────────────────────────────── */
+.hp-proof{background:#0A0A0A;color:#fff;padding:44px 24px;position:relative;overflow:clip;text-align:left;}
+.hp-proof-in{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:repeat(4,1fr);gap:0;align-items:center;position:relative;z-index:1;}
+.hp-proof-cell{padding:0 32px;border-left:1px solid rgba(255,255,255,.1);}
+.hp-proof-cell:first-child{border-left:none;padding-left:0;}
+.hp-proof-cell:last-child{padding-right:0;}
+.hp-proof-n{font-family:var(--font-num);font-size:36px;font-weight:600;letter-spacing:-.028em;color:var(--lime);line-height:1;margin-bottom:8px;font-variant-numeric:tabular-nums;}
+.hp-proof-l{font-size:13px;color:rgba(255,255,255,.55);letter-spacing:var(--tk-sm);line-height:1.4;}
+
+/* ── OUTCOME PREVIEW ─────────────────────────────────────── */
+.hp-outcome-lead{display:grid;grid-template-columns:1fr 1fr;gap:56px;align-items:center;}
+.hp-outcome-h{font-size:clamp(24px,3vw,36px);font-weight:600;letter-spacing:-.026em;line-height:1.15;color:var(--ink);margin:0 0 16px 0;}
+.hp-outcome-h em{font-style:normal;background:var(--lime);padding:0 8px;border-radius:6px;}
+.hp-outcome-p{font-size:15.5px;color:var(--g2);line-height:1.65;letter-spacing:var(--tk-sm);margin:0 0 22px 0;}
+.hp-outcome-list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px;}
+.hp-outcome-list li{display:flex;gap:12px;align-items:flex-start;font-size:14.5px;color:var(--g1);line-height:1.5;}
+.hp-outcome-list svg{width:18px;height:18px;color:var(--ink);flex-shrink:0;margin-top:2px;background:var(--lime);border-radius:6px;padding:3px;}
+.hp-outcome-card{background:#fff;border:1px solid var(--g5);border-radius:var(--r-xl);overflow:clip;box-shadow:0 24px 60px rgba(10,10,10,.06);}
+.hp-outcome-card-bar{padding:12px 20px;border-bottom:1px solid var(--g5);display:flex;align-items:center;gap:8px;background:var(--g6);font-size:12px;color:var(--g2);}
+.hp-outcome-card-dot{width:9px;height:9px;border-radius:50%;background:#f56;}
+.hp-outcome-card-dot.y{background:#fb2;}
+.hp-outcome-card-dot.g{background:#4c4;}
+.hp-outcome-card-url{margin-left:auto;background:#fff;border:1px solid var(--g5);border-radius:8px;padding:3px 12px;color:var(--g1);font-family:var(--font-num);font-size:11.5px;}
+.hp-outcome-card-body{padding:24px;}
+.hp-outcome-signal{display:flex;gap:14px;align-items:flex-start;}
+.hp-outcome-score{width:52px;height:52px;border-radius:12px;background:var(--lime);display:grid;place-items:center;flex-shrink:0;font-family:var(--font-num);font-size:18px;font-weight:600;letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--ink);}
+.hp-outcome-signal-body{flex:1;min-width:0;}
+.hp-outcome-signal-h{font-family:var(--font-num);font-size:15px;font-weight:600;letter-spacing:-.01em;color:var(--ink);line-height:1.35;margin-bottom:4px;}
+.hp-outcome-signal-meta{font-size:11.5px;color:var(--g3);letter-spacing:var(--tk-sm);display:flex;gap:6px;flex-wrap:wrap;}
+.hp-outcome-signal-meta b{color:var(--g1);font-weight:500;}
+.hp-outcome-signal-text{color:var(--g1);font-size:13.5px;line-height:1.55;margin:12px 0 14px 0;padding:12px 14px;background:var(--g6);border-radius:10px;border-left:3px solid var(--ink);}
+.hp-outcome-signal-pills{display:flex;gap:6px;flex-wrap:wrap;}
+.hp-outcome-pill{font-size:11px;color:var(--g2);padding:4px 9px;border:1px solid var(--g5);border-radius:980px;background:#fff;font-family:var(--font-num);}
+.hp-outcome-pill.lime{background:var(--lime);color:var(--ink);border-color:var(--lime);font-weight:600;}
+.hp-outcome-cta-note{margin-top:14px;padding-top:14px;border-top:1px dashed var(--g4);display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--g2);}
+.hp-outcome-cta-note strong{color:var(--ink);font-weight:600;}
+.hp-outcome-cta-note svg{width:14px;height:14px;color:var(--ink);flex-shrink:0;}
+
+/* ── BEFORE / AFTER EXAMPLE ──────────────────────────────── */
+.hp-example-frame{margin-top:52px;display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:stretch;}
+.hp-example-col{background:#fff;border:1px solid var(--g5);border-radius:var(--r-xl);overflow:clip;display:flex;flex-direction:column;}
+.hp-example-col-head{padding:14px 20px;border-bottom:1px solid var(--g5);display:flex;align-items:center;justify-content:space-between;font-family:var(--font-num);font-size:11px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:var(--g2);}
+.hp-example-col-head .badge{padding:4px 10px;border-radius:980px;font-size:10.5px;}
+.hp-example-col-head .badge.without{background:var(--g5);color:var(--g2);}
+.hp-example-col-head .badge.with{background:var(--lime);color:var(--ink);}
+.hp-example-col-body{padding:20px 20px 24px 20px;flex:1;}
+.hp-serp-mock{background:var(--g6);border-radius:12px;padding:14px 16px;margin-bottom:16px;}
+.hp-serp-q{display:flex;align-items:center;gap:10px;background:#fff;border:1px solid var(--g5);border-radius:980px;padding:8px 14px;font-size:13px;color:var(--g1);margin-bottom:12px;}
+.hp-serp-q svg{width:14px;height:14px;color:var(--g3);}
+.hp-serp-result{padding:10px 12px;border-radius:8px;margin-bottom:6px;font-family:Arial,sans-serif;}
+.hp-serp-result:last-child{margin-bottom:0;}
+.hp-serp-result.reddit{background:#fff;border:1px solid var(--g5);}
+.hp-serp-result.hit{background:#fff;border:2px solid var(--ink);box-shadow:0 4px 14px rgba(10,10,10,.08);}
+.hp-serp-url{font-size:10.5px;color:var(--g3);letter-spacing:.02em;margin-bottom:2px;}
+.hp-serp-title{font-size:12.5px;font-weight:500;color:#1a0dab;line-height:1.3;letter-spacing:-.01em;}
+.hp-serp-snip{font-size:11px;color:var(--g2);line-height:1.4;margin-top:3px;}
+.hp-rc{background:#fff;border:1px solid var(--g5);border-radius:12px;padding:14px 16px;}
+.hp-rc-head{display:flex;align-items:center;gap:8px;font-size:11.5px;color:var(--g3);margin-bottom:8px;}
+.hp-rc-head b{color:var(--g1);font-weight:600;}
+.hp-rc-body{font-size:13px;color:var(--g1);line-height:1.55;letter-spacing:var(--tk-sm);}
+.hp-rc-body strong{color:var(--ink);font-weight:600;background:var(--lime);padding:0 3px;border-radius:3px;}
+.hp-rc-actions{margin-top:10px;padding-top:10px;border-top:1px solid var(--g5);display:flex;gap:12px;font-size:11px;color:var(--g3);align-items:center;}
+.hp-empty-state{padding:30px 20px;text-align:center;color:var(--g3);border:1px dashed var(--g4);border-radius:12px;font-size:13px;line-height:1.5;}
+.hp-empty-state svg{width:32px;height:32px;color:var(--g4);margin-bottom:10px;}
+.hp-empty-state b{color:var(--g2);font-weight:600;}
+
+/* ── WHY REDDIT split ─────────────────────────────────────── */
+.hp-why-grid{margin-top:52px;display:grid;grid-template-columns:1.05fr .95fr;gap:64px;align-items:center;}
+.hp-why-points{display:flex;flex-direction:column;gap:28px;}
+.hp-why-point{display:flex;gap:18px;align-items:flex-start;}
+.hp-why-icon{width:42px;height:42px;border-radius:12px;background:var(--lime);flex-shrink:0;display:grid;place-items:center;box-shadow:0 4px 12px rgba(182,255,30,.25);}
+.hp-why-icon svg{width:19px;height:19px;color:#0A0A0A;}
+.hp-why-txt h4{font-size:16.5px;font-weight:600;letter-spacing:-.015em;margin-bottom:5px;}
+.hp-why-txt p{font-size:14px;color:var(--g2);line-height:1.6;letter-spacing:var(--tk-sm);}
+.hp-why-viz{background:var(--g6);border-radius:var(--r-xl);padding:30px 28px;min-height:360px;display:flex;flex-direction:column;justify-content:space-between;}
+.hp-viz-search{background:#fff;border-radius:var(--r-md);border:1px solid var(--g5);padding:12px 16px;font-size:13px;color:var(--g2);box-shadow:0 2px 8px rgba(0,0,0,.03);}
+.hp-viz-search span{color:var(--ink);font-weight:500;}
+.hp-viz-results{margin-top:16px;display:flex;flex-direction:column;gap:10px;}
+.hp-viz-result{background:#fff;border-radius:var(--r-md);border:1px solid var(--g5);padding:14px 16px;position:relative;}
+.hp-viz-result.hit{border:1px solid var(--ink);box-shadow:0 4px 12px rgba(0,0,0,.06);}
+.hp-viz-r-url{font-size:11px;color:var(--g3);letter-spacing:.02em;margin-bottom:4px;}
+.hp-viz-r-title{font-size:14px;font-weight:600;color:#1a0dab;letter-spacing:var(--tk-sm);line-height:1.3;}
+.hp-viz-result.hit .hp-viz-r-title{color:var(--ink);}
+.hp-viz-r-snippet{font-size:12px;color:var(--g2);line-height:1.5;margin-top:4px;}
+.hp-viz-badge{display:inline-flex;align-items:center;gap:6px;background:var(--lime);color:#0A0A0A;border-radius:980px;padding:4px 10px;font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;margin-top:8px;}
+.hp-viz-caption{font-size:12px;color:var(--g3);text-align:center;margin-top:16px;letter-spacing:var(--tk-sm);}
+
+/* ── REPORT PREVIEW mock ─────────────────────────────────── */
+.hp-report-preview{margin-top:52px;background:#fff;border:1px solid var(--g5);border-radius:var(--r-xl);overflow:clip;box-shadow:0 20px 60px rgba(0,0,0,.06);}
+.hp-report-topbar{padding:16px 24px;border-bottom:1px solid var(--g5);display:flex;align-items:center;gap:12px;font-size:12.5px;color:var(--g2);background:var(--g6);}
+.hp-report-dot{width:10px;height:10px;border-radius:50%;background:#f56;}
+.hp-report-dot.y{background:#fb2;}
+.hp-report-dot.g{background:#4c4;}
+.hp-report-url{margin-left:auto;background:#fff;border:1px solid var(--g5);border-radius:var(--r-sm);padding:4px 12px;color:var(--g1);font-family:var(--font-num);font-size:12px;}
+.hp-report-body{padding:40px 36px;}
+.hp-report-h{font-size:clamp(19px,2.3vw,25px);font-weight:600;color:var(--ink);letter-spacing:-.02em;line-height:1.25;margin-bottom:8px;}
+.hp-report-sub{font-size:14px;color:var(--g2);margin-bottom:28px;}
+.hp-report-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:28px;}
+.hp-report-cell{border:1px solid var(--g5);border-radius:var(--r-md);padding:20px 22px;}
+.hp-report-cell-l{font-size:12px;color:var(--g2);margin-bottom:8px;letter-spacing:var(--tk-sm);}
+.hp-report-cell-v{font-size:27px;font-weight:600;color:var(--ink);letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1;}
+.hp-report-thread{background:var(--g6);border-radius:var(--r-md);padding:20px 22px;display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;}
+.hp-report-score{width:52px;height:52px;border-radius:var(--r-md);background:conic-gradient(var(--lime) 306deg,var(--g4) 0);display:grid;place-items:center;position:relative;}
+.hp-report-score::before{content:"";position:absolute;inset:5px;border-radius:calc(var(--r-md) - 4px);background:#fff;}
+.hp-report-score span{position:relative;font-size:18px;font-weight:600;letter-spacing:-.02em;color:var(--ink);}
+.hp-report-thread-t{font-size:14px;font-weight:600;color:var(--ink);letter-spacing:var(--tk-sm);line-height:1.35;margin-bottom:4px;}
+.hp-report-thread-m{font-size:12px;color:var(--g2);letter-spacing:var(--tk-sm);}
+
+/* ── COST OF WAITING (dark, editorial) ───────────────────── */
+.hp-cost{padding:100px 24px;background:#0A0A0A;color:#fff;border-top:none;position:relative;overflow:clip;text-align:left;}
+.hp-cost::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 70% 50% at 50% 20%,rgba(182,255,30,.04),transparent 65%);}
+.hp-cost-in{max-width:1120px;margin:0 auto;position:relative;z-index:1;}
+.hp-cost-head{max-width:720px;margin-bottom:60px;}
+.hp-cost-title{font-size:clamp(28px,4vw,46px);font-weight:600;letter-spacing:-.032em;line-height:1.08;color:#fff;margin:0 0 18px 0;}
+.hp-cost-title-alt{color:rgba(255,255,255,.45);}
+.hp-cost-lede{font-size:clamp(15px,1.6vw,17px);color:rgba(255,255,255,.6);line-height:1.7;max-width:600px;margin:0;letter-spacing:var(--tk-sm);}
+.hp-cost-metrics{display:flex;align-items:stretch;gap:0;border-top:1px solid rgba(255,255,255,.08);border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:60px;padding:40px 0;}
+.hp-cost-metric{flex:1;padding:0 36px;display:flex;flex-direction:column;justify-content:space-between;min-height:110px;}
+.hp-cost-metric:first-child{padding-left:0;}
+.hp-cost-metric:last-child{padding-right:0;}
+.hp-cost-divider{width:1px;background:rgba(255,255,255,.08);align-self:stretch;}
+.hp-cost-metric-l{font-size:11.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:18px;}
+.hp-cost-metric-v{display:flex;flex-direction:column;gap:6px;}
+.hp-cost-metric-v > span:first-child{font-size:clamp(36px,4vw,50px);font-weight:600;letter-spacing:-.04em;line-height:1;color:#fff;font-variant-numeric:tabular-nums;transition:opacity .35s ease;}
+.hp-cost-metric-v.accent > span:first-child{color:var(--lime);}
+.hp-cost-metric-v > span:first-child.tick{opacity:.35;}
+.hp-cost-metric-suffix{font-size:12.5px;color:rgba(255,255,255,.4);letter-spacing:var(--tk-sm);line-height:1.5;}
+.hp-cost-cmp-eyebrow{font-size:11.5px;font-weight:600;letter-spacing:.11em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:10px;}
+.hp-cost-cmp-title{font-size:clamp(18px,2.2vw,24px);font-weight:600;letter-spacing:-.024em;color:#fff;line-height:1.25;max-width:640px;margin-bottom:32px;}
+.hp-cost-cmp-grid{display:flex;flex-direction:column;gap:0;border-top:1px solid rgba(255,255,255,.08);}
+.hp-cost-cmp-row{display:grid;grid-template-columns:170px 1fr 90px;gap:28px;align-items:center;padding:20px 0;border-bottom:1px solid rgba(255,255,255,.06);}
+.hp-cost-cmp-row.hp-cost-cmp-flintel{border-bottom:none;}
+.hp-cost-cmp-name{font-size:14.5px;font-weight:500;letter-spacing:var(--tk-sm);color:rgba(255,255,255,.72);}
+.hp-cost-cmp-flintel .hp-cost-cmp-name{color:#fff;font-weight:600;}
+.hp-cost-cmp-time{font-size:13.5px;font-weight:500;letter-spacing:var(--tk-sm);color:rgba(255,255,255,.5);text-align:right;font-variant-numeric:tabular-nums;}
+.hp-cost-cmp-flintel .hp-cost-cmp-time{color:var(--lime);font-weight:600;}
+.hp-cost-cmp-bar{height:3px;background:rgba(255,255,255,.06);border-radius:3px;overflow:clip;}
+.hp-cost-cmp-fill{height:100%;border-radius:3px;background:rgba(255,255,255,.35);transform-origin:left center;animation:barGrow 1.2s var(--ease) both;}
+.hp-cost-cmp-fill.lime{background:var(--lime);height:5px;margin-top:-1px;}
+@keyframes barGrow{from{transform:scaleX(0);}to{transform:scaleX(1);}}
+
+/* ── PRICING ─────────────────────────────────────────────── */
+.hp-price-grid{margin-top:52px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.hp-price{border:1px solid var(--g5);border-radius:var(--r-lg);padding:30px 26px;position:relative;background:#fff;transition:transform .2s var(--ease),box-shadow .2s;}
+.hp-price.featured{background:#0A0A0A;color:#fff;border-color:#0A0A0A;transform:scale(1.03);box-shadow:0 20px 40px rgba(0,0,0,.15);}
+.hp-price-tier{font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--g2);margin-bottom:12px;}
+.hp-price.featured .hp-price-tier{color:var(--lime);}
+.hp-price-num{font-size:40px;font-weight:600;letter-spacing:-.028em;line-height:1;color:var(--ink);margin-bottom:6px;font-variant-numeric:tabular-nums;}
+.hp-price.featured .hp-price-num{color:#fff;}
+.hp-price-num span{font-size:15px;color:var(--g3);font-weight:500;letter-spacing:0;}
+.hp-price.featured .hp-price-num span{color:rgba(255,255,255,.5);}
+.hp-price-desc{font-size:13.5px;color:var(--g2);line-height:1.5;padding-bottom:18px;border-bottom:1px solid var(--g5);margin-bottom:18px;}
+.hp-price.featured .hp-price-desc{color:rgba(255,255,255,.65);border-bottom-color:rgba(255,255,255,.15);}
+.hp-price-feats{display:flex;flex-direction:column;gap:10px;}
+.hp-price-feat{display:flex;align-items:flex-start;gap:10px;font-size:13.5px;color:var(--g1);line-height:1.45;letter-spacing:var(--tk-sm);}
+.hp-price.featured .hp-price-feat{color:rgba(255,255,255,.85);}
+.hp-price-feat svg{width:13px;height:13px;color:var(--ink);flex-shrink:0;margin-top:3px;}
+.hp-price.featured .hp-price-feat svg{color:var(--lime);}
+.hp-price-tag{position:absolute;top:-11px;left:50%;transform:translateX(-50%);background:var(--lime);color:#0A0A0A;font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;border-radius:980px;padding:5px 12px;}
+.hp-price-cta{display:block;width:100%;margin-top:22px;padding:13px 20px;min-height:46px;border-radius:980px;border:1px solid var(--g4);background:#fff;color:var(--ink);font-size:14.5px;font-weight:600;letter-spacing:var(--tk-md);cursor:pointer;text-align:center;transition:transform .16s var(--ease),background .18s,border-color .18s;}
+.hp-price-cta:hover{background:var(--g6);border-color:var(--ink);}
+.hp-price-cta:active{transform:scale(.98);}
+.hp-price.featured .hp-price-cta{background:var(--lime);color:var(--ink);border-color:var(--lime);box-shadow:0 8px 24px rgba(182,255,30,.25);}
+.hp-price.featured .hp-price-cta:hover{background:#a6ed12;border-color:#a6ed12;}
+
+/* ── FINAL CTA (dark) ─────────────────────────────────────── */
+.hp-final{background:#0A0A0A;color:#fff;padding:88px 24px 96px;border-top:none;text-align:center;position:relative;overflow:clip;}
+.hp-final::before{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 60% 50% at 50% 40%,rgba(182,255,30,.06) 0%,transparent 70%);}
+.hp-final-in{max-width:720px;margin:0 auto;position:relative;z-index:2;}
+.hp-final-eyebrow{display:inline-flex;align-items:center;gap:10px;font-size:12px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:rgba(255,255,255,.5);margin-bottom:32px;padding:8px 16px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:980px;}
+.hp-final-dot{width:6px;height:6px;border-radius:50%;background:var(--lime);animation:pulse 2s ease infinite;}
+.hp-final h2{font-size:clamp(28px,3.4vw,38px);font-weight:600;letter-spacing:-.028em;line-height:1.1;margin-bottom:16px;}
+.hp-final h2 em{font-style:normal;color:var(--lime);}
+.hp-final p{font-size:15px;color:rgba(255,255,255,.55);line-height:1.55;margin:0 auto 32px;max-width:440px;}
+.hp-final .url-box{background:#fff;border:none;box-shadow:0 20px 60px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.06);border-radius:980px;display:flex;align-items:center;gap:8px;padding:5px 5px 5px 20px;max-width:480px;margin:0 auto;transition:box-shadow .2s;}
+.hp-final .url-box:focus-within{box-shadow:0 20px 60px rgba(0,0,0,.4),0 0 0 1px var(--lime),0 0 0 4px rgba(182,255,30,.12);}
+.hp-final .url-prefix{color:var(--g3);font-size:14.5px;}
+.hp-final #final-url-input{flex:1;min-width:0;color:var(--ink);background:transparent;border:none;outline:none;font-size:14.5px;padding:12px 8px 12px 6px;}
+.hp-final #final-url-input::placeholder{color:var(--g3);}
+.hp-final #final-url-submit{
+  background:var(--lime);color:#0A0A0A;border:none;cursor:pointer;font-size:14.5px;font-weight:600;
+  padding:0 20px;height:40px;border-radius:980px;display:flex;align-items:center;gap:7px;white-space:nowrap;flex-shrink:0;
+  transition:background .18s,transform .12s,box-shadow .18s;
+}
+.hp-final #final-url-submit:hover{background:var(--limedeep);box-shadow:0 6px 20px rgba(182,255,30,.35);}
+.hp-final #final-url-submit:active{transform:scale(.98);}
+.hp-final-microline{margin-top:26px;display:flex;gap:20px;justify-content:center;flex-wrap:wrap;font-size:13px;color:rgba(255,255,255,.4);letter-spacing:var(--tk-sm);}
+
+/* ── FOOTER ───────────────────────────────────────────────── */
+.hp-foot{background:#0A0A0A;color:rgba(255,255,255,.55);padding:56px 24px 40px;border-top:1px solid rgba(255,255,255,.06);text-align:left;}
+.hp-foot-in{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:56px;padding-bottom:44px;border-bottom:1px solid #1a1a1a;}
+.hp-foot-brand{}
+.hp-foot-mark{display:flex;align-items:center;gap:10px;margin-bottom:18px;}
+.hp-foot-mark-icon{width:30px;height:30px;background:var(--lime);border-radius:var(--r-sm);display:grid;place-items:center;color:#0A0A0A;font-weight:700;font-size:15px;}
+.hp-foot-mark-name{font-weight:600;font-size:16px;color:#fff;letter-spacing:-.015em;}
+.hp-foot-tag{font-size:14px;color:rgba(255,255,255,.55);line-height:1.6;max-width:320px;}
+.hp-foot-col h5{font-size:12px;font-weight:600;color:#fff;letter-spacing:.09em;text-transform:uppercase;margin-bottom:18px;}
+.hp-foot-col ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:13px;}
+.hp-foot-col a{color:rgba(255,255,255,.55);font-size:14px;letter-spacing:var(--tk-sm);transition:color .18s;}
+.hp-foot-col a:hover{color:#fff;}
+.hp-foot-bottom{max-width:1080px;margin:0 auto;padding-top:24px;display:flex;justify-content:space-between;align-items:center;gap:20px;flex-wrap:wrap;font-size:12.5px;color:rgba(255,255,255,.4);}
+.hp-foot-bottom-links{display:flex;gap:22px;flex-wrap:wrap;}
+.hp-foot-bottom-links a{color:rgba(255,255,255,.4);transition:color .18s;}
+.hp-foot-bottom-links a:hover{color:#fff;}
+
+/* ═══════ RESPONSIVE (marketing sections) ═══════ */
+@media(max-width:900px){
+  .hp-proof-in{grid-template-columns:repeat(2,1fr);gap:20px;}
+  .hp-proof-cell{padding:16px 20px;border-left:none;border-top:1px solid rgba(255,255,255,.1);}
+  .hp-proof-cell:nth-child(-n+2){border-top:none;}
+  .hp-outcome-lead{grid-template-columns:1fr;gap:36px;}
+  .hp-example-frame{grid-template-columns:1fr;}
+  .hp-why-grid{grid-template-columns:1fr;gap:44px;}
+  .hp-report-grid{grid-template-columns:1fr;}
+  .hp-cost-metrics{flex-direction:column;padding:0;}
+  .hp-cost-metric{padding:28px 0;min-height:0;}
+  .hp-cost-metric:not(:first-child){border-top:1px solid rgba(255,255,255,.08);}
+  .hp-cost-divider{display:none;}
+  .hp-cost-cmp-row{grid-template-columns:1fr auto;gap:8px 20px;}
+  .hp-cost-cmp-bar{grid-column:1/-1;order:3;}
+  .hp-price-grid{grid-template-columns:1fr;gap:18px;}
+  .hp-price.featured{transform:none;}
+  .hp-foot-in{grid-template-columns:1fr 1fr;gap:36px;}
+  .hp-foot-brand{grid-column:1/-1;}
+}
+@media(max-width:640px){
+  .hp-sec{padding:56px 20px;}
+  .hp-cost{padding:56px 20px;}
+  .hp-final{padding:56px 20px 64px;}
+  .hp-proof{padding:28px 20px;}
+  .hp-proof-n{font-size:28px;}
+  .hp-report-body{padding:24px 20px;}
+  .hp-foot{padding:44px 18px 28px;}
+  .hp-foot-in{grid-template-columns:1fr;gap:32px;padding-bottom:28px;}
+  .hp-foot-bottom{flex-direction:column;align-items:flex-start;gap:12px;}
 }
 @media(prefers-reduced-motion:reduce){
   *{animation:none!important;transition:none!important;}
@@ -381,7 +541,7 @@ footer{text-align:center;margin-top:56px;padding-bottom:8px;font-size:12px;color
   </div>
   <nav class="site-nav">
     <a href="#how-it-works">How it works</a>
-    <a href="#sources">Sources</a>
+    <a href="#example">Sources</a>
     <a href="#intelligence">Intelligence</a>
     <a href="#pricing">Pricing</a>
   </nav>
@@ -394,158 +554,557 @@ footer{text-align:center;margin-top:56px;padding-bottom:8px;font-size:12px;color
 </header>
 
 <div class="page-frame">
-<div class="wrap">
 
-  <header class="hero">
-    <div class="eyebrow-badge">
-      <span class="seg-dark">Introducing</span>
-      <span class="seg-light">Flintel.ai</span>
+  <!-- ═══════ HERO + REAL ANALYZE FLOW (logic unchanged) ═══════ -->
+  <div class="home-hero">
+  <div class="wrap">
+
+    <header class="hero">
+      <div class="eyebrow-badge">
+        <span class="seg-dark">Introducing</span>
+        <span class="seg-light">Flintel.ai</span>
+      </div>
+
+      <h1 class="home-h1">Your buyers are on Reddit,<br>talking about your <em>competitors</em> right now.</h1>
+
+      <p class="sub">Enter your website. Flintel learns your business, identifies your best prospects, and surfaces real conversations worth joining.</p>
+
+      <div class="search-shell">
+        <form id="analyze-form" autocomplete="off">
+          <input
+            id="url-input"
+            type="text"
+            name="url"
+            placeholder="https://yourwebsite.com"
+            required
+          />
+          <button id="analyze-btn" type="submit">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+            <span>Analyze</span>
+          </button>
+        </form>
+        <div class="home-note">Free market report · No signup required · Ready in 30 seconds</div>
+      </div>
+
+      <div id="error-banner"></div>
+    </header>
+
+    <section id="loading-panel">
+      <div class="panel-eyebrow">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
+        <span id="loading-domain">getflintel.com</span>
+      </div>
+      <h2 class="panel-title">Analyzing your market</h2>
+      <p class="sub">Finding out who your buyers are and what they need to hear</p>
+
+      <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
+
+      <ul class="steps" id="steps-list">
+        <li data-step="0">
+          <div class="step-marker"></div>
+          <div class="step-copy">
+            <div class="title">Reading your website</div>
+            <div class="desc">Homepage, about page, product & pricing pages</div>
+          </div>
+        </li>
+        <li data-step="1">
+          <div class="step-marker"></div>
+          <div class="step-copy">
+            <div class="title">Identifying your target audience</div>
+            <div class="desc">Working out who actually buys this, and why</div>
+          </div>
+        </li>
+        <li data-step="2">
+          <div class="step-marker"></div>
+          <div class="step-copy">
+            <div class="title">Mapping buyer pain points</div>
+            <div class="desc">The language your buyers use when they're frustrated</div>
+          </div>
+        </li>
+        <li data-step="3">
+          <div class="step-marker"></div>
+          <div class="step-copy">
+            <div class="title">Scoring positioning & keywords</div>
+            <div class="desc">Where you stand out, and what to be found for</div>
+          </div>
+        </li>
+        <li data-step="4">
+          <div class="step-marker"></div>
+          <div class="step-copy">
+            <div class="title">Matching tracked conversations</div>
+            <div class="desc">Checking your keywords against the existing signals database</div>
+          </div>
+        </li>
+      </ul>
+    </section>
+
+    <section id="results">
+      <div class="result-header">
+        <div class="result-header-left">
+          <span class="domain-tag" id="result-domain">yourwebsite.com</span>
+          <span class="sequence-tag" id="result-sequence"></span>
+        </div>
+        <button id="again-btn" type="button">Analyze another site</button>
+      </div>
+
+      <div class="card">
+        <h3>What you do</h3>
+        <p id="r-summary">—</p>
+      </div>
+
+      <div class="card">
+        <h3>Problem you solve</h3>
+        <p id="r-problem">—</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>Who buys this</h3>
+          <ul class="persona-list" id="r-personas"></ul>
+        </div>
+        <div class="card">
+          <h3>What they say when frustrated</h3>
+          <ul class="pain-list" id="r-pains"></ul>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>Who you're up against</h3>
+        <ul class="persona-list" id="r-competitors"></ul>
+      </div>
+
+      <div class="card">
+        <h3>Why choose you</h3>
+        <p id="r-uvp">—</p>
+      </div>
+
+      <div class="grid-2">
+        <div class="card">
+          <h3>Discovery keywords</h3>
+          <div class="chip-row" id="r-keywords"></div>
+        </div>
+        <div class="card">
+          <h3>Where to reach them</h3>
+          <div class="chip-row" id="r-channels"></div>
+        </div>
+      </div>
+
+      <p class="confidence" id="r-confidence"></p>
+    </section>
+
+    <!-- Rows pulled read-only from the existing web_data collection, matched
+         against this domain's keywords stored in flintel_web_data -->
+    <section id="signals-section">
+      <div class="section-heading">
+        <h2>Matching conversations</h2>
+        <span class="count-tag" id="signals-count">0 found</span>
+      </div>
+      <div class="chip-row matched-keywords-row" id="matched-keywords-row"></div>
+      <div id="signals-empty">
+        No rows in the tracked signals database match this site's keywords yet.
+      </div>
+      <div id="signals-list"></div>
+    </section>
+
+  </div><!-- /.wrap -->
+  </div><!-- /.home-hero -->
+
+  <!-- ═══════ LIVE PROOF (dark strip) ═══════ -->
+  <section class="hp-proof">
+    <div class="hp-proof-in">
+      <div class="hp-proof-cell">
+        <div class="hp-proof-n">847</div>
+        <div class="hp-proof-l">Subreddits monitored, every hour, in every buyer language</div>
+      </div>
+      <div class="hp-proof-cell">
+        <div class="hp-proof-n">2.1M</div>
+        <div class="hp-proof-l">Threads scored for buyer intent in the last 30 days</div>
+      </div>
+      <div class="hp-proof-cell">
+        <div class="hp-proof-n">&lt;48h</div>
+        <div class="hp-proof-l">From signup to first comment placed inside a live thread</div>
+      </div>
+      <div class="hp-proof-cell">
+        <div class="hp-proof-n">94%</div>
+        <div class="hp-proof-l">Average relevance score across placed comments</div>
+      </div>
     </div>
-
-    <h1 class="home-h1">Your buyers are on Reddit,<br>talking about your <em>competitors</em> right now.</h1>
-
-    <p class="sub">Enter your website. Flintel learns your business, identifies your best prospects, and surfaces real conversations worth joining.</p>
-
-    <div class="search-shell">
-      <form id="analyze-form" autocomplete="off">
-        <input
-          id="url-input"
-          type="text"
-          name="url"
-          placeholder="https://yourwebsite.com"
-          required
-        />
-        <button id="analyze-btn" type="submit">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-          <span>Analyze</span>
-        </button>
-      </form>
-    </div>
-
-    <div id="error-banner"></div>
-  </header>
-
-  <section id="loading-panel">
-    <div class="panel-eyebrow">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/></svg>
-      <span id="loading-domain">getflintel.com</span>
-    </div>
-    <h2 class="panel-title">Analyzing your market</h2>
-    <p class="sub">Finding out who your buyers are and what they need to hear</p>
-
-    <div class="progress-track"><div class="progress-fill" id="progress-fill"></div></div>
-
-    <ul class="steps" id="steps-list">
-      <li data-step="0">
-        <div class="step-marker"></div>
-        <div class="step-copy">
-          <div class="title">Reading your website</div>
-          <div class="desc">Homepage, about page, product & pricing pages</div>
-        </div>
-      </li>
-      <li data-step="1">
-        <div class="step-marker"></div>
-        <div class="step-copy">
-          <div class="title">Identifying your target audience</div>
-          <div class="desc">Working out who actually buys this, and why</div>
-        </div>
-      </li>
-      <li data-step="2">
-        <div class="step-marker"></div>
-        <div class="step-copy">
-          <div class="title">Mapping buyer pain points</div>
-          <div class="desc">The language your buyers use when they're frustrated</div>
-        </div>
-      </li>
-      <li data-step="3">
-        <div class="step-marker"></div>
-        <div class="step-copy">
-          <div class="title">Scoring positioning & keywords</div>
-          <div class="desc">Where you stand out, and what to be found for</div>
-        </div>
-      </li>
-      <li data-step="4">
-        <div class="step-marker"></div>
-        <div class="step-copy">
-          <div class="title">Matching tracked conversations</div>
-          <div class="desc">Checking your keywords against the existing signals database</div>
-        </div>
-      </li>
-    </ul>
   </section>
 
-  <section id="results">
-    <div class="result-header">
-      <div class="result-header-left">
-        <span class="domain-tag" id="result-domain">yourwebsite.com</span>
-        <span class="sequence-tag" id="result-sequence"></span>
+  <!-- ═══════ OUTCOME PREVIEW ═══════ -->
+  <section class="hp-sec" id="intelligence">
+    <div class="hp-sec-in">
+      <div class="hp-outcome-lead">
+        <div>
+          <div class="hp-sec-num">What you get</div>
+          <h2 class="hp-outcome-h">A dashboard of buyers <em>ready to hear from you</em>, delivered every day.</h2>
+          <p class="hp-outcome-p">Not analytics. Not another dashboard to check. Real buyer conversations, scored by how close they are to buying — with a comment already drafted for you.</p>
+          <ul class="hp-outcome-list">
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span><strong>Every high-intent thread</strong>, with intent score 0–100</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span><strong>Google rank + monthly search volume</strong> — so you know which threads keep sending traffic for years</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span><strong>A ready-to-post reply</strong>, written to match the conversation and mention your product naturally</span></li>
+            <li><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg><span><strong>You approve every comment</strong> — nothing gets posted without your green light</span></li>
+          </ul>
+        </div>
+
+        <div class="hp-outcome-card">
+          <div class="hp-outcome-card-bar">
+            <span class="hp-outcome-card-dot"></span>
+            <span class="hp-outcome-card-dot y"></span>
+            <span class="hp-outcome-card-dot g"></span>
+            <div class="hp-outcome-card-url">flintel.io/dashboard</div>
+          </div>
+          <div class="hp-outcome-card-body">
+            <div class="hp-outcome-signal">
+              <div class="hp-outcome-score">94</div>
+              <div class="hp-outcome-signal-body">
+                <div class="hp-outcome-signal-h">r/SaaS — Best Stripe alternative for a SaaS with global customers?</div>
+                <div class="hp-outcome-signal-meta">
+                  <span><b>u/fintech_founder</b></span><span>·</span>
+                  <span>2 hours ago</span><span>·</span>
+                  <span>reddit</span>
+                </div>
+                <div class="hp-outcome-signal-text">
+                  "Building a SaaS that offers both subscription and one-time payment. Non-technical founder here — recommend a good alternative to Stripe? Ideally lower fees and easier to maintain."
+                </div>
+                <div class="hp-outcome-signal-pills">
+                  <div class="hp-outcome-pill lime">Ranks #1 on Google</div>
+                  <div class="hp-outcome-pill">8,400 searches/mo</div>
+                  <div class="hp-outcome-pill">347 upvotes</div>
+                  <div class="hp-outcome-pill">89 comments</div>
+                </div>
+                <div class="hp-outcome-cta-note">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                  <span><strong>Reply draft ready</strong> — 3-sentence, human-written, mentions your product naturally.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <button id="again-btn" type="button">Analyze another site</button>
     </div>
-
-    <div class="card">
-      <h3>What you do</h3>
-      <p id="r-summary">—</p>
-    </div>
-
-    <div class="card">
-      <h3>Problem you solve</h3>
-      <p id="r-problem">—</p>
-    </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <h3>Who buys this</h3>
-        <ul class="persona-list" id="r-personas"></ul>
-      </div>
-      <div class="card">
-        <h3>What they say when frustrated</h3>
-        <ul class="pain-list" id="r-pains"></ul>
-      </div>
-    </div>
-
-    <div class="card">
-      <h3>Who you're up against</h3>
-      <ul class="persona-list" id="r-competitors"></ul>
-    </div>
-
-    <div class="card">
-      <h3>Why choose you</h3>
-      <p id="r-uvp">—</p>
-    </div>
-
-    <div class="grid-2">
-      <div class="card">
-        <h3>Discovery keywords</h3>
-        <div class="chip-row" id="r-keywords"></div>
-      </div>
-      <div class="card">
-        <h3>Where to reach them</h3>
-        <div class="chip-row" id="r-channels"></div>
-      </div>
-    </div>
-
-    <p class="confidence" id="r-confidence"></p>
   </section>
 
-  <!-- Rows pulled read-only from the existing web_data collection, matched
-       against this domain's keywords stored in flintel_web_data -->
-  <section id="signals-section">
-    <div class="section-heading">
-      <h2>Matching conversations</h2>
-      <span class="count-tag" id="signals-count">0 found</span>
+  <!-- ═══════ BEFORE / AFTER EXAMPLE ═══════ -->
+  <section class="hp-sec" id="example">
+    <div class="hp-sec-in">
+      <div class="hp-sec-head">
+        <div class="hp-sec-num">01 · A real example</div>
+        <h2 class="hp-sec-title">Here's what founders are missing — and what Flintel places instead.</h2>
+        <p class="hp-sec-lede">The same buyer, the same Google search, the same Reddit thread. The only difference is whether your product is inside the conversation.</p>
+      </div>
+
+      <div class="hp-example-frame">
+        <div class="hp-example-col">
+          <div class="hp-example-col-head">
+            <span>Without Flintel</span>
+            <span class="badge without">Today</span>
+          </div>
+          <div class="hp-example-col-body">
+            <div class="hp-serp-mock">
+              <div class="hp-serp-q">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+                <span>best stripe alternative for SaaS</span>
+              </div>
+              <div class="hp-serp-result reddit">
+                <div class="hp-serp-url">reddit.com › r/SaaS › comments</div>
+                <div class="hp-serp-title">Best Stripe alternative for a SaaS with global customers?</div>
+                <div class="hp-serp-snip">89 comments · 347 upvotes · Ranks #1 on Google</div>
+              </div>
+            </div>
+            <div class="hp-empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <div><b>Your product isn't in this thread.</b><br>Buyers scroll through 89 comments — competitors are mentioned. You're invisible.</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="hp-example-col">
+          <div class="hp-example-col-head">
+            <span>With Flintel</span>
+            <span class="badge with">Week 2</span>
+          </div>
+          <div class="hp-example-col-body">
+            <div class="hp-serp-mock">
+              <div class="hp-serp-q">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+                <span>best stripe alternative for SaaS</span>
+              </div>
+              <div class="hp-serp-result hit">
+                <div class="hp-serp-url">reddit.com › r/SaaS › comments</div>
+                <div class="hp-serp-title">Best Stripe alternative for a SaaS with global customers?</div>
+                <div class="hp-serp-snip">89 comments · 347 upvotes · Ranks #1 on Google</div>
+              </div>
+            </div>
+            <div class="hp-rc">
+              <div class="hp-rc-head"><b>u/founder_from_karachi</b><span>· 2y account · 4.2k karma · 2 days ago</span></div>
+              <div class="hp-rc-body">honestly depends on ticket size. for subs we moved off stripe last year, been using <strong>your product</strong> since — the tax handling alone saved us hiring an accountant. fees a bit higher but the compliance headache went away.</div>
+              <div class="hp-rc-actions"><span>↑ 47</span><span>💬 8 replies</span><span style="margin-left:auto;color:var(--ink);font-weight:600;">Recommends your product</span></div>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
-    <div class="chip-row matched-keywords-row" id="matched-keywords-row"></div>
-    <div id="signals-empty">
-      No rows in the tracked signals database match this site's keywords yet.
-    </div>
-    <div id="signals-list"></div>
   </section>
 
-  <footer>Flintel</footer>
+  <!-- ═══════ WHY REDDIT ═══════ -->
+  <section class="hp-sec hp-sec-alt" id="how-it-works">
+    <div class="hp-sec-in">
+      <div class="hp-sec-head">
+        <div class="hp-sec-num">02 · The math</div>
+        <h2 class="hp-sec-title">One thread. 8,400 buyers. Every month. Forever.</h2>
+        <p class="hp-sec-lede">Google ads stop working the day you stop paying. A Reddit thread ranking #1 for "best [your category] alternative" sends buyers to your product every month for years — long after you've forgotten Flintel exists.</p>
+      </div>
+      <div class="hp-why-grid">
+        <div class="hp-why-points">
+          <div class="hp-why-point">
+            <div class="hp-why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg></div>
+            <div class="hp-why-txt">
+              <h4>An ad costs money forever. A comment costs money once.</h4>
+              <p>Google ads: $8 per click, gone the moment you stop paying. One Flintel placement on a page-1 Reddit thread: seen by 8,400 buyers monthly, for the life of that thread. The math isn't close.</p>
+            </div>
+          </div>
+          <div class="hp-why-point">
+            <div class="hp-why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></div>
+            <div class="hp-why-txt">
+              <h4>Founders trust Reddit strangers more than your marketing.</h4>
+              <p>When your buyer Googles "best [your category]", they scroll past the ads and click Reddit. Someone else's story means more than your landing page ever will. Flintel makes sure that story mentions you.</p>
+            </div>
+          </div>
+          <div class="hp-why-point">
+            <div class="hp-why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg></div>
+            <div class="hp-why-txt">
+              <h4>Your competitors are already there. You're not.</h4>
+              <p>Open Google right now. Search "best [your category]." Count how many times competitors are mentioned in the top Reddit results. That number is how far behind you already are.</p>
+            </div>
+          </div>
+        </div>
 
-</div>
-</div>
+        <div class="hp-why-viz">
+          <div class="hp-viz-search"><span>best Stripe alternative for SaaS</span></div>
+          <div class="hp-viz-results">
+            <div class="hp-viz-result">
+              <div class="hp-viz-r-url">stripe.com › pricing</div>
+              <div class="hp-viz-r-title">Stripe Pricing | Pay only for successful transactions</div>
+            </div>
+            <div class="hp-viz-result hit">
+              <div class="hp-viz-r-url">reddit.com › r/SaaS › comments</div>
+              <div class="hp-viz-r-title">Best Stripe alternative for a SaaS with global customers?</div>
+              <div class="hp-viz-r-snippet">"...we've been running an alternative for 18 months and honestly the tax handling alone is worth the extra 1.5%..."</div>
+              <div class="hp-viz-badge">Flintel placed you here</div>
+            </div>
+            <div class="hp-viz-result">
+              <div class="hp-viz-r-url">g2.com › categories</div>
+              <div class="hp-viz-r-title">Best Payment Processing Software 2026 — G2</div>
+            </div>
+          </div>
+          <div class="hp-viz-caption">A real Google search. Your comment sits inside the top result — for years.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ WHAT YOU'LL LEARN (report preview) ═══════ -->
+  <section class="hp-sec">
+    <div class="hp-sec-in">
+      <div class="hp-sec-head">
+        <div class="hp-sec-num">03 · The reveal</div>
+        <h2 class="hp-sec-title">Things about your own market you don't know yet.</h2>
+        <p class="hp-sec-lede">Which subreddits your buyers actually trust. Which competitor gets mentioned the most. Which threads still rank on Google from 3 years ago. Free, no signup — enter your URL above.</p>
+      </div>
+      <div class="hp-report-preview">
+        <div class="hp-report-topbar">
+          <span class="hp-report-dot"></span>
+          <span class="hp-report-dot y"></span>
+          <span class="hp-report-dot g"></span>
+          <div class="hp-report-url">getflintel.com/report/preview</div>
+        </div>
+        <div class="hp-report-body">
+          <div class="hp-report-h">Your buyers gather in <b>6 subreddits</b>. Your competitors are mentioned <b>847 times</b> a month. You are mentioned <b>4 times</b>.</div>
+          <div class="hp-report-sub">This is your competitive gap, quantified. Flintel closes it in 48 hours.</div>
+          <div class="hp-report-grid">
+            <div class="hp-report-cell"><div class="hp-report-cell-l">Buyer signals detected</div><div class="hp-report-cell-v">847</div></div>
+            <div class="hp-report-cell"><div class="hp-report-cell-l">High-intent threads</div><div class="hp-report-cell-v">42</div></div>
+            <div class="hp-report-cell"><div class="hp-report-cell-l">Google page-1 posts</div><div class="hp-report-cell-v">18</div></div>
+          </div>
+          <div class="hp-report-thread">
+            <div class="hp-report-score"><span>85</span></div>
+            <div>
+              <div class="hp-report-thread-t">"Wise held $68K and closed my business account — 5 months, still no access"</div>
+              <div class="hp-report-thread-m">r/digitalnomad · Ranks #1 on Google · 8,400 searches/mo · 757 upvotes</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ COST OF WAITING ═══════ -->
+  <section class="hp-cost">
+    <div class="hp-cost-in">
+      <div class="hp-cost-head">
+        <div class="hp-sec-num on-dark">04 · The cost of waiting</div>
+        <h2 class="hp-cost-title">Reddit doesn't wait.<br><span class="hp-cost-title-alt">Your competitors don't either.</span></h2>
+        <p class="hp-cost-lede">Every day you delay, a few more high-intent threads pick up a few more comments. None of them mention you. This is what Flintel quietly closes — every day, in the background.</p>
+      </div>
+
+      <div class="hp-cost-metrics">
+        <div class="hp-cost-metric">
+          <div class="hp-cost-metric-l">Buyers Googling your category</div>
+          <div class="hp-cost-metric-v"><span id="cost-buyers">247</span><span class="hp-cost-metric-suffix">since you opened this tab</span></div>
+        </div>
+        <div class="hp-cost-divider"></div>
+        <div class="hp-cost-metric">
+          <div class="hp-cost-metric-l">Competitor mentions today</div>
+          <div class="hp-cost-metric-v"><span id="cost-threads">18</span><span class="hp-cost-metric-suffix">new Reddit comments recommending others</span></div>
+        </div>
+        <div class="hp-cost-divider"></div>
+        <div class="hp-cost-metric">
+          <div class="hp-cost-metric-l">Buyer LTV unclaimed</div>
+          <div class="hp-cost-metric-v accent"><span id="cost-lost">$3,420</span><span class="hp-cost-metric-suffix">estimated, while this page loaded</span></div>
+        </div>
+      </div>
+
+      <div class="hp-cost-cmp-eyebrow">Time to first customer contact</div>
+      <div class="hp-cost-cmp-title">Every other channel takes weeks. Flintel takes 48 hours.</div>
+      <div class="hp-cost-cmp-grid">
+        <div class="hp-cost-cmp-row">
+          <div class="hp-cost-cmp-name">Content SEO</div>
+          <div class="hp-cost-cmp-bar"><div class="hp-cost-cmp-fill" style="width:100%;"></div></div>
+          <div class="hp-cost-cmp-time">6 months</div>
+        </div>
+        <div class="hp-cost-cmp-row">
+          <div class="hp-cost-cmp-name">Cold outbound</div>
+          <div class="hp-cost-cmp-bar"><div class="hp-cost-cmp-fill" style="width:24%;"></div></div>
+          <div class="hp-cost-cmp-time">3 weeks</div>
+        </div>
+        <div class="hp-cost-cmp-row">
+          <div class="hp-cost-cmp-name">Google Ads</div>
+          <div class="hp-cost-cmp-bar"><div class="hp-cost-cmp-fill" style="width:9%;"></div></div>
+          <div class="hp-cost-cmp-time">7 days</div>
+        </div>
+        <div class="hp-cost-cmp-row hp-cost-cmp-flintel">
+          <div class="hp-cost-cmp-name">Flintel</div>
+          <div class="hp-cost-cmp-bar"><div class="hp-cost-cmp-fill lime" style="width:3%;"></div></div>
+          <div class="hp-cost-cmp-time">48 hours</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ PRICING ═══════ -->
+  <section class="hp-sec hp-sec-alt" id="pricing">
+    <div class="hp-sec-in">
+      <div class="hp-sec-head center">
+        <div class="hp-sec-num">05 · The investment</div>
+        <h2 class="hp-sec-title">One customer covers six months of Flintel.</h2>
+        <p class="hp-sec-lede">If your product's LTV is $2,000+, one Reddit placement that converts pays for a full quarter. Most customers see their first attributed signup inside week two.</p>
+      </div>
+      <div class="hp-price-grid">
+        <div class="hp-price">
+          <div class="hp-price-tier">Starter</div>
+          <div class="hp-price-num">$799<span>/mo</span></div>
+          <div class="hp-price-desc">For founders testing the Reddit channel with one product line.</div>
+          <div class="hp-price-feats">
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>5 comments placed per month</div>
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Monthly market report</div>
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>You approve before we post</div>
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Weekly performance email</div>
+          </div>
+          <button class="hp-price-cta" type="button" data-scroll-analyze>Get started</button>
+        </div>
+        <div class="hp-price featured">
+          <div class="hp-price-tag">Most chosen</div>
+          <div class="hp-price-tier">Growth</div>
+          <div class="hp-price-num">$1,999<span>/mo</span></div>
+          <div class="hp-price-desc">For teams ready to own the Reddit conversation in their category.</div>
+          <div class="hp-price-feats">
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>15 comments placed per month</div>
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Upvote boost on every comment</div>
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Competitor intelligence dashboard</div>
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>New threads added automatically</div>
+          </div>
+          <button class="hp-price-cta" type="button" data-scroll-analyze>Get started</button>
+        </div>
+        <div class="hp-price">
+          <div class="hp-price-tier">Scale</div>
+          <div class="hp-price-num">$3,999<span>/mo</span></div>
+          <div class="hp-price-desc">For companies scaling multiple products through Reddit at once.</div>
+          <div class="hp-price-feats">
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>40 comments placed per month</div>
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Weekly 30-min strategy call</div>
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Dedicated account manager</div>
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Custom keyword targeting</div>
+          </div>
+          <button class="hp-price-cta" type="button" data-scroll-analyze>Talk to sales</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════ FINAL CTA ═══════ -->
+  <section class="hp-final">
+    <div class="hp-final-in">
+      <div class="hp-final-eyebrow"><span class="hp-final-dot"></span>Your competitors already know</div>
+      <h2>See what you're missing.<br><em>In 30 seconds. Free.</em></h2>
+      <p>Every day your buyers ask Google a question about your category. Every day, the answer isn't you. Enter your URL — Flintel will show you exactly which threads you should be inside right now.</p>
+      <div class="url-box">
+        <span class="url-prefix">https://</span>
+        <input id="final-url-input" type="text" placeholder="yourwebsite.com">
+        <button id="final-url-submit" type="button">Analyze My Market</button>
+      </div>
+      <div class="hp-final-microline">
+        <span>✓ Free report</span>
+        <span>✓ No signup</span>
+        <span>✓ Ready in 30 seconds</span>
+      </div>
+    </div>
+  </section>
+
+</div><!-- /.page-frame -->
+
+<!-- ═══════ FOOTER ═══════ -->
+<footer class="hp-foot">
+  <div class="hp-foot-in">
+    <div class="hp-foot-brand">
+      <div class="hp-foot-mark">
+        <span class="hp-foot-mark-icon">F</span>
+        <span class="hp-foot-mark-name">Flintel</span>
+      </div>
+      <p class="hp-foot-tag">Flintel finds where your buyers talk on Reddit and places your product inside the conversation — done for you.</p>
+    </div>
+    <div class="hp-foot-col">
+      <h5>Product</h5>
+      <ul>
+        <li><a href="#how-it-works">How it works</a></li>
+        <li><a href="#example">Examples</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+      </ul>
+    </div>
+    <div class="hp-foot-col">
+      <h5>Company</h5>
+      <ul>
+        <li><a href="#">About</a></li>
+        <li><a href="#">Blog</a></li>
+        <li><a href="#">Contact</a></li>
+      </ul>
+    </div>
+    <div class="hp-foot-col">
+      <h5>Legal</h5>
+      <ul>
+        <li><a href="#">Privacy</a></li>
+        <li><a href="#">Terms</a></li>
+      </ul>
+    </div>
+  </div>
+  <div class="hp-foot-bottom">
+    <span>© 2026 Flintel. All rights reserved.</span>
+    <div class="hp-foot-bottom-links">
+      <a href="#">Privacy Policy</a>
+      <a href="#">Terms of Service</a>
+    </div>
+  </div>
+</footer>
 
 <script>
 (function(){
@@ -831,6 +1390,85 @@ footer{text-align:center;margin-top:56px;padding-bottom:8px;font-size:12px;color
     input.focus();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
+})();
+</script>
+
+<!-- ── Additional UI wiring for the marketing sections below. Purely
+     presentational: syncs the footer CTA input into the real form and
+     submits it; scrolls pricing buttons up to the real form. Does not
+     alter the analyze flow above in any way. ── -->
+<script>
+(function(){
+  const mainForm = document.getElementById('analyze-form');
+  const mainInput = document.getElementById('url-input');
+  const finalInput = document.getElementById('final-url-input');
+  const finalBtn = document.getElementById('final-url-submit');
+
+  function submitFromFinal(){
+    if (!finalInput.value.trim()) { finalInput.focus(); return; }
+    mainInput.value = finalInput.value.trim();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setTimeout(() => {
+      if (mainForm.requestSubmit) mainForm.requestSubmit();
+      else mainForm.dispatchEvent(new Event('submit', { cancelable: true }));
+    }, 350);
+  }
+
+  if (finalBtn && finalInput) {
+    finalBtn.addEventListener('click', submitFromFinal);
+    finalInput.addEventListener('keydown', function(e){
+      if (e.key === 'Enter') { e.preventDefault(); submitFromFinal(); }
+    });
+  }
+
+  document.querySelectorAll('[data-scroll-analyze]').forEach(function(el){
+    el.addEventListener('click', function(){
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(() => mainInput && mainInput.focus(), 400);
+    });
+  });
+})();
+</script>
+
+<!-- ── Cost-of-waiting counters — decorative only, ticks up while the
+     section is in view. Does not touch the analyze flow. ── -->
+<script>
+(function(){
+  let buyers = 247, threads = 18, lostCents = 342000; // $3,420 = 342,000 cents
+  let inView = false;
+
+  const fmt      = n     => n.toLocaleString('en-US');
+  const fmtMoney = cents => '$' + Math.floor(cents/100).toLocaleString('en-US');
+
+  function softTick(el){
+    if(!el) return;
+    el.classList.add('tick');
+    setTimeout(() => el.classList.remove('tick'), 350);
+  }
+
+  const b = () => document.getElementById('cost-buyers');
+  const t = () => document.getElementById('cost-threads');
+  const l = () => document.getElementById('cost-lost');
+
+  const section = document.querySelector('.hp-cost');
+  if (section && 'IntersectionObserver' in window) {
+    new IntersectionObserver(entries => {
+      inView = entries[0].isIntersecting;
+    }, { threshold: 0.15 }).observe(section);
+  } else {
+    inView = true;
+  }
+
+  setInterval(() => {
+    if (!inView) return;
+    buyers += Math.floor(Math.random()*3) + 1;
+    lostCents += Math.floor(Math.random()*2400) + 1200;
+    if (Math.random() < 0.22) threads += 1;
+
+    const bel = b(); if (bel) { softTick(bel); setTimeout(() => bel.textContent = fmt(buyers), 175); }
+    const tel = t(); if (tel && tel.textContent !== fmt(threads)) { softTick(tel); setTimeout(() => tel.textContent = fmt(threads), 175); }
+    const lel = l(); if (lel) { softTick(lel); setTimeout(() => lel.textContent = fmtMoney(lostCents), 175); }
+  }, 4500);
 })();
 </script>
 </body>

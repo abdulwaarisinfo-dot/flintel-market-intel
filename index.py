@@ -315,19 +315,39 @@ def _build_match_keywords(report: dict) -> list[str]:
     keywords: set[str] = set()
 
     for kw in report.get("discovery_keywords") or []:
-        if isinstance(kw, str) and len(kw.strip()) > 2:
-            keywords.add(kw.strip())
+        if isinstance(kw, str):
+            k = kw.strip()
+            if k and len(k) > 2 and k is not Ellipsis:
+                keywords.add(k)
 
     for pain in report.get("buyer_pain_points") or []:
-        if isinstance(pain, str) and len(pain.strip()) > 2:
-            keywords.add(pain.strip())
+        if isinstance(pain, str):
+            p = pain.strip()
+            if p and len(p) > 2 and p is not Ellipsis:
+                keywords.add(p)
 
     for comp in report.get("competitors") or []:
         name = (comp or {}).get("name")
-        if isinstance(name, str) and len(name.strip()) > 1:
-            keywords.add(name.strip())
+        if isinstance(name, str):
+            n = name.strip()
+            if n and len(n) > 1 and n is not Ellipsis:
+                keywords.add(n)
 
     return list(keywords)
+
+
+def _safe_str(val: object) -> str:
+    """Return a safe string for non-string / Ellipsis values."""
+    if val is None:
+        return ""
+    if val is Ellipsis:
+        return ""
+    if isinstance(val, str):
+        return val
+    try:
+        return str(val)
+    except Exception:
+        return ""
 
 
 def _serialize_signal(doc: dict) -> dict:
@@ -357,12 +377,12 @@ async def match_and_tag_signals(domain: str, url: str, report: dict) -> list[dic
 
     # Escape each keyword/phrase for safe regex use, OR them together.
     pattern = "|".join(re.escape(k) for k in keywords)
-    mongo_query = {
-        "$or": [
-            {"text": {"$regex": pattern, "$options": "i"}},
-            {"search_keyword": {"$regex": pattern, "$options": "i"}},
-        ]
-    }
+    # Search across multiple likely fields in the fx_signals docs.
+    search_fields = ["text", "search_keyword", "subreddit_or_channel", "username", "post_url"]
+    mongo_or = []
+    for f in search_fields:
+        mongo_or.append({f: {"$regex": pattern, "$options": "i"}})
+    mongo_query = {"$or": mongo_or}
 
     matched_docs: list[dict] = []
     matched_ids: list[ObjectId] = []
@@ -385,18 +405,18 @@ async def match_and_tag_signals(domain: str, url: str, report: dict) -> list[dic
     if matched_ids:
         matched_keywords_preview = keywords[:25]
         try:
+            # Store the association under both `flintel_web_data` (existing key)
+            # and `web_data` (alternate name) so downstream UIs/scripts can
+            # reference either field depending on their expectations.
+            payload = {
+                "domain": domain,
+                "url": url,
+                "matched_at": datetime.now(timezone.utc),
+                "matched_keywords": matched_keywords_preview,
+            }
             await fx_signals_collection.update_many(
                 {"_id": {"$in": matched_ids}},
-                {
-                    "$set": {
-                        "flintel_web_data": {
-                            "domain": domain,
-                            "url": url,
-                            "matched_at": datetime.now(timezone.utc),
-                            "matched_keywords": matched_keywords_preview,
-                        }
-                    }
-                },
+                {"$set": {"flintel_web_data": payload, "web_data": payload}},
             )
         except Exception as exc:
             logger.error("fx_signals tagging (update_many) failed for domain=%s: %s", domain, exc)

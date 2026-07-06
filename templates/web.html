@@ -529,6 +529,134 @@
     margin-top: 8px;
   }
 
+  /* ---------- matching signals ---------- */
+  #signals-section{
+    display:none;
+    margin-top: 32px;
+  }
+  #signals-section .section-heading{
+    display:flex;
+    align-items:baseline;
+    justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  #signals-section .section-heading h2{
+    font-family: var(--font-display);
+    font-size: 19px;
+    margin: 0;
+  }
+  #signals-section .section-heading .count-tag{
+    font-size: 13px;
+    color: var(--muted);
+  }
+  #signals-empty{
+    display:none;
+    font-size: 14px;
+    color: var(--muted);
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 16px 18px;
+  }
+
+  .signal-card{
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 20px 22px;
+    margin-bottom: 14px;
+  }
+  .signal-top{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+  }
+  .signal-source{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .signal-source .platform-chip{
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    background: var(--accent-soft);
+    color: var(--accent-indigo-dark);
+    padding: 3px 9px;
+    border-radius: var(--radius-pill);
+  }
+  .intent-badge{
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: var(--radius-pill);
+    background: var(--ink);
+    color: #fff;
+  }
+  .signal-text{
+    font-size: 14.5px;
+    line-height: 1.55;
+    color: var(--ink);
+    margin: 0 0 12px;
+  }
+  .signal-meta{
+    display:flex;
+    flex-wrap:wrap;
+    gap: 14px;
+    font-size: 12.5px;
+    color: var(--muted-2);
+    margin-bottom: 12px;
+  }
+  .signal-meta a{ color: var(--accent-indigo); font-weight: 600; }
+  .signal-meta a:hover{ text-decoration: underline; }
+
+  .reply-box{
+    background: var(--card);
+    border: 1px dashed var(--border);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+  }
+  .reply-box .reply-label{
+    display:flex;
+    align-items:center;
+    justify-content: space-between;
+    font-size: 11.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    margin-bottom: 6px;
+  }
+  .reply-box .reply-label button{
+    font-family: inherit;
+    font-size: 11.5px;
+    font-weight: 700;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-pill);
+    padding: 3px 10px;
+    cursor: pointer;
+    color: var(--ink);
+  }
+  .reply-box .reply-label button:hover{ border-color: var(--ink); }
+  .reply-box p{
+    margin: 0;
+    font-size: 13.5px;
+    line-height: 1.5;
+    color: var(--ink);
+  }
+  .reply-disclaimer{
+    font-size: 11.5px;
+    color: var(--muted-2);
+    margin-top: 8px;
+  }
+
   footer{
     text-align:center;
     margin-top: clamp(24px, 4vh, 40px);
@@ -571,7 +699,7 @@
 
     <h1>Your buyers are on Reddit,<br>talking about your competitors<br>right now.</h1>
 
-    <p class="sub">Enter your website. Flintel learns your business, identifies your best prospects, and runs outreach automatically.</p>
+    <p class="sub">Enter your website. Flintel learns your business, identifies your best prospects, and surfaces real conversations worth joining.</p>
 
     <div class="search-shell">
       <form id="analyze-form" autocomplete="off">
@@ -634,8 +762,8 @@
       <li data-step="4">
         <div class="step-marker"></div>
         <div class="step-copy">
-          <div class="title">Building your market report</div>
-          <div class="desc">Packaging everything into something you can act on</div>
+          <div class="title">Matching live conversations</div>
+          <div class="desc">Cross-checking your keywords against tracked signals</div>
         </div>
       </li>
     </ul>
@@ -692,6 +820,18 @@
     <p class="confidence" id="r-confidence"></p>
   </section>
 
+  <!-- Matching conversations pulled from the fx_signals collection -->
+  <section id="signals-section">
+    <div class="section-heading">
+      <h2>Matching conversations</h2>
+      <span class="count-tag" id="signals-count">0 found</span>
+    </div>
+    <div id="signals-empty">
+      No tracked conversations match this site's keywords yet. Signals are added continuously, so check back later.
+    </div>
+    <div id="signals-list"></div>
+  </section>
+
 </div>
 </div>
 
@@ -703,6 +843,10 @@
   const errorBanner = document.getElementById('error-banner');
   const loadingPanel = document.getElementById('loading-panel');
   const resultsSection = document.getElementById('results');
+  const signalsSection = document.getElementById('signals-section');
+  const signalsList = document.getElementById('signals-list');
+  const signalsEmpty = document.getElementById('signals-empty');
+  const signalsCount = document.getElementById('signals-count');
   const stepsList = document.getElementById('steps-list');
   const progressFill = document.getElementById('progress-fill');
   const loadingDomain = document.getElementById('loading-domain');
@@ -817,6 +961,111 @@
     confidenceEl.style.display = report.confidence_notes ? 'block' : 'none';
   }
 
+  function fmtNumber(n){
+    if (n === null || n === undefined) return null;
+    return Number(n).toLocaleString();
+  }
+
+  function buildMetaLine(signal){
+    const parts = [];
+    if (signal.subreddit_or_channel) parts.push(signal.subreddit_or_channel);
+    if (signal.google_rank !== null && signal.google_rank !== undefined) parts.push('Google rank #' + signal.google_rank);
+    if (signal.search_volume !== null && signal.search_volume !== undefined) parts.push(fmtNumber(signal.search_volume) + ' searches/mo');
+    if (signal.upvotes !== null && signal.upvotes !== undefined) parts.push(fmtNumber(signal.upvotes) + ' upvotes');
+    if (signal.comments !== null && signal.comments !== undefined) parts.push(fmtNumber(signal.comments) + ' comments');
+    return parts;
+  }
+
+  function renderSignals(signals){
+    signalsList.innerHTML = '';
+    const count = (signals || []).length;
+    signalsCount.textContent = count + (count === 1 ? ' found' : ' found');
+    signalsEmpty.style.display = count === 0 ? 'block' : 'none';
+
+    (signals || []).forEach((signal, idx) => {
+      const card = document.createElement('div');
+      card.className = 'signal-card';
+
+      const top = document.createElement('div');
+      top.className = 'signal-top';
+      const source = document.createElement('div');
+      source.className = 'signal-source';
+      const platformChip = document.createElement('span');
+      platformChip.className = 'platform-chip';
+      platformChip.textContent = signal.platform || 'unknown';
+      source.appendChild(platformChip);
+      const username = document.createElement('span');
+      username.textContent = signal.username ? ('u/' + signal.username) : '';
+      source.appendChild(username);
+      top.appendChild(source);
+
+      if (signal.intent_score !== null && signal.intent_score !== undefined) {
+        const badge = document.createElement('span');
+        badge.className = 'intent-badge';
+        badge.textContent = 'Intent ' + signal.intent_score;
+        top.appendChild(badge);
+      }
+      card.appendChild(top);
+
+      const text = document.createElement('p');
+      text.className = 'signal-text';
+      text.textContent = signal.text || '(no text)';
+      card.appendChild(text);
+
+      const meta = document.createElement('div');
+      meta.className = 'signal-meta';
+      buildMetaLine(signal).forEach(part => {
+        const span = document.createElement('span');
+        span.textContent = part;
+        meta.appendChild(span);
+      });
+      if (signal.post_url) {
+        const link = document.createElement('a');
+        link.href = signal.post_url;
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        link.textContent = 'View post ↗';
+        meta.appendChild(link);
+      }
+      card.appendChild(meta);
+
+      if (signal.reply_draft) {
+        const replyBox = document.createElement('div');
+        replyBox.className = 'reply-box';
+
+        const label = document.createElement('div');
+        label.className = 'reply-label';
+        const labelText = document.createElement('span');
+        labelText.textContent = 'Suggested draft (edit before use)';
+        const copyBtn = document.createElement('button');
+        copyBtn.type = 'button';
+        copyBtn.textContent = 'Copy';
+        copyBtn.addEventListener('click', () => {
+          navigator.clipboard.writeText(signal.reply_draft).then(() => {
+            copyBtn.textContent = 'Copied';
+            setTimeout(() => { copyBtn.textContent = 'Copy'; }, 1500);
+          });
+        });
+        label.appendChild(labelText);
+        label.appendChild(copyBtn);
+        replyBox.appendChild(label);
+
+        const replyText = document.createElement('p');
+        replyText.textContent = signal.reply_draft;
+        replyBox.appendChild(replyText);
+
+        const disclaimer = document.createElement('div');
+        disclaimer.className = 'reply-disclaimer';
+        disclaimer.textContent = 'Personalize this and disclose your affiliation where the platform or local rules require it — this is a starting point, not a script to post as-is.';
+        replyBox.appendChild(disclaimer);
+
+        card.appendChild(replyBox);
+      }
+
+      signalsList.appendChild(card);
+    });
+  }
+
   form.addEventListener('submit', async function(e){
     e.preventDefault();
     hideError();
@@ -826,6 +1075,7 @@
 
     setBusy(true);
     resultsSection.style.display = 'none';
+    signalsSection.style.display = 'none';
     loadingPanel.style.display = 'block';
     loadingDomain.textContent = rawUrl.replace(/^https?:\/\//i, '');
     resetSteps();
@@ -849,7 +1099,9 @@
       setTimeout(() => {
         loadingPanel.style.display = 'none';
         resultsSection.style.display = 'block';
+        signalsSection.style.display = 'block';
         renderReport(data.domain, data.report);
+        renderSignals(data.matched_signals);
       }, 450);
 
     } catch (err) {
@@ -863,6 +1115,7 @@
 
   againBtn.addEventListener('click', function(){
     resultsSection.style.display = 'none';
+    signalsSection.style.display = 'none';
     input.value = '';
     input.focus();
     window.scrollTo({ top: 0, behavior: 'smooth' });

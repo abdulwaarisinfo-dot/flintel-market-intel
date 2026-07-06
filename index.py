@@ -9,9 +9,12 @@ FastAPI backend that:
      returns a structured market-intelligence report: what the company
      does, who it's for, what pain points its buyers talk about, who its
      competitors are, and where to reach them.
-  4. Persists every report in MongoDB so a domain's history can be
+  4. Matches that report against the `fx_signals` collection (pre-scraped
+     social/search posts) to surface conversations relevant to this
+     specific domain, and tags the matched documents so the match sticks.
+  5. Persists every report in MongoDB so a domain's history can be
      re-fetched without re-analyzing.
-  5. Serves a single-page UI (templates/web.html) that drives the whole
+  6. Serves a single-page UI (templates/web.html) that drives the whole
      flow.
 
 Run:
@@ -29,6 +32,7 @@ from urllib.parse import urlparse
 import anthropic
 import httpx
 from bs4 import BeautifulSoup
+from bson import ObjectId
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -59,6 +63,9 @@ SECONDARY_PATHS = ["/about", "/about-us", "/product", "/products", "/pricing", "
 MAX_SITE_CHARS = 12000          # cap on scraped text sent to Claude
 REQUEST_TIMEOUT_SECONDS = 15.0
 
+# How many fx_signals documents to match & return per analysis.
+MAX_MATCHED_SIGNALS = 30
+
 if not ANTHROPIC_API_KEY:
     # Fail loudly at startup rather than on the first request.
     print("WARNING: ANTHROPIC_API_KEY is not set. /api/analyze will fail until it is.")
@@ -67,6 +74,7 @@ anthropic_client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 mongo_client = AsyncIOMotorClient(MONGODB_URI)
 db = mongo_client[MONGODB_DB_NAME]
 reports_collection = db["reports"]
+fx_signals_collection = db["fx_signals"]  # pre-scraped social/search posts, matched per domain
 
 app = FastAPI(title="Flintel — Website Market Intelligence", version="1.0.0")
 templates = Jinja2Templates(directory="templates")
@@ -288,6 +296,115 @@ Analyze this site and return the market-intelligence report as JSON only, follow
 
 
 # --------------------------------------------------------------------------
+# fx_signals matching
+# --------------------------------------------------------------------------
+# `fx_signals` is a separately-populated collection of scraped social/search
+# posts (Reddit, forums, etc.) with fields like:
+#   message_id, platform, post_url, text, username, subreddit_or_channel,
+#   posted_at, google_rank, search_volume, upvotes, comments, search_keyword,
+#   intent_score, is_relevant, reply_draft, status
+#
+# After a site is analyzed, we build a keyword set from that report
+# (discovery keywords, pain-point phrases, competitor names) and look for
+# fx_signals documents whose `text` or `search_keyword` mentions any of them.
+# Matches get tagged with a `flintel_web_data` sub-object so the association
+# between a signal and a domain persists in the collection itself, and so a
+# signal already matched to one domain can still be found for another.
+
+def _build_match_keywords(report: dict) -> list[str]:
+    keywords: set[str] = set()
+
+    for kw in report.get("discovery_keywords") or []:
+        if isinstance(kw, str) and len(kw.strip()) > 2:
+            keywords.add(kw.strip())
+
+    for pain in report.get("buyer_pain_points") or []:
+        if isinstance(pain, str) and len(pain.strip()) > 2:
+            keywords.add(pain.strip())
+
+    for comp in report.get("competitors") or []:
+        name = (comp or {}).get("name")
+        if isinstance(name, str) and len(name.strip()) > 1:
+            keywords.add(name.strip())
+
+    return list(keywords)
+
+
+def _serialize_signal(doc: dict) -> dict:
+    """Make a fx_signals doc JSON-safe (ObjectId / datetime -> str)."""
+    doc = dict(doc)
+    if "_id" in doc:
+        doc["_id"] = str(doc["_id"])
+    for key in ("posted_at",):
+        val = doc.get(key)
+        if isinstance(val, datetime):
+            doc[key] = val.isoformat()
+    fwd = doc.get("flintel_web_data")
+    if isinstance(fwd, dict) and isinstance(fwd.get("matched_at"), datetime):
+        fwd["matched_at"] = fwd["matched_at"].isoformat()
+    return doc
+
+
+async def match_and_tag_signals(domain: str, url: str, report: dict) -> list[dict]:
+    """
+    Find fx_signals documents relevant to this domain's report, tag them with
+    flintel_web_data (so the match persists in the collection), and return the
+    matched documents for display.
+    """
+    keywords = _build_match_keywords(report)
+    if not keywords:
+        return []
+
+    # Escape each keyword/phrase for safe regex use, OR them together.
+    pattern = "|".join(re.escape(k) for k in keywords)
+    mongo_query = {
+        "$or": [
+            {"text": {"$regex": pattern, "$options": "i"}},
+            {"search_keyword": {"$regex": pattern, "$options": "i"}},
+        ]
+    }
+
+    matched_docs: list[dict] = []
+    matched_ids: list[ObjectId] = []
+
+    try:
+        cursor = (
+            fx_signals_collection.find(mongo_query)
+            .sort("intent_score", -1)
+            .limit(MAX_MATCHED_SIGNALS)
+        )
+        async for doc in cursor:
+            matched_ids.append(doc["_id"])
+            matched_docs.append(_serialize_signal(doc))
+    except Exception as exc:
+        # A missing/misconfigured fx_signals collection shouldn't break the
+        # main analysis flow — the site report is still useful on its own.
+        logger.error("fx_signals lookup failed for domain=%s: %s", domain, exc)
+        return []
+
+    if matched_ids:
+        matched_keywords_preview = keywords[:25]
+        try:
+            await fx_signals_collection.update_many(
+                {"_id": {"$in": matched_ids}},
+                {
+                    "$set": {
+                        "flintel_web_data": {
+                            "domain": domain,
+                            "url": url,
+                            "matched_at": datetime.now(timezone.utc),
+                            "matched_keywords": matched_keywords_preview,
+                        }
+                    }
+                },
+            )
+        except Exception as exc:
+            logger.error("fx_signals tagging (update_many) failed for domain=%s: %s", domain, exc)
+
+    return matched_docs
+
+
+# --------------------------------------------------------------------------
 # Routes
 # --------------------------------------------------------------------------
 
@@ -324,7 +441,19 @@ async def analyze(payload: AnalyzeRequest):
         # but log it loudly so a broken DB connection doesn't go unnoticed.
         logger.error("MongoDB insert_one failed for domain=%s: %s", domain, exc)
 
-    return JSONResponse({"id": report_id, "domain": domain, "url": url, "report": report})
+    # Cross-reference against previously scraped fx_signals posts so the user
+    # sees which real conversations line up with this specific business.
+    matched_signals = await match_and_tag_signals(domain, url, report)
+
+    return JSONResponse(
+        {
+            "id": report_id,
+            "domain": domain,
+            "url": url,
+            "report": report,
+            "matched_signals": matched_signals,
+        }
+    )
 
 
 @app.get("/api/reports/{domain}")
@@ -336,6 +465,22 @@ async def get_reports(domain: str):
         doc["created_at"] = doc["created_at"].isoformat()
         reports.append(doc)
     return JSONResponse({"domain": domain, "reports": reports})
+
+
+@app.get("/api/signals/{domain}")
+async def get_signals(domain: str):
+    """
+    Re-fetch whatever fx_signals documents are currently tagged as matching
+    this domain (i.e. flintel_web_data.domain == domain), without re-running
+    the analysis or the matching query.
+    """
+    cursor = (
+        fx_signals_collection.find({"flintel_web_data.domain": domain})
+        .sort("intent_score", -1)
+        .limit(MAX_MATCHED_SIGNALS)
+    )
+    signals = [_serialize_signal(doc) async for doc in cursor]
+    return JSONResponse({"domain": domain, "signals": signals})
 
 
 @app.get("/api/health")

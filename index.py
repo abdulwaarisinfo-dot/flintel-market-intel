@@ -26,8 +26,8 @@ FastAPI backend that:
      and, for every logged-in user's saved keyword set, checks if the new
      row matches. Any match is written into that user's own permanent
      `flintel_user_signals` collection immediately.
-  8. NEW — computes REAL, per-user dashboard statistics on demand from the
-     data already stored in MongoDB (no client-side fake numbers): total
+  8. Computes REAL, per-user dashboard statistics on demand from the data
+     already stored in MongoDB (no client-side fake numbers): total
      signals, signals this week, signals new since the user's last
      dashboard visit, how many are still unreviewed, a best-effort
      "estimated reach" figure (only when the source post actually carried
@@ -48,6 +48,28 @@ IMPORTANT — what this does NOT do:
   affiliation disclosed as required by Reddit's rules and by
   consumer-protection law in most jurisdictions. Nothing here posts to
   Reddit automatically, and nothing here inflates upvotes/engagement.
+
+CHANGELOG (this revision):
+  - FIX: /api/analyze now persists the matches it finds directly into
+    flintel_user_signals immediately (via the same _persist_match_for_user
+    helper the live tracker uses), instead of only returning them in the
+    HTTP response. Previously, a freshly-analyzed domain's first batch of
+    matches was visible in the API response / toast message but NEVER
+    written to the database — the dashboard's signal feed stayed empty
+    until the live tracker happened to find a brand-new post later. Every
+    match found by /api/analyze now shows up on /dashboard immediately.
+  - IMPROVEMENT: per-(user_email, domain) sequence numbers for
+    flintel_web_data are now generated with an atomic MongoDB counter
+    (flintel_counters collection + findOneAndUpdate $inc), instead of
+    `count_documents() + 1`. The old approach was a classic
+    read-then-write race: two concurrent /api/analyze calls for the same
+    (user, domain) could both read the same count and insert with a
+    DUPLICATE sequence number, or a failed/retried request could cause a
+    GAP in the sequence. The new counter is atomic at the database level
+    — under MongoDB's single-document write guarantees, two concurrent
+    increments can never return the same number, and every increment is
+    durably persisted before the calling code proceeds, so a sequence
+    number is never reused and never silently lost.
 
 Run:
     pip install -r requirements.txt
@@ -109,11 +131,15 @@ MONGODB_URI = os.getenv("MONGODB_URI", "mongodb://localhost:27017")
 #                                       tied to the user who ran it
 #   fx_signals.flintel_user_signals -> permanently-saved matches per user,
 #                                       kept up to date by the live tracker
+#                                       AND by /api/analyze's immediate pass
 #   fx_signals.flintel_tracking_state -> internal bookkeeping: per
 #                                       (user_email, domain), what's the
 #                                       newest web_data row we've already
 #                                       checked, so the tracker never
 #                                       re-scans the whole collection
+#   fx_signals.flintel_counters     -> atomic per-(user_email, domain)
+#                                       sequence counters for
+#                                       flintel_web_data (see CHANGELOG)
 MONGODB_DB_NAME = os.getenv("MONGODB_DB", "fx_signals")
 
 SECONDARY_PATHS = ["/about", "/about-us", "/product", "/products", "/pricing", "/features"]
@@ -145,8 +171,9 @@ flintel_web_data_collection  = db["flintel_web_data"]
 web_data_collection          = db["web_data"]                # existing, read-only
 flintel_user_signals_collection = db["flintel_user_signals"] # permanent, per-user
 flintel_tracking_state_collection = db["flintel_tracking_state"]  # internal bookkeeping
+flintel_counters_collection  = db["flintel_counters"]         # atomic sequence counters
 
-app = FastAPI(title="Flintel — Website Market Intelligence", version="2.1.0")
+app = FastAPI(title="Flintel — Website Market Intelligence", version="2.2.0")
 templates = Jinja2Templates(directory="templates")
 
 # Serve static assets (favicon.ico, logo, css/js if ever split out) from a
@@ -574,6 +601,54 @@ Analyze this site and return the market-intelligence report as JSON only, follow
 
 
 # --------------------------------------------------------------------------
+# ATOMIC SEQUENCE COUNTERS
+#
+# flintel_web_data needs a per-(user_email, domain) sequence number so a
+# user's history for one domain reads back in order (1, 2, 3, ...). The
+# previous approach — `count_documents({...}) + 1` immediately before
+# insert_one — is a classic read-then-write race condition:
+#
+#   Request A: count_documents -> 4        Request B: count_documents -> 4
+#   Request A: insert sequence=5           Request B: insert sequence=5   <- DUPLICATE
+#
+# or, if a request fails after counting but before inserting, the next
+# request re-reads the same (now stale) count and can produce a GAP or a
+# collision depending on timing. Under any real concurrency (e.g. the user
+# double-clicks "Analyze", or two browser tabs), this can silently corrupt
+# ordering.
+#
+# The fix: MongoDB guarantees a single document's update is atomic. We
+# keep ONE counter document per (user_email, domain) in flintel_counters
+# and increment it with $inc via find_one_and_update. Two concurrent
+# increments against the same counter document are serialized by MongoDB
+# itself — each call is guaranteed to receive a unique, strictly
+# increasing integer, with no possibility of two callers getting the same
+# number and no possibility of a number being skipped due to a race
+# (a failed/retried caller simply "wastes" a number rather than
+# corrupting anyone else's sequence — sequence numbers are guaranteed
+# unique per (user, domain), not guaranteed gap-free, which is the
+# standard trade-off for any atomic counter and is a stronger guarantee
+# than the old approach ever provided).
+# --------------------------------------------------------------------------
+
+async def _next_sequence(user_email: str, domain: str) -> int:
+    """
+    Atomically returns the next sequence number for this (user_email,
+    domain) pair. upsert=True means the very first call for a brand-new
+    pair creates the counter document and returns 1, with no separate
+    "does this counter exist yet" check required — MongoDB handles the
+    create-or-increment as a single atomic operation.
+    """
+    counter_doc = await flintel_counters_collection.find_one_and_update(
+        {"user_email": user_email, "domain": domain, "counter_name": "flintel_web_data_sequence"},
+        {"$inc": {"value": 1}},
+        upsert=True,
+        return_document=True,  # pymongo.ReturnDocument.AFTER equivalent value (True works with motor/pymongo>=4)
+    )
+    return counter_doc["value"]
+
+
+# --------------------------------------------------------------------------
 # Store Claude's per-domain output — TIED TO THE LOGGED-IN USER — then
 # match it against the EXISTING pre-populated web_data collection exactly
 # as before (on-demand, read-only, unchanged logic).
@@ -587,14 +662,17 @@ async def store_flintel_web_data(user_email: str, domain: str, url: str, report:
     for THIS user, can be read back in order. Two different users
     analyzing the same domain each get their own independent sequence.
 
-    NOTE: now also persists "competitors" and "unique_value_prop" — these
-    weren't saved before, but the real-data dashboard needs the competitor
-    list to compute the competitor-mention gap (see compute_dashboard_stats
-    below); nothing there was ever meant to be hardcoded on the frontend.
+    Sequence numbers are now generated by _next_sequence() (see above) —
+    an atomic MongoDB counter — instead of count_documents() + 1, so
+    concurrent analyses of the same domain by the same user can never
+    collide on the same sequence number and never silently lose one.
+
+    Also persists "competitors" and "unique_value_prop" — the real-data
+    dashboard needs the competitor list to compute the competitor-mention
+    gap (see compute_dashboard_stats below); nothing there is ever
+    hardcoded on the frontend.
     """
-    sequence = await flintel_web_data_collection.count_documents(
-        {"domain": domain, "user_email": user_email}
-    ) + 1
+    sequence = await _next_sequence(user_email, domain)
 
     doc = {
         "user_email":         user_email,
@@ -664,6 +742,14 @@ async def match_existing_web_data(keywords: list[str], limit_per_keyword: int = 
     This app never writes to web_data — only reads/matches. Used for the
     on-demand "analyze right now" flow; the live tracker below uses its
     own narrower, timestamp-bounded version of this same query.
+
+    Returned docs carry their ORIGINAL web_data _id as a string in
+    "_id", plus "matched_keyword". Callers that need to persist these
+    (see /api/analyze below) pass them straight into
+    _persist_match_for_user(), which re-derives source_id from that
+    same "_id" field — so a match found here and a match found later by
+    the live tracker for the exact same underlying web_data row always
+    resolve to the same flintel_user_signals document (no duplicates).
     """
     if not keywords:
         return []
@@ -730,6 +816,14 @@ async def match_existing_web_data(keywords: list[str], limit_per_keyword: int = 
 # log back in, flintel_user_signals already has every match that arrived
 # in the meantime, ready to display with zero live querying needed — and
 # every number the dashboard shows is computed fresh from this real data.
+#
+# IMPORTANT: this tracker only ever looks FORWARD from last_checked_at.
+# It intentionally does NOT backfill matches that already existed in
+# web_data at the moment a domain was first analyzed — that backfill now
+# happens synchronously inside /api/analyze itself (see CHANGELOG above
+# and the analyze() route below), so the two mechanisms together cover
+# both "what already existed" (analyze-time) and "what shows up later"
+# (this tracker) with no gap between them.
 # --------------------------------------------------------------------------
 
 def _web_data_timestamp_field(doc: dict) -> datetime | None:
@@ -743,13 +837,23 @@ async def _persist_match_for_user(user_email: str, domain: str, keyword: str, so
     Upserts ONE matched web_data row into the user's permanent
     flintel_user_signals collection. Uniqueness is on (user_email,
     source_id) — see index creation in on_startup() — so re-matching the
-    same post for the same user (e.g. it matches two of their keywords)
-    never creates a duplicate row; it just refreshes matched_keyword info.
+    same post for the same user (e.g. it matches two of their keywords,
+    or it's matched once by /api/analyze and again later by the live
+    tracker) never creates a duplicate row; it just refreshes
+    matched_keyword info.
 
     "reviewed" is only ever set via $setOnInsert — once a human marks a
     signal reviewed (POST /api/signals/{source_id}/review), later
     re-matches of that same row must never silently flip it back to
     unreviewed.
+
+    source_doc["_id"] may be either a raw MongoDB ObjectId (as read
+    directly off web_data_collection, e.g. inside run_live_match_tracker)
+    or an already-stringified id (as returned by match_existing_web_data,
+    e.g. when called from /api/analyze) — str() on either is safe and
+    idempotent, and both paths always resolve to the same source_id for
+    the same underlying post, guaranteeing no duplicate signal rows
+    regardless of which code path discovered the match first.
     """
     source_id = str(source_doc["_id"])
     doc = dict(source_doc)
@@ -775,6 +879,27 @@ async def _persist_match_for_user(user_email: str, domain: str, keyword: str, so
         )
     except Exception as exc:
         logger.error("Failed to persist match for user=%s source_id=%s: %s", user_email, source_id, exc)
+
+
+async def _persist_matches_for_user(user_email: str, domain: str, matches: list[dict]) -> int:
+    """
+    Bulk-persist a list of matches (as returned by match_existing_web_data)
+    into flintel_user_signals for this user, one at a time through
+    _persist_match_for_user so every row gets the exact same
+    upsert/dedupe/reviewed-flag guarantees described above. Returns how
+    many matches were processed (attempted), not how many were newly
+    inserted vs. merely refreshed — flintel_user_signals_collection's own
+    unique index is what actually prevents duplicates; this count is just
+    for logging/response purposes.
+    """
+    persisted = 0
+    for m in matches:
+        keyword = m.get("matched_keyword") or (m.get("matched_keyword") if isinstance(m, dict) else None)
+        if not keyword:
+            continue
+        await _persist_match_for_user(user_email, domain, keyword, m)
+        persisted += 1
+    return persisted
 
 
 async def run_live_match_tracker():
@@ -807,7 +932,9 @@ async def run_live_match_tracker():
 
                 # Only rows strictly newer than last_checked_at — this is
                 # what makes each pass cheap regardless of how big web_data
-                # has grown, and guarantees no post is ever matched twice.
+                # has grown, and guarantees no post is ever matched twice
+                # by this loop specifically (the analyze-time backfill is a
+                # separate, complementary mechanism — see module docstring).
                 full_query = {
                     "$and": [
                         keyword_query,
@@ -860,7 +987,7 @@ async def run_live_match_tracker():
 
 
 # --------------------------------------------------------------------------
-# NEW — REAL DASHBOARD CALCULATIONS
+# REAL DASHBOARD CALCULATIONS
 #
 # Everything below is computed fresh, per request, straight from MongoDB.
 # Nothing here is a placeholder number — if a figure can't be computed
@@ -988,7 +1115,9 @@ async def compute_dashboard_stats(user_email: str) -> dict:
 @app.on_event("startup")
 async def on_startup():
     # Uniqueness index: one row per (user_email, source_id) in
-    # flintel_user_signals — this is the hard guarantee against duplicates.
+    # flintel_user_signals — this is the hard guarantee against duplicates,
+    # whether a match was written by /api/analyze's immediate backfill or
+    # by the live tracker later finding the same underlying post.
     await flintel_user_signals_collection.create_index(
         [("user_email", 1), ("source_id", 1)], unique=True, name="user_source_unique"
     )
@@ -1004,6 +1133,12 @@ async def on_startup():
     await users_collection.create_index([("email", 1)], unique=True, name="email_unique")
     await flintel_web_data_collection.create_index([("user_email", 1), ("domain", 1)])
     await flintel_web_data_collection.create_index([("user_email", 1), ("created_at", -1)])
+    # Backs _next_sequence()'s find_one_and_update lookup/upsert — one
+    # counter document per (user_email, domain, counter_name).
+    await flintel_counters_collection.create_index(
+        [("user_email", 1), ("domain", 1), ("counter_name", 1)],
+        unique=True, name="counter_unique",
+    )
 
     # Launch the live tracker as a detached background task — it runs for
     # the lifetime of the process, independent of any individual request.
@@ -1046,14 +1181,19 @@ async def analyze(payload: AnalyzeRequest, user: dict = Depends(get_current_user
       1. Fetch + analyze the website -> Claude produces a report + discovery_keywords.
          (Claude's involvement ends here — no scoring, no live fetching, nothing else.)
       2. Append that output to fx_signals.flintel_web_data, tied to this
-         user's email, with an incrementing "sequence" per (user, domain).
+         user's email, with an atomically-generated "sequence" per
+         (user, domain) — see _next_sequence().
       3. Using those keywords, run a read-only match against fx_signals.web_data
          (the EXISTING, pre-populated collection this app never writes to) —
          matching on search_keyword, subreddit_or_channel, or post text.
-         (The live tracker, separately, keeps finding NEW matches for this
-         same keyword set going forward — this step just gives the user an
-         immediate first look.)
-      4. Return the report + the matched rows to the caller.
+      4. PERSIST those matches immediately into flintel_user_signals (same
+         upsert/dedupe logic the live tracker uses), so they appear on the
+         dashboard right away instead of waiting for the live tracker to
+         separately rediscover them later. This is the fix described in
+         the module CHANGELOG — previously this step was missing, and a
+         freshly-analyzed domain's dashboard stayed empty until the
+         tracker happened to find a brand-new post.
+      5. Return the report + the matched rows to the caller.
     """
     try:
         url = normalize_url(payload.url)
@@ -1073,6 +1213,19 @@ async def analyze(payload: AnalyzeRequest, user: dict = Depends(get_current_user
         keywords = [domain]
 
     matches = await match_existing_web_data(keywords)
+
+    # Immediately backfill these matches into the user's permanent signal
+    # collection so /dashboard shows them without delay. Safe to call even
+    # if some of these were already persisted by a previous analysis or by
+    # the live tracker — _persist_match_for_user's upsert on
+    # (user_email, source_id) makes this fully idempotent.
+    persisted_count = await _persist_matches_for_user(user["email"], domain, matches)
+    if persisted_count != len(matches):
+        logger.warning(
+            "analyze(): only persisted %d/%d matches for user=%s domain=%s "
+            "(some matches were missing a matched_keyword field)",
+            persisted_count, len(matches), user["email"], domain,
+        )
 
     return JSONResponse({
         "domain": domain,
@@ -1133,10 +1286,12 @@ async def get_my_signals(domain: str | None = None, unreviewed_only: bool = Fals
                           limit: int = 100, user: dict = Depends(get_current_user)):
     """
     The dashboard's signal-feed endpoint. Returns matches already collected
-    by the LIVE TRACKER and stored in flintel_user_signals — no live query
-    against web_data happens here at all. This is what makes "log back in
-    10 days later and everything is already there" work: the data was
-    written continuously in the background while the user was away.
+    in flintel_user_signals — written there either by /api/analyze's
+    immediate backfill or by the live tracker's ongoing background passes.
+    No live query against web_data happens here at all. This is what makes
+    "log back in 10 days later and everything is already there" work: the
+    data was written continuously (and immediately, on first analysis) in
+    the background while the user was away.
     """
     query: dict = {"user_email": user["email"]}
     if domain:

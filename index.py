@@ -21,23 +21,33 @@ FastAPI backend that:
      TIED TO THE LOGGED-IN USER'S EMAIL — so if the user logs back in 10
      days later, all of their domains and all of their matches are still
      there, nothing is lost, nothing needs to be re-analyzed.
-  7. NEW — runs a continuous background loop (independent of any user
-     being online) that watches the `web_data` collection for genuinely
-     NEW rows and, for every logged-in user's saved keyword set, checks
-     if the new row matches. Any match is written into that user's own
-     permanent `flintel_user_signals` collection immediately — so by the
-     time a user logs back in, their dashboard is already up to date,
-     with zero live querying needed at page-load time.
-  8. Serves a single-page UI (templates/web.html) that drives the whole
-     flow.
+  7. Runs a continuous background loop (independent of any user being
+     online) that watches the `web_data` collection for genuinely NEW rows
+     and, for every logged-in user's saved keyword set, checks if the new
+     row matches. Any match is written into that user's own permanent
+     `flintel_user_signals` collection immediately.
+  8. NEW — computes REAL, per-user dashboard statistics on demand from the
+     data already stored in MongoDB (no client-side fake numbers): total
+     signals, signals this week, signals new since the user's last
+     dashboard visit, how many are still unreviewed, a best-effort
+     "estimated reach" figure (only when the source post actually carried
+     an engagement field), the single highest-engagement thread, and a
+     competitor-mention gap computed against the competitor list from the
+     user's own most recent report.
+  9. Serves the marketing/report flow at "/" (templates/web.html) and the
+     logged-in dashboard at "/dashboard" (templates/dashboard.html), the
+     latter populated entirely from /api/dashboard-stats + /api/my-signals
+     — never from hardcoded numbers.
 
 IMPORTANT — what this does NOT do:
   This backend does not generate ready-to-post replies meant to look like
-  organic, undisclosed endorsements. For each matched Reddit post it stores
-  a set of internal "suggested_talking_points" — notes a human on your team
-  can read and use to write their OWN reply, with their affiliation
-  disclosed as required by Reddit's rules and by consumer-protection law in
-  most jurisdictions. Nothing here posts to Reddit automatically.
+  organic, undisclosed endorsements, and it does not automate posting or
+  vote/engagement manipulation of any kind. For each matched Reddit post
+  it stores a set of internal "suggested_talking_points" — notes a human
+  on your team can read and use to write their OWN reply, with their
+  affiliation disclosed as required by Reddit's rules and by
+  consumer-protection law in most jurisdictions. Nothing here posts to
+  Reddit automatically, and nothing here inflates upvotes/engagement.
 
 Run:
     pip install -r requirements.txt
@@ -56,7 +66,7 @@ import logging
 import os
 import re
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from urllib.parse import urlparse
 
 import anthropic
@@ -118,6 +128,10 @@ MAX_KEYWORDS_TO_MATCH = 6
 # rows and match them against every user's saved keywords.
 LIVE_TRACKER_INTERVAL_SECONDS = int(os.getenv("LIVE_TRACKER_INTERVAL_SECONDS", "120"))
 
+# How many of a user's most recent competitors (from their latest report)
+# to compute mention-volume stats for on the dashboard.
+MAX_COMPETITORS_FOR_GAP = 5
+
 if not ANTHROPIC_API_KEY:
     # Fail loudly at startup rather than on the first request.
     print("WARNING: ANTHROPIC_API_KEY is not set. /api/analyze will fail until it is.")
@@ -129,10 +143,10 @@ db = mongo_client[MONGODB_DB_NAME]
 users_collection             = db["users"]
 flintel_web_data_collection  = db["flintel_web_data"]
 web_data_collection          = db["web_data"]                # existing, read-only
-flintel_user_signals_collection = db["flintel_user_signals"] # NEW — permanent, per-user
-flintel_tracking_state_collection = db["flintel_tracking_state"]  # NEW — internal bookkeeping
+flintel_user_signals_collection = db["flintel_user_signals"] # permanent, per-user
+flintel_tracking_state_collection = db["flintel_tracking_state"]  # internal bookkeeping
 
-app = FastAPI(title="Flintel — Website Market Intelligence", version="2.0.0")
+app = FastAPI(title="Flintel — Website Market Intelligence", version="2.1.0")
 templates = Jinja2Templates(directory="templates")
 
 # Serve static assets (favicon.ico, logo, css/js if ever split out) from a
@@ -226,7 +240,10 @@ async def get_current_user(request: Request) -> dict:
     """
     Reads the signed session cookie for a user_email, then loads the full
     user document from MongoDB. Raises 401 if nobody is logged in. Use as
-    a FastAPI dependency on any route that requires a logged-in user.
+    a FastAPI dependency on any JSON API route that requires a logged-in
+    user. For HTML page routes, use get_current_user_optional instead and
+    redirect manually (see /dashboard below) — a raised 401 there would
+    just show an ugly error page instead of sending the user to log in.
     """
     email = request.session.get("user_email")
     if not email:
@@ -277,6 +294,7 @@ async def _find_or_create_google_user(email: str, name: str, google_id: str) -> 
         "google_id": google_id,
         "password_hash": None,
         "created_at": now,
+        "last_dashboard_view_at": None,
     }
     result = await users_collection.insert_one(doc)
     doc["_id"] = result.inserted_id
@@ -317,7 +335,7 @@ async def google_callback(request: Request):
     # This is the entire "login" step: put the email in the signed session
     # cookie. Every other route just reads this back via get_current_user().
     request.session["user_email"] = email
-    return RedirectResponse(url="/")
+    return RedirectResponse(url="/dashboard")
 
 
 @app.post("/auth/signup")
@@ -333,6 +351,7 @@ async def signup(payload: SignupRequest, request: Request):
         "google_id": None,
         "password_hash": hash_password(payload.password),
         "created_at": datetime.now(timezone.utc),
+        "last_dashboard_view_at": None,
     }
     await users_collection.insert_one(doc)
     request.session["user_email"] = payload.email
@@ -555,7 +574,7 @@ Analyze this site and return the market-intelligence report as JSON only, follow
 
 
 # --------------------------------------------------------------------------
-# Store Claude's per-domain output — NOW TIED TO THE LOGGED-IN USER — then
+# Store Claude's per-domain output — TIED TO THE LOGGED-IN USER — then
 # match it against the EXISTING pre-populated web_data collection exactly
 # as before (on-demand, read-only, unchanged logic).
 # --------------------------------------------------------------------------
@@ -567,6 +586,11 @@ async def store_flintel_web_data(user_email: str, domain: str, url: str, report:
     sequence number PER (user_email, domain) — so history for a domain,
     for THIS user, can be read back in order. Two different users
     analyzing the same domain each get their own independent sequence.
+
+    NOTE: now also persists "competitors" and "unique_value_prop" — these
+    weren't saved before, but the real-data dashboard needs the competitor
+    list to compute the competitor-mention gap (see compute_dashboard_stats
+    below); nothing there was ever meant to be hardcoded on the frontend.
     """
     sequence = await flintel_web_data_collection.count_documents(
         {"domain": domain, "user_email": user_email}
@@ -580,6 +604,8 @@ async def store_flintel_web_data(user_email: str, domain: str, url: str, report:
         "discovery_keywords": report.get("discovery_keywords") or [],
         "company_summary":    report.get("company_summary", ""),
         "buyer_pain_points":  report.get("buyer_pain_points", []),
+        "competitors":        report.get("competitors") or [],
+        "unique_value_prop":  report.get("unique_value_prop", ""),
         "created_at":         datetime.now(timezone.utc),
     }
     try:
@@ -675,7 +701,7 @@ async def match_existing_web_data(keywords: list[str], limit_per_keyword: int = 
 
 
 # --------------------------------------------------------------------------
-# NEW — LIVE BACKGROUND TRACKER
+# LIVE BACKGROUND TRACKER
 #
 # Runs forever, independent of any user being logged in or any page being
 # open. Every LIVE_TRACKER_INTERVAL_SECONDS it:
@@ -692,18 +718,18 @@ async def match_existing_web_data(keywords: list[str], limit_per_keyword: int = 
 #   3. Any match found is upserted into flintel_user_signals, keyed by
 #      (user_email, source web_data _id) so the SAME underlying post is
 #      never duplicated for the same user even if it matches multiple
-#      keywords or the tracker somehow sees it twice.
+#      keywords or the tracker somehow sees it twice. New rows are created
+#      with reviewed=False (via $setOnInsert) so a human knows what's new;
+#      re-matching an already-seen row never resets that flag back to
+#      unreviewed.
 #
 #   4. Advances last_checked_at for that pair to "now" once done, so the
-#      NEXT pass only ever looks at what's newly arrived since this pass —
-#      this fully replaces having to re-scan the whole web_data collection
-#      every time, exactly the same fetch-once-forward principle used by
-#      the SERP discovery cache in the separate worker service.
+#      NEXT pass only ever looks at what's newly arrived since this pass.
 #
 # Net effect: a user can close their laptop entirely, and by the time they
-# log back in — an hour, a day, or 10 days later — flintel_user_signals
-# already has every match that arrived in the meantime, ready to display
-# with zero live querying needed.
+# log back in, flintel_user_signals already has every match that arrived
+# in the meantime, ready to display with zero live querying needed — and
+# every number the dashboard shows is computed fresh from this real data.
 # --------------------------------------------------------------------------
 
 def _web_data_timestamp_field(doc: dict) -> datetime | None:
@@ -718,7 +744,12 @@ async def _persist_match_for_user(user_email: str, domain: str, keyword: str, so
     flintel_user_signals collection. Uniqueness is on (user_email,
     source_id) — see index creation in on_startup() — so re-matching the
     same post for the same user (e.g. it matches two of their keywords)
-    never creates a duplicate row; it just updates matched_keyword info.
+    never creates a duplicate row; it just refreshes matched_keyword info.
+
+    "reviewed" is only ever set via $setOnInsert — once a human marks a
+    signal reviewed (POST /api/signals/{source_id}/review), later
+    re-matches of that same row must never silently flip it back to
+    unreviewed.
     """
     source_id = str(source_doc["_id"])
     doc = dict(source_doc)
@@ -736,7 +767,10 @@ async def _persist_match_for_user(user_email: str, domain: str, keyword: str, so
     try:
         await flintel_user_signals_collection.update_one(
             {"user_email": user_email, "source_id": source_id},
-            {"$set": doc},
+            {
+                "$set": doc,
+                "$setOnInsert": {"reviewed": False, "first_matched_at": datetime.now(timezone.utc)},
+            },
             upsert=True,
         )
     except Exception as exc:
@@ -825,6 +859,132 @@ async def run_live_match_tracker():
         await asyncio.sleep(LIVE_TRACKER_INTERVAL_SECONDS)
 
 
+# --------------------------------------------------------------------------
+# NEW — REAL DASHBOARD CALCULATIONS
+#
+# Everything below is computed fresh, per request, straight from MongoDB.
+# Nothing here is a placeholder number — if a figure can't be computed
+# honestly from stored data (e.g. there's no engagement field on a given
+# source post), it's simply omitted/zero rather than faked.
+# --------------------------------------------------------------------------
+
+def _engagement_score(doc: dict) -> float:
+    """
+    Best-effort "how much engagement did this post have" figure, pulled
+    from whatever field the separate worker service actually populated.
+    Returns 0 if none of the known fields are present — never invented.
+    """
+    for field in ("upvotes", "score", "ups", "num_upvotes"):
+        val = doc.get(field)
+        if isinstance(val, (int, float)):
+            return float(val)
+    return 0.0
+
+
+def _serialize_signal(doc: dict) -> dict:
+    """Strip Mongo-native types down to JSON-safe values for one signal doc."""
+    doc = dict(doc)
+    doc.pop("_id", None)
+    for f in ("posted_at", "fetched_at", "created_at", "matched_at", "first_matched_at", "reviewed_at"):
+        if isinstance(doc.get(f), datetime):
+            doc[f] = doc[f].isoformat()
+    return doc
+
+
+async def compute_dashboard_stats(user_email: str) -> dict:
+    """
+    Returns the real numbers behind every dashboard metric card, computed
+    from flintel_user_signals + the user's latest flintel_web_data report.
+
+    "new_since_last_visit" is measured against the timestamp of the user's
+    PREVIOUS call to this function, which is then atomically advanced to
+    now — so it behaves like a proper "what's new since I last checked"
+    counter rather than a fixed rolling window.
+    """
+    now = datetime.now(timezone.utc)
+    week_ago = now - timedelta(days=7)
+
+    # Read-then-advance the "last dashboard view" marker atomically.
+    user_doc = await users_collection.find_one_and_update(
+        {"email": user_email},
+        {"$set": {"last_dashboard_view_at": now}},
+    )
+    last_view = (user_doc or {}).get("last_dashboard_view_at") or (now - timedelta(days=3650))
+    if isinstance(last_view, str):
+        # Defensive: tolerate a string timestamp if one ever sneaks in.
+        try:
+            last_view = datetime.fromisoformat(last_view)
+        except ValueError:
+            last_view = now - timedelta(days=3650)
+
+    signals_filter = {"user_email": user_email}
+
+    signals_total = await flintel_user_signals_collection.count_documents(signals_filter)
+    signals_this_week = await flintel_user_signals_collection.count_documents(
+        {**signals_filter, "matched_at": {"$gte": week_ago}}
+    )
+    new_since_last_visit = await flintel_user_signals_collection.count_documents(
+        {**signals_filter, "matched_at": {"$gte": last_view}}
+    )
+    unreviewed_count = await flintel_user_signals_collection.count_documents(
+        {**signals_filter, "reviewed": {"$ne": True}}
+    )
+
+    # Estimated reach — sum of whatever engagement field each matched post
+    # actually carried. Zero for posts that carried none; never fabricated.
+    reach_total = 0.0
+    top_thread = None
+    top_score = -1.0
+    cursor = flintel_user_signals_collection.find(signals_filter).sort([("matched_at", -1)]).limit(500)
+    async for doc in cursor:
+        score = _engagement_score(doc)
+        reach_total += score
+        if score > top_score:
+            top_score = score
+            top_thread = doc
+
+    # Competitor-mention gap — computed against the competitor list from
+    # this user's own most recent report for whichever domain they most
+    # recently analyzed, counting how many of THEIR matched signals'
+    # text mentions each competitor by name vs. mentions their own domain.
+    latest_report = await flintel_web_data_collection.find_one(
+        {"user_email": user_email}, sort=[("created_at", -1)]
+    )
+    competitor_gap = []
+    your_mentions = 0
+    domain = None
+    if latest_report:
+        domain = latest_report.get("domain")
+        competitors = (latest_report.get("competitors") or [])[:MAX_COMPETITORS_FOR_GAP]
+        for comp in competitors:
+            name = (comp or {}).get("name") if isinstance(comp, dict) else None
+            if not name:
+                continue
+            pattern = re.escape(name)
+            count = await flintel_user_signals_collection.count_documents(
+                {**signals_filter, "text": {"$regex": pattern, "$options": "i"}}
+            )
+            competitor_gap.append({"name": name, "mentions": count})
+
+        if domain:
+            your_mentions = await flintel_user_signals_collection.count_documents(
+                {**signals_filter, "text": {"$regex": re.escape(domain), "$options": "i"}}
+            )
+
+    return {
+        "generated_at": now.isoformat(),
+        "domain": domain,
+        "signals_total": signals_total,
+        "signals_this_week": signals_this_week,
+        "new_since_last_visit": new_since_last_visit,
+        "unreviewed_count": unreviewed_count,
+        "estimated_reach": int(reach_total),
+        "top_thread": _serialize_signal(top_thread) if top_thread else None,
+        "competitor_gap": competitor_gap,
+        "your_mentions": your_mentions,
+    }
+
+
 @app.on_event("startup")
 async def on_startup():
     # Uniqueness index: one row per (user_email, source_id) in
@@ -832,11 +992,18 @@ async def on_startup():
     await flintel_user_signals_collection.create_index(
         [("user_email", 1), ("source_id", 1)], unique=True, name="user_source_unique"
     )
+    await flintel_user_signals_collection.create_index(
+        [("user_email", 1), ("matched_at", -1)], name="user_matched_at"
+    )
+    await flintel_user_signals_collection.create_index(
+        [("user_email", 1), ("reviewed", 1)], name="user_reviewed"
+    )
     await flintel_tracking_state_collection.create_index(
         [("user_email", 1), ("domain", 1)], unique=True, name="user_domain_unique"
     )
     await users_collection.create_index([("email", 1)], unique=True, name="email_unique")
     await flintel_web_data_collection.create_index([("user_email", 1), ("domain", 1)])
+    await flintel_web_data_collection.create_index([("user_email", 1), ("created_at", -1)])
 
     # Launch the live tracker as a detached background task — it runs for
     # the lifetime of the process, independent of any individual request.
@@ -845,13 +1012,32 @@ async def on_startup():
 
 
 # --------------------------------------------------------------------------
-# Routes
+# HTML page routes
 # --------------------------------------------------------------------------
 
 @app.get("/", response_class=HTMLResponse)
 async def home(request: Request):
+    """Marketing / free-report flow — public, no login required."""
     return templates.TemplateResponse(request, "web.html", {})
 
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard_page(request: Request):
+    """
+    Logged-in dashboard shell. This template renders no numbers itself —
+    it calls /api/dashboard-stats, /api/my-signals, and /api/my-domains on
+    load and fills every card from those real responses. Not logged in?
+    Bounce to the homepage rather than raising a bare 401 on an HTML page.
+    """
+    user = await get_current_user_optional(request)
+    if not user:
+        return RedirectResponse(url="/")
+    return templates.TemplateResponse(request, "dashboard.html", {"user": user})
+
+
+# --------------------------------------------------------------------------
+# JSON API routes
+# --------------------------------------------------------------------------
 
 @app.post("/api/analyze")
 async def analyze(payload: AnalyzeRequest, user: dict = Depends(get_current_user)):
@@ -943,22 +1129,40 @@ async def get_signals(domain: str, subreddit: str | None = None, limit: int = 50
 
 
 @app.get("/api/my-signals")
-async def get_my_signals(domain: str | None = None, limit: int = 100,
-                          user: dict = Depends(get_current_user)):
+async def get_my_signals(domain: str | None = None, unreviewed_only: bool = False,
+                          limit: int = 100, user: dict = Depends(get_current_user)):
     """
-    NEW — the dashboard endpoint. Returns matches already collected by the
-    LIVE TRACKER and stored in flintel_user_signals — no live query against
-    web_data happens here at all. This is what makes "log back in 10 days
-    later and everything is already there" work: the data was written
-    continuously in the background while the user was away.
+    The dashboard's signal-feed endpoint. Returns matches already collected
+    by the LIVE TRACKER and stored in flintel_user_signals — no live query
+    against web_data happens here at all. This is what makes "log back in
+    10 days later and everything is already there" work: the data was
+    written continuously in the background while the user was away.
     """
     query: dict = {"user_email": user["email"]}
     if domain:
         query["domain"] = domain
+    if unreviewed_only:
+        query["reviewed"] = {"$ne": True}
 
     cursor = flintel_user_signals_collection.find(query, {"_id": 0}).sort("matched_at", -1).limit(limit)
-    signals = [doc async for doc in cursor]
+    signals = [_serialize_signal(doc) async for doc in cursor]
     return JSONResponse({"count": len(signals), "signals": signals})
+
+
+@app.post("/api/signals/{source_id}/review")
+async def mark_signal_reviewed(source_id: str, user: dict = Depends(get_current_user)):
+    """
+    Marks one signal as reviewed by a human. This does NOT post anything
+    anywhere — it only updates the dashboard's own bookkeeping so the
+    "unreviewed" count reflects what the user has actually looked at.
+    """
+    result = await flintel_user_signals_collection.update_one(
+        {"user_email": user["email"], "source_id": source_id},
+        {"$set": {"reviewed": True, "reviewed_at": datetime.now(timezone.utc)}},
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Signal not found for this user.")
+    return JSONResponse({"status": "ok", "source_id": source_id})
 
 
 @app.get("/api/my-domains")
@@ -972,6 +1176,18 @@ async def get_my_domains(user: dict = Depends(get_current_user)):
         if doc["domain"] not in seen_domains:
             seen_domains.append(doc["domain"])
     return JSONResponse({"domains": seen_domains})
+
+
+@app.get("/api/dashboard-stats")
+async def dashboard_stats(user: dict = Depends(get_current_user)):
+    """
+    The single endpoint dashboard.html calls on load to fill every metric
+    card, the competitor-gap chart, and the "top thread" card — all real
+    numbers computed from flintel_user_signals + the latest report, never
+    hardcoded on the client.
+    """
+    stats = await compute_dashboard_stats(user["email"])
+    return JSONResponse(stats)
 
 
 @app.get("/api/health")

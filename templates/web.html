@@ -34,7 +34,9 @@ a{color:inherit;text-decoration:none;}
 
 h1,h2,h3,h4,h5,h6,.logo-text,.home-h1,.panel-title,.persona-name,
 .hp-sec-title,.hp-outcome-h,.hp-report-h,.hp-price-num,.hp-cost-title,
-.hp-final h2,.hp-foot-mark-name,.hp-step-h,.hp-viz-r-title,.hp-serp-title{
+.hp-final h2,.hp-foot-mark-name,.hp-step-h,.hp-viz-r-title,.hp-serp-title,
+.dash-title,.dash-section-title,.metric-card .mc-value,.camp-thread-title,
+.intel-title,.ht-title{
   font-family:"Fustat","Inter",-apple-system,BlinkMacSystemFont,sans-serif;
 }
 
@@ -83,6 +85,8 @@ h1,h2,h3,h4,h5,h6,.logo-text,.home-h1,.panel-title,.persona-name,
 :focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:var(--r-sm);}
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
 @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.45;transform:scale(1.25);}}
+@keyframes fadeIn{from{opacity:0;}to{opacity:1;}}
+@keyframes spin{to{transform:rotate(360deg);}}
 
 /* ═══════ NAV ═══════ */
 .site-header{
@@ -94,7 +98,7 @@ h1,h2,h3,h4,h5,h6,.logo-text,.home-h1,.panel-title,.persona-name,
   border-bottom:1px solid var(--hair);
   flex:none;
 }
-.logo{grid-column:1;display:inline-flex;align-items:center;gap:10px;font-size:16px;font-weight:600;color:var(--ink);letter-spacing:-.02em;justify-self:start;}
+.logo{grid-column:1;display:inline-flex;align-items:center;gap:10px;font-size:16px;font-weight:600;color:var(--ink);letter-spacing:-.02em;justify-self:start;cursor:pointer;}
 .logo-mark{width:30px;height:30px;background:var(--lime);border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;}
 .logo-mark img{width:15px;height:15px;object-fit:contain;}
 .logo-text{font-size:16px;font-weight:700;letter-spacing:-.02em;}
@@ -109,6 +113,13 @@ h1,h2,h3,h4,h5,h6,.logo-text,.home-h1,.panel-title,.persona-name,
 .menu-btn svg{width:16px;height:16px;}
 
 /* logged-in header state */
+.dash-nav-btn{
+  font-size:13px;font-weight:600;color:var(--ink);background:var(--g6);border:1px solid var(--g5);
+  cursor:pointer;padding:9px 16px;min-height:40px;border-radius:980px;display:inline-flex;align-items:center;gap:7px;
+  transition:background .18s,border-color .18s;
+}
+.dash-nav-btn:hover{background:var(--g5);}
+.dash-nav-btn svg{width:14px;height:14px;flex-shrink:0;}
 .user-chip{display:inline-flex;align-items:center;gap:8px;background:var(--g6);border:1px solid var(--g5);border-radius:980px;padding:5px 6px 5px 14px;font-size:13px;color:var(--g1);cursor:pointer;transition:background .18s;}
 .user-chip:hover{background:var(--g5);}
 .user-chip .avatar{width:26px;height:26px;border-radius:50%;background:var(--lime);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:var(--ink);flex-shrink:0;}
@@ -122,6 +133,7 @@ h1,h2,h3,h4,h5,h6,.logo-text,.home-h1,.panel-title,.persona-name,
   .login-btn{padding:9px 16px;font-size:13px;min-height:40px;}
   .menu-btn{width:40px;height:40px;}
   .user-chip span.chip-label{display:none;}
+  .dash-nav-btn span.dash-nav-label{display:none;}
 }
 
 /* ═══════ AUTH MODAL ═══════ */
@@ -261,7 +273,6 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
 .steps li.active .step-marker{border-color:var(--blue);border-top-color:transparent;background:rgba(104,99,252,.08);animation:spin .8s linear infinite;}
 .steps li.done .step-marker{border:none;background:var(--gbg);}
 .steps li.done .step-marker::after{content:'';position:absolute;left:7px;top:4px;width:6px;height:10px;border-right:2px solid var(--ink);border-bottom:2px solid var(--ink);transform:rotate(40deg);}
-@keyframes spin{to{transform:rotate(360deg);}}
 .step-copy .title{font-size:15px;font-weight:500;color:var(--g3);line-height:1.4;transition:color .3s;}
 .steps li.active .step-copy .title,.steps li.done .step-copy .title{color:var(--ink);}
 .step-copy .desc{font-size:13px;color:var(--g3);margin-top:2px;}
@@ -317,16 +328,6 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
 .signal-meta{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--g3);}
 .signal-meta a{color:var(--bluedeep);font-weight:600;}
 .signal-meta a:hover{text-decoration:underline;}
-
-/* ═══════ MY SIGNALS DASHBOARD (live-tracked, per user) ═══════ */
-#my-dashboard{display:none;margin-top:64px;text-align:left;}
-.dashboard-head{display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;margin-bottom:6px;}
-.dashboard-head h2{font-family:var(--font-num);font-size:21px;font-weight:600;letter-spacing:-.018em;color:var(--ink);}
-.dashboard-sub{font-size:13.5px;color:var(--g2);margin-bottom:20px;line-height:1.5;}
-.dashboard-refresh{background:var(--g6);border:none;border-radius:980px;padding:9px 16px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;transition:background .18s;display:inline-flex;align-items:center;gap:6px;}
-.dashboard-refresh:hover{background:var(--g5);}
-.dashboard-refresh svg{width:13px;height:13px;}
-.domain-filter-row{margin:16px 0 22px;}
 
 @media(max-width:768px){
   input,textarea,select{font-size:16px!important;}
@@ -597,6 +598,100 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
   .hp-foot-in{grid-template-columns:1fr;gap:32px;padding-bottom:28px;}
   .hp-foot-bottom{flex-direction:column;align-items:flex-start;gap:12px;}
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   DASHBOARD — ported from the product design reference (screen 6),
+   wired to the site's real, existing endpoints only:
+   /api/me · /api/my-domains · /api/my-signals · /api/reports/{domain}
+═══════════════════════════════════════════════════════════════ */
+#app-dashboard{display:none;min-height:100vh;background:var(--g6);}
+.dash-shell{display:flex;min-height:100vh;}
+.dash-sidebar{
+  width:240px;flex-shrink:0;border-right:1px solid var(--g5);
+  padding:20px 12px;display:flex;flex-direction:column;
+  background:#fff;position:sticky;top:0;height:100vh;overflow-y:auto;
+}
+.dash-side-top{padding:6px 10px 18px;border-bottom:1px solid var(--g6);margin-bottom:16px;}
+.dash-side-brand{display:flex;align-items:center;gap:9px;margin-bottom:16px;cursor:pointer;}
+.dash-side-brand .logo-mark{width:26px;height:26px;}
+.dash-side-brand span{font-family:var(--font-num);font-weight:700;font-size:15px;letter-spacing:-.02em;}
+.dash-user{display:flex;align-items:center;gap:10px;}
+.dash-user-avatar{width:36px;height:36px;border-radius:50%;background:var(--lime);color:var(--ink);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0;}
+.dash-user-name{font-size:13.5px;font-weight:600;color:var(--ink);line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;}
+.dash-user-email{font-size:11.5px;color:var(--g3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;}
+.ds-section-label{font-size:11px;font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--g3);padding:0 12px;margin-bottom:8px;margin-top:20px;}
+.ds-section-label:first-of-type{margin-top:0;}
+.ds-item{
+  display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;cursor:pointer;
+  font-size:13.5px;font-weight:400;color:var(--g1);transition:background .15s,color .15s;margin-bottom:1px;
+}
+.ds-item:hover{background:var(--g6);color:var(--ink);}
+.ds-item.active{background:var(--g6);color:var(--ink);font-weight:600;}
+.ds-item svg{width:15px;height:15px;flex-shrink:0;color:var(--g2);}
+.ds-item.active svg{color:var(--blue);}
+.ds-badge{margin-left:auto;background:var(--blue);color:#fff;font-size:10.5px;font-weight:600;border-radius:980px;padding:1px 8px;}
+.dash-main{flex:1;padding:36px 40px 64px;min-width:0;}
+.dash-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:26px;gap:14px;flex-wrap:wrap;}
+.dash-title{font-size:23px;font-weight:600;color:var(--ink);letter-spacing:-.025em;margin-bottom:4px;}
+.dash-subtitle{font-size:13.5px;color:var(--g2);}
+.dashboard-refresh{background:#fff;border:1px solid var(--g5);border-radius:980px;padding:9px 16px;font-size:12.5px;font-weight:600;color:var(--ink);cursor:pointer;transition:background .18s;display:inline-flex;align-items:center;gap:6px;box-shadow:0 1px 3px rgba(10,10,10,.04);}
+.dashboard-refresh:hover{background:var(--g6);}
+.dashboard-refresh svg{width:13px;height:13px;}
+.metric-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px;}
+.metric-card{
+  background:#fff;border:none;border-radius:var(--r-lg);border-top:3px solid var(--g5);
+  padding:20px 20px 18px;box-shadow:0 1px 3px rgba(0,0,0,.04);
+  transition:transform .25s var(--ease2);animation:fadeUp .5s var(--ease2) backwards;
+}
+.metric-card:nth-child(1){animation-delay:.02s;background:var(--ink);border-top-color:var(--lime);}
+.metric-card:nth-child(2){animation-delay:.07s;border-top-color:var(--blue);}
+.metric-card:nth-child(3){animation-delay:.12s;}
+.metric-card:nth-child(4){animation-delay:.17s;}
+.metric-card:hover{transform:translateY(-2px);}
+.metric-card:nth-child(1) .mc-value{color:#fff;}
+.metric-card:nth-child(1) .mc-label{color:rgba(255,255,255,.62);}
+.metric-card:nth-child(1) .mc-delta{color:var(--lime);}
+.mc-value{font-size:32px;font-weight:700;color:var(--ink);letter-spacing:-.03em;margin-bottom:4px;font-variant-numeric:tabular-nums;}
+.mc-label{font-size:12.5px;color:var(--g2);}
+.mc-delta{font-size:11.5px;font-weight:600;margin-top:8px;color:var(--g3);}
+.dash-section-title{font-size:15.5px;font-weight:600;color:var(--ink);letter-spacing:-.012em;margin-bottom:14px;display:flex;align-items:center;justify-content:space-between;}
+.dash-panel{display:none;}
+.dash-panel.active{display:block;animation:fadeIn .35s var(--ease);}
+.dash-domain-filter{margin-bottom:18px;}
+.camp-card{
+  background:#fff;border:none;border-radius:var(--r-lg);border-left:3px solid var(--g4);
+  padding:20px 22px;margin-bottom:12px;box-shadow:0 1px 3px rgba(0,0,0,.04);
+  transition:transform .25s var(--ease2),box-shadow .25s;
+}
+.camp-card:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(0,0,0,.07);}
+.camp-card.is-new{border-left-color:var(--lime);}
+.camp-thread-title{font-size:14.5px;font-weight:600;color:var(--ink);line-height:1.45;letter-spacing:-.008em;margin-bottom:10px;}
+.camp-meta-row{display:flex;align-items:center;gap:14px;flex-wrap:wrap;}
+.camp-meta{font-size:12.5px;color:var(--g2);}
+.camp-meta b{color:var(--ink);font-weight:500;}
+.camp-actions{margin-top:14px;padding-top:14px;border-top:1px solid var(--g6);display:flex;gap:8px;flex-wrap:wrap;}
+.ca-btn{font-size:12.5px;font-weight:500;cursor:pointer;padding:8px 15px;border-radius:980px;transition:background .18s,color .18s;background:var(--g6);color:var(--ink);border:none;}
+.ca-btn:hover{background:var(--g5);}
+.intel-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.intel-card{background:#fff;border:none;border-radius:var(--r-lg);padding:22px 24px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:16px;}
+.intel-title{font-size:14.5px;font-weight:600;color:var(--ink);margin-bottom:6px;letter-spacing:-.008em;}
+.intel-domain-tag{display:inline-flex;font-size:11px;font-weight:700;background:var(--lime);color:var(--ink);padding:3px 10px;border-radius:980px;margin-bottom:14px;font-family:var(--font-num);}
+.dash-empty{padding:30px 20px;text-align:center;color:var(--g3);border:1px dashed var(--g4);border-radius:var(--r-lg);font-size:13.5px;line-height:1.6;background:#fff;}
+.account-row{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--g6);font-size:14px;}
+.account-row:last-child{border-bottom:none;}
+.account-row span:first-child{color:var(--g2);}
+.account-row span:last-child{color:var(--ink);font-weight:500;}
+
+@media(max-width:900px){
+  .dash-shell{flex-direction:column;}
+  .dash-sidebar{width:100%;height:auto;position:relative;flex-direction:row;flex-wrap:wrap;border-right:none;border-bottom:1px solid var(--g5);}
+  .dash-side-top{width:100%;}
+  .ds-section-label{display:none;}
+  .dash-main{padding:24px 18px 48px;}
+  .metric-row{grid-template-columns:repeat(2,1fr);}
+  .intel-grid{grid-template-columns:1fr;}
+}
+
 @media(prefers-reduced-motion:reduce){
   *{animation:none!important;transition:none!important;}
 }
@@ -605,7 +700,7 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
 <body>
 
 <header class="site-header">
-  <div class="logo">
+  <div class="logo" id="header-logo">
     <span class="logo-mark">
       <img src="{{ request.url_for('static', path='favicon.ico') }}" alt="Flintel logo" width="15" height="15">
     </span>
@@ -617,7 +712,7 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
     <a href="#intelligence">Intelligence</a>
     <a href="#pricing">Pricing</a>
   </nav>
-  <!-- Dynamic: swapped between "Login" button and user-chip + logout by checkAuth() -->
+  <!-- Dynamic: swapped between "Login" button and dashboard-nav + user-chip + logout by checkAuth() -->
   <div class="header-actions" id="header-actions">
     <button class="login-btn" id="login-btn" type="button">Login</button>
     <button class="menu-btn" type="button" aria-label="Menu">
@@ -657,7 +752,7 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
   </div>
 </div>
 
-<div class="page-frame">
+<div class="page-frame" id="page-frame">
 
   <!-- ═══════ HERO + REAL ANALYZE FLOW (logic unchanged, now login-gated) ═══════ -->
   <div class="home-hero">
@@ -809,29 +904,6 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
         No rows in the tracked signals database match this site's keywords yet.
       </div>
       <div id="signals-list"></div>
-    </section>
-
-    <!-- ═══════ MY SIGNALS — permanent, live-tracked, per logged-in user ═══════
-         Sourced from /api/my-signals (flintel_user_signals), which is kept up
-         to date by the background live tracker even while the user is
-         offline. No live query happens on page load — just a read of what's
-         already been collected. -->
-    <section id="my-dashboard">
-      <div class="dashboard-head">
-        <h2>Your tracked signals</h2>
-        <button class="dashboard-refresh" id="dashboard-refresh-btn" type="button">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-          Refresh
-        </button>
-      </div>
-      <p class="dashboard-sub" id="dashboard-sub">
-        Collected automatically in the background — new matching conversations are added here as they're found, even while you're offline.
-      </p>
-      <div class="chip-row domain-filter-row" id="domain-filter-row"></div>
-      <div id="my-signals-empty">
-        Nothing tracked yet. Analyze a site above to start tracking matching conversations for it.
-      </div>
-      <div id="my-signals-list"></div>
     </section>
 
   </div><!-- /.wrap -->
@@ -1191,6 +1263,124 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
 
 </div><!-- /.page-frame -->
 
+<!-- ═══════════════════════════════════════════════════════════════
+     DASHBOARD SCREEN — real data only, from the site's existing
+     endpoints. Toggled by openDashboard()/closeDashboard() below.
+     Design ported from the reference product's #s-dashboard.
+═══════════════════════════════════════════════════════════════ -->
+<div id="app-dashboard">
+  <div class="dash-shell">
+    <aside class="dash-sidebar">
+      <div class="dash-side-top">
+        <div class="dash-side-brand" id="dash-back-logo">
+          <span class="logo-mark">
+            <img src="{{ request.url_for('static', path='favicon.ico') }}" alt="Flintel logo" width="13" height="13">
+          </span>
+          <span>Flintel</span>
+        </div>
+        <div class="dash-user">
+          <span class="dash-user-avatar" id="dash-user-avatar">?</span>
+          <div>
+            <div class="dash-user-name" id="dash-user-name">—</div>
+            <div class="dash-user-email" id="dash-user-email">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ds-section-label">Overview</div>
+      <div class="ds-item active" data-panel="feed">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Signal Feed
+        <span class="ds-badge" id="ds-badge-count">0</span>
+      </div>
+      <div class="ds-item" data-panel="domains">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Domains &amp; Reports
+      </div>
+
+      <div class="ds-section-label">Manage</div>
+      <div class="ds-item" data-panel="account">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
+        Account
+      </div>
+      <div class="ds-item" id="dash-back-btn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+        Back to site
+      </div>
+      <div class="ds-item" id="dash-logout-btn2" style="margin-top:auto;">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+        Sign out
+      </div>
+    </aside>
+
+    <main class="dash-main">
+      <div class="dash-header">
+        <div>
+          <div class="dash-title" id="dash-panel-title">Signal Feed</div>
+          <div class="dash-subtitle" id="dash-subtitle">Loading your data…</div>
+        </div>
+        <button class="dashboard-refresh" id="dash-refresh-btn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Refresh
+        </button>
+      </div>
+
+      <!-- Metrics — computed entirely from real /api/my-signals + /api/my-domains data -->
+      <div class="metric-row" id="dash-metric-row">
+        <div class="metric-card">
+          <div class="mc-value" id="mc-total-signals">0</div>
+          <div class="mc-label">Signals tracked</div>
+          <div class="mc-delta">Across all your domains</div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-value" id="mc-total-domains">0</div>
+          <div class="mc-label">Domains analyzed</div>
+          <div class="mc-delta">Each with its own keyword set</div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-value" id="mc-total-keywords">0</div>
+          <div class="mc-label">Keywords matched at least once</div>
+          <div class="mc-delta">Out of everything Claude surfaced</div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-value" id="mc-latest">—</div>
+          <div class="mc-label">Most recent match</div>
+          <div class="mc-delta" id="mc-top-platform">—</div>
+        </div>
+      </div>
+
+      <!-- Panel: Signal Feed (real matches from /api/my-signals) -->
+      <div class="dash-panel active" id="dash-panel-feed">
+        <div class="dash-section-title">Tracked signals</div>
+        <div class="chip-row dash-domain-filter" id="dash-domain-filter-row"></div>
+        <div class="dash-empty" id="dash-signals-empty" style="display:none;">
+          Nothing tracked yet. Analyze a site from the homepage to start tracking matching conversations for it — the background tracker will keep adding new matches automatically.
+        </div>
+        <div id="dash-signals-list"></div>
+      </div>
+
+      <!-- Panel: Domains & Reports (real reports from /api/reports/{domain}) -->
+      <div class="dash-panel" id="dash-panel-domains">
+        <div class="dash-section-title">Your analyzed domains</div>
+        <div class="dash-empty" id="dash-domains-empty" style="display:none;">
+          You haven't analyzed any sites yet. Enter a URL on the homepage to generate your first market report.
+        </div>
+        <div class="intel-grid" id="dash-domains-list"></div>
+      </div>
+
+      <!-- Panel: Account -->
+      <div class="dash-panel" id="dash-panel-account">
+        <div class="dash-section-title">Account</div>
+        <div class="intel-card">
+          <div class="account-row"><span>Name</span><span id="acct-name">—</span></div>
+          <div class="account-row"><span>Email</span><span id="acct-email">—</span></div>
+          <div class="account-row"><span>Signed in with</span><span id="acct-method">—</span></div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
 <!-- ═══════ FOOTER ═══════ -->
 <footer class="hp-foot">
   <div class="hp-foot-in">
@@ -1334,6 +1524,10 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
   function renderHeaderLoggedIn(user){
     const initial = (user.name || user.email || '?').trim().charAt(0).toUpperCase();
     headerActions.innerHTML = `
+      <button class="dash-nav-btn" id="dash-nav-btn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="7" height="9"/><rect x="14" y="3" width="7" height="5"/><rect x="14" y="12" width="7" height="9"/><rect x="3" y="16" width="7" height="5"/></svg>
+        <span class="dash-nav-label">Dashboard</span>
+      </button>
       <button class="user-chip" id="user-chip-btn" type="button" title="${user.email}">
         <span class="avatar">${initial}</span>
         <span class="chip-label">${user.name || user.email}</span>
@@ -1345,7 +1539,10 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
     `;
     document.getElementById('logout-btn').addEventListener('click', doLogout);
     document.getElementById('user-chip-btn').addEventListener('click', () => {
-      document.getElementById('my-dashboard').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      if (window.FlintelDashboard) window.FlintelDashboard.open('feed');
+    });
+    document.getElementById('dash-nav-btn').addEventListener('click', () => {
+      if (window.FlintelDashboard) window.FlintelDashboard.open('feed');
     });
   }
 
@@ -1364,8 +1561,7 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
     currentUser = null;
     renderHeaderLoggedOut();
     homeNote.textContent = 'Free market report · Log in to save your results · Ready in 30 seconds';
-    const dash = document.getElementById('my-dashboard');
-    if (dash) dash.style.display = 'none';
+    if (window.FlintelDashboard) window.FlintelDashboard.close();
   }
 
   async function checkAuth(){
@@ -1376,7 +1572,6 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
         currentUser = { email: data.email, name: data.name, auth_method: data.auth_method };
         renderHeaderLoggedIn(currentUser);
         homeNote.textContent = 'Free market report · Saved to your account · Ready in 30 seconds';
-        if (window.FlintelDashboard) window.FlintelDashboard.show();
       } else {
         currentUser = null;
         renderHeaderLoggedOut();
@@ -1553,7 +1748,7 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
   }
 
   // Shared card builder used both by the one-time "just analyzed" list and
-  // the permanent "My tracked signals" dashboard list below.
+  // the permanent "Dashboard → Signal Feed" list.
   window.buildSignalCard = function(signal, opts){
     opts = opts || {};
     const card = document.createElement('div');
@@ -1685,8 +1880,8 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
         renderReport(data.domain, data.report, data.flintel_web_data_sequence);
         renderMatchedKeywords(data.matched_keywords);
         renderSignals(data.matches);
-        // A domain was just analyzed for this user — refresh the tracked
-        // ("My Signals") dashboard too, and its domain-filter chips.
+        // A domain was just analyzed for this user — refresh the dashboard's
+        // cached data too, so it's current whenever they open it next.
         if (window.FlintelDashboard) window.FlintelDashboard.refresh();
       }, 450);
 
@@ -1709,52 +1904,127 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
 })();
 </script>
 
-<!-- ═══════ MY SIGNALS DASHBOARD — reads /api/my-signals + /api/my-domains,
-     both of which serve data already collected by the backend's live
-     tracker. No matching logic runs in the browser; this is just a
-     read-and-render of what's been persisted for the logged-in user. ═══════ -->
+<!-- ═══════ DASHBOARD — full-screen view styled after the reference design's
+     #s-dashboard, reading ONLY from the site's real, existing endpoints:
+     /api/me, /api/my-domains, /api/my-signals, /api/reports/{domain}.
+     No new backend routes, no new persistence — purely a different way of
+     presenting data the backend already serves. ═══════ -->
 <script>
 (function(){
-  const dashboardSection = document.getElementById('my-dashboard');
-  const listEl = document.getElementById('my-signals-list');
-  const emptyEl = document.getElementById('my-signals-empty');
-  const domainFilterRow = document.getElementById('domain-filter-row');
-  const refreshBtn = document.getElementById('dashboard-refresh-btn');
-  const dashboardSub = document.getElementById('dashboard-sub');
+  const pageFrame       = document.getElementById('page-frame');
+  const appDashboard     = document.getElementById('app-dashboard');
+  const sidebarItems     = Array.from(document.querySelectorAll('.ds-item[data-panel]'));
+  const panels           = {
+    feed:    document.getElementById('dash-panel-feed'),
+    domains: document.getElementById('dash-panel-domains'),
+    account: document.getElementById('dash-panel-account'),
+  };
+  const panelTitle       = document.getElementById('dash-panel-title');
+  const panelSubtitle    = document.getElementById('dash-subtitle');
+  const refreshBtn       = document.getElementById('dash-refresh-btn');
+  const backBtn          = document.getElementById('dash-back-btn');
+  const backLogo         = document.getElementById('dash-back-logo');
+  const logoutBtn2       = document.getElementById('dash-logout-btn2');
+  const headerLogo       = document.getElementById('header-logo');
 
-  let activeDomain = null; // null = all domains
+  const domainFilterRow  = document.getElementById('dash-domain-filter-row');
+  const signalsListEl    = document.getElementById('dash-signals-list');
+  const signalsEmptyEl   = document.getElementById('dash-signals-empty');
+  const domainsListEl    = document.getElementById('dash-domains-list');
+  const domainsEmptyEl   = document.getElementById('dash-domains-empty');
+  const badgeCount       = document.getElementById('ds-badge-count');
+
+  const PANEL_META = {
+    feed:    { title: 'Signal Feed',        sub: 'Every matching conversation your keywords have found so far.' },
+    domains: { title: 'Domains & Reports',  sub: 'Every site you\u2019ve analyzed, with its latest market-intelligence report.' },
+    account: { title: 'Account',            sub: 'Your Flintel account details.' },
+  };
+
+  let allSignals = [];
+  let allDomains = [];
+  let activeDomain = null;
+  let activePanel = 'feed';
+  let loaded = false;
 
   window.FlintelDashboard = {
-    show: () => { dashboardSection.style.display = 'block'; loadDomains(); loadSignals(); },
-    refresh: () => { loadDomains(); loadSignals(); },
+    open: (panel) => { showDashboard(); setPanel(panel || 'feed'); if (!loaded) refresh(); },
+    close: closeDashboard,
+    refresh,
   };
+
+  function showDashboard(){
+    pageFrame.style.display = 'none';
+    document.querySelector('.hp-foot').style.display = 'none';
+    appDashboard.style.display = 'block';
+    window.scrollTo(0, 0);
+  }
+
+  function closeDashboard(){
+    appDashboard.style.display = 'none';
+    pageFrame.style.display = '';
+    document.querySelector('.hp-foot').style.display = '';
+    window.scrollTo(0, 0);
+  }
+
+  backBtn.addEventListener('click', closeDashboard);
+  backLogo.addEventListener('click', closeDashboard);
+  headerLogo.addEventListener('click', () => { if (appDashboard.style.display !== 'none') closeDashboard(); else window.scrollTo({top:0,behavior:'smooth'}); });
+  logoutBtn2.addEventListener('click', async () => {
+    try { await fetch('/auth/logout', { method: 'POST' }); } catch (e) {}
+    closeDashboard();
+    location.reload();
+  });
+
+  sidebarItems.forEach(item => {
+    item.addEventListener('click', () => setPanel(item.dataset.panel));
+  });
+
+  function setPanel(panel){
+    activePanel = panel;
+    sidebarItems.forEach(item => item.classList.toggle('active', item.dataset.panel === panel));
+    Object.entries(panels).forEach(([key, el]) => el.classList.toggle('active', key === panel));
+    const meta = PANEL_META[panel] || PANEL_META.feed;
+    panelTitle.textContent = meta.title;
+    panelSubtitle.textContent = meta.sub;
+  }
+
+  refreshBtn.addEventListener('click', refresh);
+
+  async function refresh(){
+    if (!window.FlintelAuth || !window.FlintelAuth.isLoggedIn()) return;
+    refreshBtn.disabled = true;
+    try {
+      await Promise.all([loadUser(), loadDomains(), loadSignals()]);
+      loaded = true;
+      computeMetrics();
+      renderDomainFilterChips();
+      renderSignalsList();
+      await renderDomainReports();
+    } finally {
+      refreshBtn.disabled = false;
+    }
+  }
+
+  function loadUser(){
+    const user = window.FlintelAuth.getUser();
+    if (!user) return Promise.resolve();
+    const initial = (user.name || user.email || '?').trim().charAt(0).toUpperCase();
+    document.getElementById('dash-user-avatar').textContent = initial;
+    document.getElementById('dash-user-name').textContent = user.name || user.email;
+    document.getElementById('dash-user-email').textContent = user.email;
+    document.getElementById('acct-name').textContent = user.name || '—';
+    document.getElementById('acct-email').textContent = user.email || '—';
+    document.getElementById('acct-method').textContent = user.auth_method === 'google' ? 'Google' : 'Email & password';
+    return Promise.resolve();
+  }
 
   async function loadDomains(){
     try {
       const res = await fetch('/api/my-domains');
       if (!res.ok) return;
       const data = await res.json();
-      renderDomainChips(data.domains || []);
-    } catch (e) { /* silent — dashboard is best-effort */ }
-  }
-
-  function renderDomainChips(domains){
-    domainFilterRow.innerHTML = '';
-    if (!domains.length) return;
-
-    const allChip = document.createElement('span');
-    allChip.className = 'chip domain-chip' + (activeDomain === null ? ' active-domain' : '');
-    allChip.textContent = 'All domains';
-    allChip.addEventListener('click', () => { activeDomain = null; renderDomainChips(domains); loadSignals(); });
-    domainFilterRow.appendChild(allChip);
-
-    domains.forEach(domain => {
-      const chip = document.createElement('span');
-      chip.className = 'chip domain-chip' + (activeDomain === domain ? ' active-domain' : '');
-      chip.textContent = domain;
-      chip.addEventListener('click', () => { activeDomain = domain; renderDomainChips(domains); loadSignals(); });
-      domainFilterRow.appendChild(chip);
-    });
+      allDomains = data.domains || [];
+    } catch (e) { allDomains = []; }
   }
 
   async function loadSignals(){
@@ -1763,8 +2033,8 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
       const res = await fetch(url);
       if (!res.ok) return;
       const data = await res.json();
-      renderSignalsList(data.signals || []);
-    } catch (e) { /* silent — dashboard is best-effort */ }
+      allSignals = data.signals || [];
+    } catch (e) { allSignals = []; }
   }
 
   function timeAgo(iso){
@@ -1781,14 +2051,63 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
     } catch (e) { return null; }
   }
 
-  function renderSignalsList(signals){
-    listEl.innerHTML = '';
-    emptyEl.style.display = signals.length === 0 ? 'block' : 'none';
+  function computeMetrics(){
+    document.getElementById('mc-total-signals').textContent = allSignals.length.toLocaleString();
+    document.getElementById('mc-total-domains').textContent = allDomains.length.toLocaleString();
 
-    signals.forEach(signal => {
-      const card = window.buildSignalCard(signal, { showDomain: true, isNew: false });
-      // Add a "tracked X ago" note using matched_at, since these came from
-      // the background tracker, not from a live-just-now query.
+    const uniqueKeywords = new Set(allSignals.map(s => s.matched_keyword).filter(Boolean));
+    document.getElementById('mc-total-keywords').textContent = uniqueKeywords.size.toLocaleString();
+
+    if (allSignals.length) {
+      const newest = allSignals.reduce((a, b) => {
+        const at = a.matched_at ? new Date(a.matched_at).getTime() : 0;
+        const bt = b.matched_at ? new Date(b.matched_at).getTime() : 0;
+        return bt > at ? b : a;
+      });
+      document.getElementById('mc-latest').textContent = timeAgo(newest.matched_at) || '—';
+
+      const platformCounts = {};
+      allSignals.forEach(s => {
+        const p = s.platform || 'unknown';
+        platformCounts[p] = (platformCounts[p] || 0) + 1;
+      });
+      const topPlatform = Object.entries(platformCounts).sort((a, b) => b[1] - a[1])[0];
+      document.getElementById('mc-top-platform').textContent = topPlatform
+        ? `Mostly on ${topPlatform[0]}` : '—';
+    } else {
+      document.getElementById('mc-latest').textContent = '—';
+      document.getElementById('mc-top-platform').textContent = 'No signals yet';
+    }
+
+    badgeCount.textContent = allSignals.length.toLocaleString();
+  }
+
+  function renderDomainFilterChips(){
+    domainFilterRow.innerHTML = '';
+    if (!allDomains.length) return;
+
+    const allChip = document.createElement('span');
+    allChip.className = 'chip domain-chip' + (activeDomain === null ? ' active-domain' : '');
+    allChip.textContent = 'All domains';
+    allChip.addEventListener('click', async () => { activeDomain = null; await loadSignals(); renderDomainFilterChips(); renderSignalsList(); computeMetrics(); });
+    domainFilterRow.appendChild(allChip);
+
+    allDomains.forEach(domain => {
+      const chip = document.createElement('span');
+      chip.className = 'chip domain-chip' + (activeDomain === domain ? ' active-domain' : '');
+      chip.textContent = domain;
+      chip.addEventListener('click', async () => { activeDomain = domain; await loadSignals(); renderDomainFilterChips(); renderSignalsList(); computeMetrics(); });
+      domainFilterRow.appendChild(chip);
+    });
+  }
+
+  function renderSignalsList(){
+    signalsListEl.innerHTML = '';
+    signalsEmptyEl.style.display = allSignals.length === 0 ? 'block' : 'none';
+
+    allSignals.forEach(signal => {
+      const card = window.buildSignalCard(signal, { showDomain: !activeDomain, isNew: false });
+      card.classList.add('camp-card-wrap');
       const ago = timeAgo(signal.matched_at);
       if (ago) {
         const meta = card.querySelector('.signal-meta');
@@ -1796,14 +2115,87 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
         span.textContent = 'tracked ' + ago;
         if (meta) meta.insertBefore(span, meta.firstChild);
       }
-      listEl.appendChild(card);
+      signalsListEl.appendChild(card);
     });
   }
 
-  refreshBtn.addEventListener('click', () => {
-    refreshBtn.disabled = true;
-    Promise.all([loadDomains(), loadSignals()]).finally(() => { refreshBtn.disabled = false; });
-  });
+  // Reports panel — calls the existing /api/reports/{domain} endpoint (max
+  // 5 most recent analyses per domain already returned by the backend) and
+  // shows the latest one per domain, styled as intel cards.
+  async function renderDomainReports(){
+    domainsListEl.innerHTML = '';
+    domainsEmptyEl.style.display = allDomains.length === 0 ? 'block' : 'none';
+    if (!allDomains.length) return;
+
+    for (const domain of allDomains) {
+      let report = null;
+      let sequence = null;
+      try {
+        const res = await fetch(`/api/reports/${encodeURIComponent(domain)}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.reports && data.reports.length) {
+            report = data.reports[0]; // newest first (sequence -1 sort, server-side)
+            sequence = report.sequence;
+          }
+        }
+      } catch (e) { /* best-effort */ }
+
+      const card = document.createElement('div');
+      card.className = 'intel-card';
+
+      const domainTag = document.createElement('div');
+      domainTag.className = 'intel-domain-tag';
+      domainTag.textContent = domain;
+      card.appendChild(domainTag);
+
+      if (!report) {
+        const empty = document.createElement('div');
+        empty.style.cssText = 'font-size:13.5px;color:var(--g3);';
+        empty.textContent = 'No saved report found for this domain.';
+        card.appendChild(empty);
+        domainsListEl.appendChild(card);
+        continue;
+      }
+
+      const title = document.createElement('div');
+      title.className = 'intel-title';
+      title.textContent = report.company_summary || 'No summary available.';
+      card.appendChild(title);
+
+      if (sequence) {
+        const seqRow = document.createElement('div');
+        seqRow.style.cssText = 'font-size:12px;color:var(--g3);margin-bottom:12px;';
+        seqRow.textContent = `Analysis #${sequence} for this domain`;
+        card.appendChild(seqRow);
+      }
+
+      const painPoints = (report.buyer_pain_points || []).slice(0, 3);
+      if (painPoints.length) {
+        const list = document.createElement('ul');
+        list.className = 'pain-list';
+        list.style.marginBottom = '14px';
+        painPoints.forEach(p => {
+          const li = document.createElement('li');
+          li.textContent = p;
+          list.appendChild(li);
+        });
+        card.appendChild(list);
+      }
+
+      const kwRow = document.createElement('div');
+      kwRow.className = 'chip-row';
+      (report.discovery_keywords || []).slice(0, 8).forEach(kw => {
+        const chip = document.createElement('span');
+        chip.className = 'chip keyword';
+        chip.textContent = kw;
+        kwRow.appendChild(chip);
+      });
+      card.appendChild(kwRow);
+
+      domainsListEl.appendChild(card);
+    }
+  }
 })();
 </script>
 

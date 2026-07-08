@@ -1,13 +1,7 @@
 <!-- web.html — REAL, backend-connected. Every number on this page comes from
-     index.py's JSON responses (GET /api/me, POST /api/analyze). Nothing is
-     hardcoded or mocked. If a field isn't returned by the backend, the UI
-     simply doesn't show it (no fabricated placeholders).
-
-     Visual design ported 1:1 from the Flintel design system (Fustat display
-     type, ink/blue/lime/white palette, dot-grid hero, pill controls, card
-     language, dark proof strip, editorial section rhythm). All JavaScript
-     logic below is unchanged from the working backend-integrated version:
-     same endpoints, same element IDs, same auth flow, same report renderer. -->
+     index.py's JSON responses (GET /api/me, GET /api/stats/public,
+     POST /api/analyze). Nothing is hardcoded or mocked. If a field isn't
+     returned by the backend, the UI simply doesn't show it. -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -19,11 +13,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=Fustat:wght@400..800&display=swap" rel="stylesheet">
 <style>
-/* ═══════════════════════════════════════════════════════════════
-   FLINTEL — SIGNAL SYSTEM
-   Four colors only: 0A0A0A ink · 6863FC signal (info/active) ·
-   B6FF1E strike (the one "go" color — CTAs, wins, live) · FFFFFF.
-═══════════════════════════════════════════════════════════════ */
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;overflow-x:clip;}
 body{
@@ -270,6 +259,9 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
   color:var(--lime);line-height:1;margin-bottom:8px;font-variant-numeric:tabular-nums;
 }
 .hp-proof-l{font-size:13px;color:rgba(255,255,255,.55);line-height:1.4;}
+/* Hides an individual proof cell cleanly if its backing stat is unavailable
+   (e.g. /api/stats/public failed) — no layout gap, no fabricated fallback. */
+.hp-proof-cell.is-hidden{display:none;}
 @media(max-width:900px){
   .hp-proof-in{grid-template-columns:repeat(2,1fr);gap:20px;}
   .hp-proof-cell{padding:16px 20px;border-left:none;border-top:1px solid rgba(255,255,255,.1);}
@@ -577,7 +569,7 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
 .comp-name{font-family:var(--font-num);font-size:14.5px;font-weight:600;margin-bottom:6px;color:var(--ink);}
 .comp-why{font-size:13px;color:var(--g2);line-height:1.5;}
 
-/* Section 04 — talking points step card */
+/* Section 04 — real-signal preview card */
 .step-card{border-radius:var(--r-xl);border-top:3px solid var(--lime);overflow:hidden;background:var(--g6);}
 .step-card-head{display:flex;align-items:center;gap:14px;padding:22px 26px 0;}
 .step-number{
@@ -698,9 +690,17 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
     <div id="error-banner"></div>
   </div></div>
 
+  <!-- Proof strip — every cell here is either fully static/qualitative copy
+       (no number to fabricate) or bound to a real backend value fetched in
+       the script block below via GET /api/stats/public. If that fetch
+       fails or returns null, #proof-domains-cell is hidden entirely rather
+       than showing a fake number. -->
   <section class="hp-proof">
     <div class="hp-proof-in">
-      <div class="hp-proof-cell"><div class="hp-proof-n" id="proof-domains">—</div><div class="hp-proof-l">Domains analyzed by Flintel users so far</div></div>
+      <div class="hp-proof-cell" id="proof-domains-cell">
+        <div class="hp-proof-n" id="proof-domains">—</div>
+        <div class="hp-proof-l">Domains analyzed by Flintel users so far</div>
+      </div>
       <div class="hp-proof-cell"><div class="hp-proof-n">Live</div><div class="hp-proof-l">Background tracker matches new signals continuously</div></div>
       <div class="hp-proof-cell"><div class="hp-proof-n">100%</div><div class="hp-proof-l">Human-reviewed and disclosed — nothing auto-posts</div></div>
       <div class="hp-proof-cell"><div class="hp-proof-n">1</div><div class="hp-proof-l">Analysis. Then your dashboard fills itself in automatically.</div></div>
@@ -718,7 +718,7 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
       <div class="hp-why-grid">
         <div class="hp-why-points">
           <div class="hp-why-point"><div class="hp-why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg></div><div class="hp-why-txt"><h4>You see only what actually matched.</h4><p>No placeholder counts. If your site only matches 3 threads today, the report shows 3 — and grows as the tracker finds more.</p></div></div>
-          <div class="hp-why-point"><div class="hp-why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></div><div class="hp-why-txt"><h4>Talking points, not fake comments.</h4><p>Flintel never writes an undisclosed "customer story." It gives your team notes to write their own, disclosed reply.</p></div></div>
+          <div class="hp-why-point"><div class="hp-why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg></div><div class="hp-why-txt"><h4>Real post text, not fake comments.</h4><p>Flintel never writes an undisclosed "customer story." Your dashboard shows the actual matched post so your team can write their own, disclosed reply.</p></div></div>
           <div class="hp-why-point"><div class="hp-why-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg></div><div class="hp-why-txt"><h4>Nothing is posted or upvoted for you.</h4><p>No engagement manipulation, ever. You stay fully in control of what goes where.</p></div></div>
         </div>
         <div class="hp-why-viz">
@@ -793,7 +793,7 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
   <footer class="hp-foot">
     <div class="hp-foot-in">
       <div><div class="hp-foot-mark"><span class="hp-foot-mark-icon">F</span><span class="hp-foot-mark-name">Flintel</span></div>
-        <p class="hp-foot-tag">Flintel finds where your buyers talk on Reddit and gives your team the talking points to join, honestly.</p></div>
+        <p class="hp-foot-tag">Flintel finds where your buyers talk on Reddit and gives your team the real post so they can join the conversation, honestly.</p></div>
       <div class="hp-foot-col"><h5>Product</h5><ul><li><a href="#how-it-works">How it works</a></li><li><a href="#pricing">Pricing</a></li></ul></div>
       <div class="hp-foot-col"><h5>Company</h5><ul><li><a href="#">About</a></li><li><a href="#">Contact</a></li></ul></div>
       <div class="hp-foot-col"><h5>Legal</h5><ul><li><a href="#">Privacy</a></li><li><a href="#">Terms</a></li></ul></div>
@@ -871,22 +871,25 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
       </div>
     </div>
 
-    <!-- Section 04: honest — talking points, disclosed, gated behind /dashboard -->
+    <!-- Section 04: honest — this is exactly what's stored today: the raw
+         matched post, plus which keyword triggered the match. There is no
+         backend-generated "talking points" or "notes" field — the copy
+         below describes only what the dashboard actually shows. -->
     <div class="report-section">
       <div class="rs-label">Section 04</div>
       <div class="rs-title">What happens next</div>
-      <div class="rs-desc">Flintel never writes an undisclosed comment or inflates engagement. For each matched thread, your dashboard gives your team talking points — notes to write their own reply, with affiliation disclosed as Reddit's rules require.</div>
+      <div class="rs-desc">Flintel never writes an undisclosed comment or inflates engagement. For each matched thread, your dashboard shows the real post and which of your keywords matched it, so a human on your team can write their own reply — disclosing who they work for, as Reddit's rules require.</div>
       <div class="step-card">
-        <div class="step-card-head"><div class="step-number">1</div><div class="step-card-title">Talking points, not scripted comments</div></div>
+        <div class="step-card-head"><div class="step-number">1</div><div class="step-card-title">The real post, not a script</div></div>
         <div class="step-card-body">
-          <p class="step-desc">A human on your team reads the thread, then writes their own reply — disclosing who they work for. Flintel only prepares the context.</p>
+          <p class="step-desc">Your team reads the actual matched post below, then writes their own reply. Flintel doesn't draft, suggest, or auto-generate any comment text — it only surfaces the match.</p>
           <div class="comment-preview">
-            <div class="cp-label">Preview — talking points for your top matched thread</div>
+            <div class="cp-label">Preview — your top matched post</div>
             <div class="cp-text" id="talking-points-preview">Log in and analyze a domain to see this.</div>
             <div class="cp-blur" id="cp-blur-overlay">
               <div class="cp-blur-inner" id="unlock-dashboard-btn">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-                Full talking points in your dashboard
+                Full match details in your dashboard
               </div>
             </div>
           </div>
@@ -992,6 +995,34 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
   document.getElementById('login-btn').addEventListener('click',()=>openModal('login'));
   document.addEventListener('DOMContentLoaded',checkAuth);
   if(document.readyState!=='loading') checkAuth();
+})();
+</script>
+
+<!-- ═══════ PUBLIC STATS — real aggregate from GET /api/stats/public ═══════
+     Populates #proof-domains with a real, DB-backed count of distinct
+     analyzed domains. No client-side incrementing, no estimate. If the
+     fetch fails or the backend returns null, the whole cell is hidden
+     rather than left showing a fake number or a permanent "—". -->
+<script>
+(function(){
+  async function loadPublicStats(){
+    const cell = document.getElementById('proof-domains-cell');
+    const el = document.getElementById('proof-domains');
+    try{
+      const res = await fetch('/api/stats/public');
+      if(!res.ok) throw new Error('stats endpoint returned ' + res.status);
+      const data = await res.json();
+      if(typeof data.domains_analyzed === 'number'){
+        el.textContent = data.domains_analyzed.toLocaleString();
+      } else {
+        cell.classList.add('is-hidden');
+      }
+    }catch(err){
+      cell.classList.add('is-hidden');
+    }
+  }
+  document.addEventListener('DOMContentLoaded', loadPublicStats);
+  if(document.readyState!=='loading') loadPublicStats();
 })();
 </script>
 
@@ -1110,14 +1141,18 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
       ? comps.map(c=>`<div class="comp-card"><div class="comp-name">${esc(c.name||'Unnamed competitor')}</div><div class="comp-why">${esc(c.why_buyers_leave||'')}</div></div>`).join('')
       : '<div class="empty-note">No competitors returned.</div>';
 
-    // ── Section 04: honest talking-points preview (not a fake comment) ──
+    // ── Section 04: honest preview — describes ONLY what is actually
+    //    stored (the raw matched post + the keyword that matched it).
+    //    No "talking points" / "notes" claim, since the backend has no
+    //    field or endpoint that generates those today. ──
     const previewEl = document.getElementById('talking-points-preview');
     if(matches.length > 0){
       const top = matches[0];
       const kw = top.matched_keyword ? `matched on "${esc(top.matched_keyword)}"` : 'a real matched thread';
-      previewEl.textContent = `This post from ${top.subreddit_or_channel||'a tracked source'} was ${kw}. In your dashboard you'll see the full post plus notes your team can use to write their own, disclosed reply — never a pre-written comment posted on your behalf.`;
+      const sourceLabel = esc(top.subreddit_or_channel || 'a tracked source');
+      previewEl.textContent = `This post from ${sourceLabel} was ${kw}. Your dashboard shows this same post in full, so your team can write their own, disclosed reply — never a pre-written comment posted on your behalf.`;
     } else {
-      previewEl.textContent = 'Once a signal matches, this section shows real notes for your team — never a pre-written, undisclosed comment.';
+      previewEl.textContent = 'Once a signal matches, this section shows the real matched post — never a pre-written, undisclosed comment.';
     }
     document.getElementById('unlock-dashboard-btn').onclick = ()=>{ window.location.href = '/dashboard'; };
   }

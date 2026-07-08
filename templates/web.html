@@ -1,1 +1,425 @@
+<!-- web.html — HERO-ONLY BUILD, REAL BACKEND
+     ------------------------------------------------------------
+     This is a trimmed version of the full web.html: every screen
+     except the hero (scan animation, report screen, pricing,
+     proof strip, footer) has been removed. What remains is 100%
+     wired to the real FastAPI backend in index.py — nothing here
+     is mocked or hardcoded:
 
+       - GET  /api/me            → real login state (nav + hero note)
+       - GET/POST /auth/*        → real Google OAuth + email/password auth
+       - POST /api/analyze       → real Claude analysis + real signal match
+
+     There is no scan/report UI left in this file, so on a
+     successful analyze() call the user is sent to /dashboard,
+     which is where the full result already lives (see index.py's
+     GET /dashboard route + dashboard.html). This mirrors what the
+     full report screen's "Open my dashboard" button already did.
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Flintel — Your buyers are on Reddit, talking about your competitors right now.</title>
+<link rel="icon" href="{{ request.url_for('static', path='favicon.ico') }}" type="image/x-icon">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=Fustat:wght@400..800&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;overflow-x:clip;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Inter","Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  background:#fff;color:#0A0A0A;overflow-x:clip;min-height:100vh;
+}
+button,input,textarea{font-family:inherit;}
+input,textarea{-webkit-appearance:none;}
+a{color:inherit;text-decoration:none;}
+::selection{background:rgba(104,99,252,.18);}
+
+h1,h2,h3,h4,h5,h6,
+.logo-text,.home-h1,.auth-modal h3{
+  font-family:"Fustat","Inter",-apple-system,BlinkMacSystemFont,sans-serif;
+}
+
+:root{
+  --ink:    #0A0A0A;
+  --blue:   #6863FC;
+  --lime:   #B6FF1E;
+  --blue2:    #7D78FF;
+  --bluedeep: #4B46D6;
+  --limedeep: #93CC00;
+  --g1:     rgba(10,10,10,.82);
+  --g2:     rgba(10,10,10,.60);
+  --g3:     rgba(10,10,10,.42);
+  --g4:     rgba(10,10,10,.16);
+  --g5:     rgba(10,10,10,.09);
+  --g6:     rgba(10,10,10,.045);
+
+  --navh:   68px;
+  --ease:   cubic-bezier(.28,.11,.32,1);
+  --ease2:  cubic-bezier(.16,1,.3,1);
+
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-xl: 24px;
+}
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:var(--r-sm);}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+
+/* ═══════ NAV ═══════ */
+.site-header{
+  position:sticky;top:0;z-index:999;
+  height:var(--navh);padding:0 max(24px,4vw);
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+  background:rgba(255,255,255,.72);
+  backdrop-filter:saturate(140%) blur(20px);-webkit-backdrop-filter:saturate(140%) blur(20px);
+  border-bottom:1px solid rgba(10,10,10,.08);
+}
+.logo{
+  grid-column:1;display:inline-flex;align-items:center;gap:10px;
+  font-size:16px;font-weight:600;color:var(--ink);letter-spacing:-.02em;
+  cursor:pointer;justify-self:start;min-height:44px;padding:6px 0;
+}
+.logo-mark{
+  width:28px;height:28px;background:var(--lime);border-radius:var(--r-sm);
+  display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;
+}
+.logo-mark img{width:16px;height:16px;object-fit:contain;}
+.header-actions{grid-column:3;display:flex;align-items:center;gap:8px;justify-self:end;flex-shrink:0;}
+.login-btn{
+  font-size:13.5px;font-weight:600;color:#fff;background:var(--ink);border:none;cursor:pointer;
+  padding:11px 20px;min-height:44px;border-radius:980px;display:inline-flex;align-items:center;
+  transition:transform .16s var(--ease),opacity .16s;
+}
+.login-btn:hover{opacity:.85;}
+.login-btn:active{transform:scale(.97);}
+.user-chip{
+  display:inline-flex;align-items:center;gap:8px;background:var(--g6);border:1px solid var(--g5);
+  border-radius:980px;padding:5px 6px 5px 14px;font-size:13px;cursor:pointer;
+  transition:background .18s;min-height:44px;
+}
+.user-chip:hover{background:var(--g5);}
+.user-chip .avatar{
+  width:26px;height:26px;border-radius:50%;background:var(--lime);color:var(--ink);
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0;
+}
+.logout-btn{
+  font-size:12.5px;font-weight:600;color:var(--g2);background:#fff;border:1px solid var(--g5);
+  cursor:pointer;padding:9px 16px;min-height:40px;border-radius:980px;transition:background .18s,color .18s;
+}
+.logout-btn:hover{background:var(--g6);color:var(--ink);}
+@media(max-width:420px){.user-chip span.chip-label{display:none;}}
+@media(max-width:768px){
+  .site-header{padding:0 max(18px,env(safe-area-inset-left)) 0 max(18px,env(safe-area-inset-right));}
+  input,textarea,select{font-size:16px!important;}
+}
+
+/* ═══════ AUTH MODAL ═══════ */
+.auth-overlay{
+  display:none;position:fixed;inset:0;z-index:9999;background:rgba(10,10,10,.5);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  align-items:center;justify-content:center;padding:20px;
+}
+.auth-overlay.open{display:flex;}
+.auth-modal{
+  background:#fff;border-radius:var(--r-xl);max-width:380px;width:100%;
+  padding:32px 30px 28px;position:relative;box-shadow:0 40px 80px rgba(0,0,0,.24);
+  animation:fadeUp .3s var(--ease2);
+}
+.auth-modal-close{
+  position:absolute;top:16px;right:16px;width:32px;height:32px;border-radius:980px;
+  border:none;background:var(--g6);cursor:pointer;font-size:18px;color:var(--g2);
+  transition:background .18s,color .18s;
+}
+.auth-modal-close:hover{background:var(--g5);color:var(--ink);}
+.auth-modal h3{font-size:20px;font-weight:600;letter-spacing:-.02em;margin-bottom:6px;}
+.auth-sub{font-size:13.5px;color:var(--g2);margin-bottom:22px;line-height:1.5;}
+.google-btn{
+  display:flex;align-items:center;justify-content:center;gap:10px;width:100%;
+  border:1px solid var(--g4);border-radius:980px;background:#fff;font-size:14px;font-weight:600;
+  padding:12px 18px;cursor:pointer;min-height:48px;transition:border-color .18s,box-shadow .18s;
+}
+.google-btn:hover{border-color:var(--g3);box-shadow:0 4px 14px rgba(0,0,0,.06);}
+.google-btn svg{width:18px;height:18px;}
+.auth-divider{display:flex;align-items:center;gap:12px;margin:20px 0;font-size:12px;color:var(--g3);}
+.auth-divider::before,.auth-divider::after{content:"";flex:1;height:1px;background:var(--g5);}
+#auth-form{display:flex;flex-direction:column;gap:10px;}
+#auth-form input{
+  border:1px solid var(--g4);border-radius:var(--r-md);padding:12px 14px;font-size:14px;
+  outline:none;transition:border-color .18s,box-shadow .18s;color:var(--ink);background:#fff;
+}
+#auth-form input::placeholder{color:var(--g3);}
+#auth-form input:focus{border-color:var(--ink);box-shadow:0 0 0 4px rgba(10,10,10,.05);}
+#auth-submit-btn{
+  background:var(--blue);color:#fff;border:none;border-radius:980px;padding:12px 18px;min-height:48px;
+  font-size:14.5px;font-weight:600;cursor:pointer;margin-top:4px;transition:background .18s;
+}
+#auth-submit-btn:hover{background:var(--blue2);}
+#auth-submit-btn:disabled{opacity:.5;cursor:not-allowed;}
+#auth-error{
+  display:none;margin-top:12px;font-size:13px;background:var(--g6);border-left:3px solid var(--ink);
+  border-radius:var(--r-sm);padding:10px 13px;line-height:1.5;color:var(--g1);
+}
+.auth-toggle{margin-top:18px;font-size:13px;color:var(--g2);text-align:center;}
+.auth-toggle a{color:var(--bluedeep);font-weight:600;cursor:pointer;}
+.auth-toggle a:hover{text-decoration:underline;}
+.auth-name-field{display:none;}
+
+/* ═══════ HOME HERO ═══════ */
+.home-hero{
+  padding:calc(var(--navh) + 40px) 24px 88px;position:relative;text-align:center;
+  min-height:calc(100vh - var(--navh));display:flex;align-items:center;justify-content:center;
+  background:#fff;background-image:radial-gradient(rgba(10,10,10,.08) 1px,transparent 1px);
+  background-size:22px 22px;
+}
+.home-hero::before{
+  content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 60% 55% at 50% 25%,transparent 0%,rgba(255,255,255,.55) 70%,#fff 100%);
+}
+.wrap{position:relative;z-index:1;max-width:760px;margin:0 auto;width:100%;padding:0 24px;}
+.eyebrow-badge{
+  display:inline-flex;align-items:center;font-size:12.5px;font-weight:600;
+  border-radius:980px;background:var(--g6);padding:3px;margin-bottom:26px;
+}
+.eyebrow-badge .seg-dark{color:#fff;background:var(--ink);border-radius:980px;padding:7px 15px;font-weight:600;}
+.eyebrow-badge .seg-light{color:var(--g2);padding:7px 15px;font-weight:500;}
+.home-h1{
+  font-size:clamp(30px,4.6vw,46px);font-weight:600;letter-spacing:-.045em;line-height:1.18;
+  color:var(--ink);margin:0 auto 20px;max-width:660px;
+}
+.home-h1 em{
+  font-style:normal;background:linear-gradient(100deg,var(--bluedeep) 10%,var(--limedeep) 90%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.sub{font-size:clamp(15px,1.4vw,17px);color:var(--g2);line-height:1.55;max-width:480px;margin:0 auto 36px;}
+.search-shell{width:100%;max-width:460px;margin:0 auto;}
+#analyze-form{
+  display:flex;align-items:center;gap:8px;border:1px solid var(--g4);border-radius:980px;
+  background:#fff;overflow:clip;padding:5px 5px 5px 20px;box-shadow:0 2px 10px rgba(10,10,10,.04);
+  transition:border-color .2s,box-shadow .2s;
+}
+#analyze-form:focus-within{border-color:var(--ink);box-shadow:0 2px 14px rgba(10,10,10,.08);}
+#url-input{flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:14.5px;color:var(--ink);padding:12px 8px 12px 0;}
+#url-input::placeholder{color:var(--g3);}
+button#analyze-btn{
+  background:var(--lime);color:#0A0A0A;border:none;cursor:pointer;font-size:14.5px;font-weight:500;
+  padding:0 20px;height:40px;border-radius:980px;display:flex;align-items:center;gap:7px;
+  white-space:nowrap;transition:background .18s,box-shadow .18s,transform .12s;
+}
+button#analyze-btn svg{width:13px;height:13px;}
+button#analyze-btn:hover{background:var(--limedeep);box-shadow:0 6px 20px rgba(182,255,30,.35);}
+button#analyze-btn:active{transform:scale(.98);}
+button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none;cursor:not-allowed;}
+.home-note{font-size:12px;color:var(--g3);font-weight:400;margin-top:14px;}
+#error-banner{
+  display:none;max-width:460px;margin:20px auto 0;text-align:left;background:#fff;
+  border:1px solid var(--g5);border-left:3px solid var(--ink);border-radius:var(--r-md);
+  padding:13px 16px;font-size:13.5px;color:var(--g1);box-shadow:0 2px 10px rgba(10,10,10,.04);
+}
+@media(max-width:480px){
+  #analyze-form{flex-direction:column;padding:8px;border-radius:24px;gap:8px;}
+  #url-input{width:100%;text-align:center;padding:12px;}
+  button#analyze-btn{width:100%;justify-content:center;}
+}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;}}
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="logo" id="header-logo">
+    <span class="logo-mark"><img src="{{ request.url_for('static', path='favicon.ico') }}" alt="Flintel"></span>
+    <span class="logo-text">Flintel</span>
+  </div>
+  <span></span>
+  <!-- Real auth state — filled by checkAuth() from GET /api/me. -->
+  <div class="header-actions" id="header-actions">
+    <button class="login-btn" id="login-btn" type="button">Login</button>
+  </div>
+</header>
+
+<!-- ═══════ AUTH MODAL — real endpoints: /auth/google/login, /auth/signup, /auth/login ═══════ -->
+<div class="auth-overlay" id="auth-overlay">
+  <div class="auth-modal">
+    <button class="auth-modal-close" id="auth-modal-close" type="button" aria-label="Close">&times;</button>
+    <h3 id="auth-modal-title">Log in to Flintel</h3>
+    <p class="auth-sub" id="auth-modal-sub">Your analyses and matched signals are saved to your account.</p>
+    <a class="google-btn" id="google-login-btn" href="/auth/google/login">
+      <svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.4 29.3 35 24 35c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 4.9 29.6 3 24 3 12.4 3 3 12.4 3 24s9.4 21 21 21 21-9.4 21-21c0-1.2-.1-2.3-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.5 19 12.5 24 12.5c3.1 0 5.8 1.1 8 3l5.7-5.7C34.6 6.9 29.6 5 24 5c-8 0-14.9 4.6-18.4 11.3z"/><path fill="#4CAF50" d="M24 43c5.5 0 10.4-1.8 14.1-5l-6.5-5.3C29.6 34 27 35 24 35c-5.3 0-9.7-3.4-11.3-8.1l-6.5 5C9.1 38.4 15.9 43 24 43z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-1 2.6-2.9 4.8-5.2 6.3l6.5 5.3C39.9 36.7 43 30.9 43 24c0-1.2-.1-2.3-.4-3.5z"/></svg>
+      <span>Continue with Google</span>
+    </a>
+    <div class="auth-divider">or</div>
+    <form id="auth-form" autocomplete="on">
+      <div class="auth-name-field"><input id="auth-name" type="text" placeholder="Your name" autocomplete="name"></div>
+      <input id="auth-email" type="email" placeholder="Email" required autocomplete="email">
+      <input id="auth-password" type="password" placeholder="Password" required autocomplete="current-password">
+      <button id="auth-submit-btn" type="submit">Log in</button>
+    </form>
+    <div id="auth-error"></div>
+    <div class="auth-toggle"><span id="auth-toggle-text">Don't have an account?</span> <a id="auth-toggle-link">Sign up</a></div>
+  </div>
+</div>
+
+<!-- ═══════ HERO — the only screen left in this build ═══════ -->
+<div class="home-hero"><div class="wrap">
+  <div class="eyebrow-badge"><span class="seg-dark">Introducing</span><span class="seg-light">Flintel.ai</span></div>
+  <h1 class="home-h1">Your buyers are on Reddit,<br>talking about your <em>competitors</em> right now.</h1>
+  <p class="sub">Enter your website. Flintel reads your business with Claude, matches it against real tracked Reddit signals, and shows you exactly which conversations you're missing.</p>
+  <div class="search-shell">
+    <form id="analyze-form" autocomplete="off">
+      <input id="url-input" type="text" name="url" placeholder="https://yourwebsite.com" required />
+      <button id="analyze-btn" type="submit">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
+        <span>Analyze</span>
+      </button>
+    </form>
+    <div class="home-note" id="home-note">Free market report · Log in to save your results · Real data, not a demo</div>
+  </div>
+  <div id="error-banner"></div>
+</div></div>
+
+<!-- ═══════ AUTH SCRIPT — real /api/me, /auth/*, unchanged from full build ═══════ -->
+<script>
+(function(){
+  const overlay=document.getElementById('auth-overlay'), closeBtn=document.getElementById('auth-modal-close');
+  const modalTitle=document.getElementById('auth-modal-title'), modalSub=document.getElementById('auth-modal-sub');
+  const nameField=document.querySelector('.auth-name-field'), nameInput=document.getElementById('auth-name');
+  const emailInput=document.getElementById('auth-email'), passwordInput=document.getElementById('auth-password');
+  const authForm=document.getElementById('auth-form'), authSubmitBtn=document.getElementById('auth-submit-btn');
+  const authError=document.getElementById('auth-error'), toggleText=document.getElementById('auth-toggle-text');
+  const toggleLink=document.getElementById('auth-toggle-link'), headerActions=document.getElementById('header-actions');
+  const homeNote=document.getElementById('home-note');
+  let authMode='login', currentUser=null;
+  window.pendingAnalyzeUrl=null;
+  window.FlintelAuth={getUser:()=>currentUser,isLoggedIn:()=>!!currentUser,openModal};
+
+  function setMode(mode){
+    authMode=mode;
+    if(mode==='signup'){
+      modalTitle.textContent='Create your Flintel account';
+      modalSub.textContent='Save your reports and let Flintel keep tracking new conversations for you.';
+      nameField.style.display='block'; passwordInput.setAttribute('autocomplete','new-password');
+      authSubmitBtn.textContent='Sign up'; toggleText.textContent='Already have an account?'; toggleLink.textContent='Log in';
+    } else {
+      modalTitle.textContent='Log in to Flintel';
+      modalSub.textContent='Your analyses and matched signals are saved to your account.';
+      nameField.style.display='none'; passwordInput.setAttribute('autocomplete','current-password');
+      authSubmitBtn.textContent='Log in'; toggleText.textContent="Don't have an account?"; toggleLink.textContent='Sign up';
+    }
+    authError.style.display='none';
+  }
+  function openModal(mode){ setMode(mode||'login'); authForm.reset(); overlay.classList.add('open'); setTimeout(()=>emailInput.focus(),50); }
+  function closeModal(){ overlay.classList.remove('open'); }
+  closeBtn.addEventListener('click',closeModal);
+  overlay.addEventListener('click',e=>{if(e.target===overlay)closeModal();});
+  toggleLink.addEventListener('click',e=>{e.preventDefault();setMode(authMode==='login'?'signup':'login');});
+
+  authForm.addEventListener('submit', async function(e){
+    e.preventDefault(); authError.style.display='none'; authSubmitBtn.disabled=true;
+    const path=authMode==='signup'?'/auth/signup':'/auth/login';
+    const body=authMode==='signup'
+      ? {email:emailInput.value.trim(),password:passwordInput.value,name:nameInput.value.trim()||undefined}
+      : {email:emailInput.value.trim(),password:passwordInput.value};
+    try{
+      const res=await fetch(path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      const data=await res.json();
+      if(!res.ok) throw new Error(data.detail||'Something went wrong. Please try again.');
+      closeModal(); await checkAuth();
+      if(window.pendingAnalyzeUrl && window.FlintelAnalyze){
+        const url=window.pendingAnalyzeUrl; window.pendingAnalyzeUrl=null; window.FlintelAnalyze.run(url);
+      }
+    }catch(err){ authError.textContent=err.message; authError.style.display='block'; }
+    finally{ authSubmitBtn.disabled=false; }
+  });
+
+  function renderHeaderLoggedIn(user){
+    const initial=(user.name||user.email||'?').trim().charAt(0).toUpperCase();
+    headerActions.innerHTML=`
+      <button class="user-chip" id="user-chip-btn" type="button" title="${user.email}">
+        <span class="avatar">${initial}</span><span class="chip-label">${user.name||user.email}</span>
+      </button>
+      <button class="logout-btn" id="logout-btn" type="button">Log out</button>`;
+    document.getElementById('logout-btn').addEventListener('click',doLogout);
+    document.getElementById('user-chip-btn').addEventListener('click',()=>{window.location.href='/dashboard';});
+  }
+  function renderHeaderLoggedOut(){
+    headerActions.innerHTML=`<button class="login-btn" id="login-btn" type="button">Login</button>`;
+    document.getElementById('login-btn').addEventListener('click',()=>openModal('login'));
+  }
+  async function doLogout(){
+    try{await fetch('/auth/logout',{method:'POST'});}catch(e){}
+    currentUser=null; renderHeaderLoggedOut();
+    homeNote.textContent='Free market report · Log in to save your results · Real data, not a demo';
+  }
+  async function checkAuth(){
+    try{
+      const res=await fetch('/api/me'); const data=await res.json();
+      if(data.logged_in){
+        currentUser={email:data.email,name:data.name,auth_method:data.auth_method};
+        renderHeaderLoggedIn(currentUser);
+        homeNote.textContent='Free market report · Saved to your account · Real data, not a demo';
+      } else { currentUser=null; renderHeaderLoggedOut(); }
+    }catch(e){ currentUser=null; renderHeaderLoggedOut(); }
+  }
+  document.getElementById('login-btn').addEventListener('click',()=>openModal('login'));
+  document.addEventListener('DOMContentLoaded',checkAuth);
+  if(document.readyState!=='loading') checkAuth();
+})();
+</script>
+
+<!-- ═══════ ANALYZE SCRIPT — real POST /api/analyze, no fake screens.
+     Since the scan + report screens were removed from this build, a
+     successful analysis sends the user straight to /dashboard, which
+     already renders the full, real, saved result (index.py's GET
+     /dashboard route + dashboard.html). Nothing here is a placeholder:
+     a 401 opens the real login modal, a non-2xx shows the real error
+     message from the backend, and a 2xx redirects to the real page
+     that displays the data /api/analyze just persisted. ═══════ -->
+<script>
+(function(){
+  const form=document.getElementById('analyze-form'), input=document.getElementById('url-input'), btn=document.getElementById('analyze-btn');
+  const errorBanner=document.getElementById('error-banner');
+
+  function showError(msg){ errorBanner.textContent=msg; errorBanner.style.display='block'; }
+  function hideError(){ errorBanner.style.display='none'; }
+  function setBusy(isBusy){ btn.disabled=isBusy; input.disabled=isBusy; btn.querySelector('span').textContent=isBusy?'Analyzing…':'Analyze'; }
+
+  async function runAnalyze(rawUrl){
+    hideError(); setBusy(true);
+    try{
+      const response = await fetch('/api/analyze',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({url:rawUrl})});
+      const data = await response.json();
+      if(response.status===401){
+        window.pendingAnalyzeUrl = rawUrl;
+        if(window.FlintelAuth) window.FlintelAuth.openModal('login');
+        return;
+      }
+      if(!response.ok) throw new Error(data.detail || 'Something went wrong while analyzing that site.');
+      // Real result is already persisted server-side (flintel_web_data +
+      // matched signals) — send the user to the real dashboard to see it.
+      window.location.href = '/dashboard';
+    }catch(err){
+      showError(err.message || 'Something went wrong. Please try again.');
+    }finally{ setBusy(false); }
+  }
+
+  window.FlintelAnalyze = { run: runAnalyze };
+
+  form.addEventListener('submit', function(e){
+    e.preventDefault();
+    const rawUrl = input.value.trim();
+    if(!rawUrl) return;
+    if(!window.FlintelAuth || !window.FlintelAuth.isLoggedIn()){
+      window.pendingAnalyzeUrl = rawUrl;
+      if(window.FlintelAuth) window.FlintelAuth.openModal('login');
+      return;
+    }
+    runAnalyze(rawUrl);
+  });
+})();
+</script>
+</body>
+</html>

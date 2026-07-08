@@ -1105,7 +1105,7 @@ async def market_momentum(user: dict = Depends(get_current_user)):
 async def public_stats():
     """
     Small, honest, PUBLIC (no auth) aggregate for the marketing homepage
-    proof strip. Counts DISTINCT domains that have ever been analyzed by
+    proof strip. Counts DISTINCT domains that have ever been analyzed by 
     ANY user, across flintel_web_data. This is a real aggregate query
     against real stored data — not an estimate, not a client-side
     incrementing counter, and not gated behind login.

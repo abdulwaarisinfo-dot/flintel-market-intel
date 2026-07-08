@@ -1,8 +1,7 @@
 """
 Flintel — Website Market Intelligence + Reddit Signal Tracking
 ----------------------------------------------------------------
-(See project docs for full architecture notes — unchanged from the
-existing backend. This revision adds:
+(See project docs for full architecture notes. This revision adds:
   1. /api/stats/public — used by the Report/homepage proof strip.
   2. /api/report/market-momentum — powers the "Section 03: Your market
      is moving" report card (competitor complaint volume trend, intent
@@ -11,12 +10,11 @@ existing backend. This revision adds:
      integration exists in this codebase).
 
 Everything else in this file — every route, every collection, every
-query, every isolation guarantee — is 100% unchanged from the existing
-2.3.0 backend. All new code lives in one clearly-marked additive block
-and reuses the SAME user_email-scoping pattern used everywhere else in
-this file (see signals_filter = {"user_email": user_email} throughout).
-No existing function was edited, renamed, or reordered.
-)
+query, every isolation guarantee — is unchanged from the existing
+backend. All new code lives in one clearly-marked additive block and
+reuses the SAME user_email-scoping pattern used everywhere else in this
+file. No existing function was edited, renamed, or reordered except for
+one bug fix inside _volume_trend (see its docstring for details).
 """
 
 import asyncio
@@ -75,7 +73,7 @@ flintel_user_signals_collection = db["flintel_user_signals"]
 flintel_tracking_state_collection = db["flintel_tracking_state"]
 flintel_counters_collection  = db["flintel_counters"]
 
-app = FastAPI(title="Flintel — Website Market Intelligence", version="2.4.0")
+app = FastAPI(title="Flintel — Website Market Intelligence", version="2.4.1")
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -747,38 +745,25 @@ async def compute_dashboard_stats(user_email: str) -> dict:
 
 
 # ============================================================================
-# NEW — SECTION 03 REPORT CARD: "Your market is moving — and it's moving
-# toward you"
+# SECTION 03 REPORT CARD: "Your market is moving — and it's moving toward you"
 # ============================================================================
 #
-# Everything below is 100% ADDITIVE. No function above this block was
-# edited, renamed, reordered, or has its behavior changed in any way.
+# Everything below is additive. No function above this block was renamed,
+# reordered, or has its behavior changed, with one exception noted below.
 #
 # ISOLATION GUARANTEE: every query below filters on {"user_email": user_email},
 # the exact same pattern already used throughout compute_dashboard_stats()
-# above. user_email is always the value from the authenticated session
-# (via get_current_user, reading request.session — never from client input),
-# so one user's competitor volume, intent-phrase volume, and bar chart can
-# never mix with another user's data, for the same reason /api/dashboard-stats
-# already can't mix users: the filter is applied at the database-query level,
-# not reconstructed or trusted from anything the client sends.
+# above. user_email always comes from the authenticated session (via
+# get_current_user, reading request.session — never from client input), so
+# one user's data can never mix with another's.
 #
 # HONESTY GUARANTEE: "Threads ranking on Google Page 1" has no underlying
 # data source anywhere in this codebase — nothing here queries Google or
-# stores SERP-ranking history. Rather than fabricate a number for it (which
-# would violate the same "never invent facts" principle already applied in
-# ANALYSIS_SYSTEM_PROMPT and in public_stats()'s fail-soft-to-null pattern),
-# it is returned as null with an explicit "not yet available" reason string,
-# so the frontend can hide/skip that card instead of rendering a fake number.
+# stores SERP-ranking history. Rather than fabricate a number for it, it is
+# returned as null with an explicit reason string, so the frontend can show
+# an honest "not available" state instead of a fake number.
 # ============================================================================
 
-# Pure heuristic used ONLY to classify already-existing discovery_keywords
-# as "intent" phrasing (comparison/recommendation-seeking language) for the
-# "'Anyone use X?' search phrases" card. This does NOT touch
-# ANALYSIS_SYSTEM_PROMPT, does NOT change the discovery_keywords schema, and
-# does NOT alter store_flintel_web_data / match_existing_web_data / any
-# existing keyword-matching code path in any way — it only reads keywords
-# that already exist in a user's own latest report.
 INTENT_PHRASE_MARKERS = [
     "anyone use", "anyone tried", " vs ", "alternative to", "alternative for",
     "recommend", "worth it", "switch from", "switching from", "better than",
@@ -790,21 +775,30 @@ def _is_intent_phrase(keyword: str) -> bool:
     return any(marker in k for marker in INTENT_PHRASE_MARKERS)
 
 
-async def _volume_trend(user_email: str, text_pattern: str, days_back: int = 90) -> dict:
+async def _volume_trend(user_email: str, text_pattern: str, window_days: int = 30) -> dict:
     """
-    Read-only comparison of matched-signal volume in the most recent third
-    of the window vs. the two-thirds before it, using ONLY
-    flintel_user_signals.matched_at (a field that already exists and is
-    already user-scoped by every other query in this file). No new
-    collection, no new write path, no mutation of any state.
+    Read-only comparison of matched-signal volume in the most recent
+    `window_days`-day period vs. the `window_days`-day period immediately
+    before it, using ONLY flintel_user_signals.matched_at.
 
-    ALWAYS filtered by user_email first in the query dict below — this is
-    the same isolation guarantee used by signals_filter in
-    compute_dashboard_stats() above.
+    BUG FIX vs. the original draft of this function: it previously compared
+    a `days_back // 3`-day "recent" window (e.g. 30 days) against a
+    `days_back`-day "baseline" window (e.g. the other 60 days) — two
+    windows of different lengths. Comparing raw counts across unequal
+    window lengths biases pct_change_vs_prior_period toward a false
+    decline even when the underlying daily rate is perfectly flat (a
+    60-day window will almost always contain more matches than a 30-day
+    one, purely from covering more time). Both windows here are exactly
+    `window_days` days long, so counts are directly comparable with no
+    separate per-day normalization step needed.
+
+    ALWAYS filtered by user_email first — the same isolation guarantee
+    used by signals_filter in compute_dashboard_stats() above.
     """
     now = datetime.now(timezone.utc)
-    recent_start = now - timedelta(days=days_back // 3)
-    baseline_start = now - timedelta(days=days_back)
+    recent_start = now - timedelta(days=window_days)
+    baseline_start = now - timedelta(days=window_days * 2)
+    baseline_end = recent_start
 
     filt = {
         "user_email": user_email,
@@ -815,7 +809,7 @@ async def _volume_trend(user_email: str, text_pattern: str, days_back: int = 90)
         {**filt, "matched_at": {"$gte": recent_start}}
     )
     baseline_count = await flintel_user_signals_collection.count_documents(
-        {**filt, "matched_at": {"$gte": baseline_start, "$lt": recent_start}}
+        {**filt, "matched_at": {"$gte": baseline_start, "$lt": baseline_end}}
     )
 
     pct_change = None
@@ -826,33 +820,33 @@ async def _volume_trend(user_email: str, text_pattern: str, days_back: int = 90)
         "current_period_count": recent_count,
         "baseline_period_count": baseline_count,
         "pct_change_vs_prior_period": pct_change,
+        "window_days": window_days,
     }
 
 
-async def _competitor_complaint_volume(user_email: str, competitors: list[dict], days_back: int = 90) -> dict:
+async def _competitor_complaint_volume(user_email: str, competitors: list[dict], window_days: int = 30) -> dict:
     """
     "Competitor complaint volume" card. Volume = count of THIS user's own
     matched_signals (flintel_user_signals, already user-scoped) whose text
-    mentions any competitor name from THIS user's own latest report — same
-    competitor list already used by compute_dashboard_stats()'s
-    competitor_gap, just aggregated as a single combined trend instead of
-    per-competitor counts.
+    mentions any competitor name from THIS user's own latest report.
     """
     names = [c.get("name") for c in competitors if isinstance(c, dict) and c.get("name")]
     if not names:
-        return {"current_period_count": 0, "baseline_period_count": 0, "pct_change_vs_prior_period": None}
+        return {
+            "current_period_count": 0, "baseline_period_count": 0,
+            "pct_change_vs_prior_period": None, "window_days": window_days,
+        }
 
     pattern = "|".join(re.escape(n) for n in names)
-    return await _volume_trend(user_email, pattern, days_back=days_back)
+    return await _volume_trend(user_email, pattern, window_days=window_days)
 
 
-async def _intent_phrase_volume(user_email: str, discovery_keywords: list[str], days_back: int = 90) -> dict:
+async def _intent_phrase_volume(user_email: str, discovery_keywords: list[str], window_days: int = 30) -> dict:
     """
     "'Anyone use X?' search phrases" card. Filters THIS user's own latest
-    report's discovery_keywords down to the ones that read as comparison /
-    recommendation-seeking language (via _is_intent_phrase — a pure string
-    heuristic, not a schema change), then reuses _volume_trend() against
-    THIS user's own flintel_user_signals.
+    report's discovery_keywords down to comparison/recommendation-seeking
+    language, then reuses _volume_trend() against THIS user's own
+    flintel_user_signals.
     """
     intent_keywords = [kw for kw in discovery_keywords if _is_intent_phrase(kw)]
     if not intent_keywords:
@@ -860,23 +854,22 @@ async def _intent_phrase_volume(user_email: str, discovery_keywords: list[str], 
             "current_period_count": 0,
             "baseline_period_count": 0,
             "pct_change_vs_prior_period": None,
+            "window_days": window_days,
             "matched_phrases": [],
         }
 
     pattern = "|".join(re.escape(kw) for kw in intent_keywords)
-    trend = await _volume_trend(user_email, pattern, days_back=days_back)
+    trend = await _volume_trend(user_email, pattern, window_days=window_days)
     trend["matched_phrases"] = intent_keywords
     return trend
 
 
 def _build_competitor_bar_chart(competitor_gap: list[dict], your_mentions: int) -> dict:
     """
-    Pure reshape of data ALREADY computed by compute_dashboard_stats()
+    Pure reshape of data already computed by compute_dashboard_stats()
     (competitor_gap + your_mentions passed in as arguments) — no new query
-    is issued here, no new source of truth is introduced. Adds the
-    "talked about Nx more" headline stat honestly: if your_mentions is 0,
-    the multiple is returned as None (never a fabricated ratio, never a
-    division by zero).
+    is issued here. "talked about Nx more": if your_mentions is 0, the
+    multiple is None (never fabricated, never a division by zero).
     """
     bars = sorted(
         [{"name": c["name"], "mentions": c["mentions"], "is_you": False} for c in competitor_gap],
@@ -897,23 +890,13 @@ def _build_competitor_bar_chart(competitor_gap: list[dict], your_mentions: int) 
 async def compute_market_momentum(user_email: str) -> dict:
     """
     Assembles the full "Section 03 — Your market is moving" report card
-    for THIS user only. Every piece of data plugged in here traces back to
-    a query filtered on {"user_email": user_email}:
+    for THIS user only.
       - competitor_gap / your_mentions / domain: reuses
-        compute_dashboard_stats(user_email)'s existing, already-correct,
-        already user-scoped computation verbatim — not recomputed, not
-        duplicated, just read from its return value.
-      - competitor_complaint_volume / intent_search_phrases: new read-only
-        aggregations against flintel_user_signals_collection, each call
-        passing user_email through to _volume_trend()'s
-        {"user_email": user_email, ...} filter.
+        compute_dashboard_stats(user_email)'s existing computation verbatim.
+      - competitor_complaint_volume / intent_search_phrases: read-only
+        aggregations against flintel_user_signals_collection, user-scoped.
       - page_one_threads: honestly null. No SERP-ranking integration
-        exists anywhere in this file — nothing queries Google, nothing
-        stores ranking history. Faking this number here would be exactly
-        the kind of fabrication ANALYSIS_SYSTEM_PROMPT explicitly forbids
-        Claude from doing, and that public_stats() explicitly avoids by
-        failing soft to null. Wire this to a real SERP-checking worker
-        before ever returning a number for it.
+        exists anywhere in this file.
     """
     base_stats = await compute_dashboard_stats(user_email)
     competitor_gap = base_stats["competitor_gap"]
@@ -1108,12 +1091,11 @@ async def dashboard_stats(user: dict = Depends(get_current_user)):
 @app.get("/api/report/market-momentum")
 async def market_momentum(user: dict = Depends(get_current_user)):
     """
-    Powers the "Section 03 — Your market is moving" report card (the three
-    trend cards, the competitor bar chart, and the "talked about Nx more"
-    callout). Scoped to the logged-in user via get_current_user, exactly
-    like every other authenticated route in this file — user_email is
-    read from the signed session cookie, never accepted from the client,
-    so this can never return another user's data.
+    Powers the "Section 03 — Your market is moving" report card (the two
+    real trend cards, the honest 'not available' third card, the
+    competitor bar chart, and the "talked about Nx more" callout). Scoped
+    to the logged-in user via get_current_user — user_email is read from
+    the signed session cookie, never accepted from the client.
     """
     momentum = await compute_market_momentum(user["email"])
     return JSONResponse(momentum)
@@ -1126,8 +1108,7 @@ async def public_stats():
     proof strip. Counts DISTINCT domains that have ever been analyzed by
     ANY user, across flintel_web_data. This is a real aggregate query
     against real stored data — not an estimate, not a client-side
-    incrementing counter, and not gated behind login (it doesn't expose
-    any per-user data, just a count).
+    incrementing counter, and not gated behind login.
 
     If this endpoint is ever removed, the corresponding #proof-domains
     fetch in web.html must be removed too, rather than replaced with a
@@ -1138,8 +1119,6 @@ async def public_stats():
         return JSONResponse({"domains_analyzed": len(domains)})
     except Exception as exc:
         logger.error("public_stats() failed: %s", exc)
-        # Fail soft: null tells the frontend to hide the stat rather than
-        # show a fabricated fallback number.
         return JSONResponse({"domains_analyzed": None})
 
 

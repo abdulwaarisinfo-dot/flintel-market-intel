@@ -88,6 +88,12 @@ h1,h2,h3,h4,h5,h6,
   display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden;
 }
 .logo-mark img{width:16px;height:16px;object-fit:contain;}
+.site-nav{grid-column:2;display:flex;align-items:center;gap:34px;justify-self:center;}
+.site-nav a{
+  min-height:44px;display:inline-flex;align-items:center;padding:6px 0;
+  font-size:14px;color:var(--g2);cursor:pointer;transition:color .18s;white-space:nowrap;
+}
+.site-nav a:hover{color:var(--ink);}
 .header-actions{grid-column:3;display:flex;align-items:center;gap:8px;justify-self:end;flex-shrink:0;}
 .login-btn{
   font-size:13.5px;font-weight:600;color:#fff;background:var(--ink);border:none;cursor:pointer;
@@ -112,6 +118,7 @@ h1,h2,h3,h4,h5,h6,
 }
 .logout-btn:hover{background:var(--g6);color:var(--ink);}
 @media(max-width:420px){.user-chip span.chip-label{display:none;}}
+@media(max-width:820px){.site-nav{display:none;}}
 @media(max-width:768px){
   .site-header{padding:0 max(18px,env(safe-area-inset-left)) 0 max(18px,env(safe-area-inset-right));}
   input,textarea,select{font-size:16px!important;}
@@ -198,11 +205,12 @@ h1,h2,h3,h4,h5,h6,
 .search-shell{width:100%;max-width:460px;margin:0 auto;}
 #analyze-form{
   display:flex;align-items:center;gap:8px;border:1px solid var(--g4);border-radius:980px;
-  background:#fff;overflow:clip;padding:5px 5px 5px 20px;box-shadow:0 2px 10px rgba(10,10,10,.04);
+  background:#fff;overflow:clip;padding:5px 5px 5px 0;box-shadow:0 2px 10px rgba(10,10,10,.04);
   transition:border-color .2s,box-shadow .2s;
 }
 #analyze-form:focus-within{border-color:var(--ink);box-shadow:0 2px 14px rgba(10,10,10,.08);}
-#url-input{flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:14.5px;color:var(--ink);padding:12px 8px 12px 0;}
+.url-prefix{padding:0 0 0 20px;font-size:14.5px;color:var(--g3);font-weight:400;flex-shrink:0;white-space:nowrap;line-height:1;}
+#url-input{flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:14.5px;color:var(--ink);padding:12px 8px 12px 6px;}
 #url-input::placeholder{color:var(--g3);}
 button#analyze-btn{
   background:var(--lime);color:#0A0A0A;border:none;cursor:pointer;font-size:14.5px;font-weight:500;
@@ -219,6 +227,7 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
   border:1px solid var(--g5);border-left:3px solid var(--ink);border-radius:var(--r-md);
   padding:13px 16px;font-size:13.5px;color:var(--g1);box-shadow:0 2px 10px rgba(10,10,10,.04);
 }
+@media(max-width:768px){.url-prefix{display:none;} #url-input{padding-left:22px;}}
 @media(max-width:480px){
   #analyze-form{flex-direction:column;padding:8px;border-radius:24px;gap:8px;}
   #url-input{width:100%;text-align:center;padding:12px;}
@@ -234,7 +243,12 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
     <span class="logo-mark"><img src="{{ request.url_for('static', path='favicon.ico') }}" alt="Flintel"></span>
     <span class="logo-text">Flintel</span>
   </div>
-  <span></span>
+  <nav class="site-nav">
+    <a>How it works</a>
+    <a>Sources</a>
+    <a>Intelligence</a>
+    <a>Pricing</a>
+  </nav>
   <!-- Real auth state — filled by checkAuth() from GET /api/me. -->
   <div class="header-actions" id="header-actions">
     <button class="login-btn" id="login-btn" type="button">Login</button>
@@ -270,13 +284,14 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
   <p class="sub">Enter your website. Flintel reads your business with Claude, matches it against real tracked Reddit signals, and shows you exactly which conversations you're missing.</p>
   <div class="search-shell">
     <form id="analyze-form" autocomplete="off">
-      <input id="url-input" type="text" name="url" placeholder="https://yourwebsite.com" required />
+      <span class="url-prefix">https://</span>
+      <input id="url-input" type="text" name="url" placeholder="yourwebsite.com" required />
       <button id="analyze-btn" type="submit">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>
-        <span>Analyze</span>
+        <span>Analyze My Market</span>
       </button>
     </form>
-    <div class="home-note" id="home-note">Free market report · Log in to save your results · Real data, not a demo</div>
+    <div class="home-note" id="home-note">Free market report · Login required · Ready in 30 seconds</div>
   </div>
   <div id="error-banner"></div>
 </div></div>
@@ -352,7 +367,7 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
   async function doLogout(){
     try{await fetch('/auth/logout',{method:'POST'});}catch(e){}
     currentUser=null; renderHeaderLoggedOut();
-    homeNote.textContent='Free market report · Log in to save your results · Real data, not a demo';
+    homeNote.textContent='Free market report · Login required · Ready in 30 seconds';
   }
   async function checkAuth(){
     try{
@@ -360,7 +375,7 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
       if(data.logged_in){
         currentUser={email:data.email,name:data.name,auth_method:data.auth_method};
         renderHeaderLoggedIn(currentUser);
-        homeNote.textContent='Free market report · Saved to your account · Real data, not a demo';
+        homeNote.textContent='Free market report · Saved to your account · Ready in 30 seconds';
       } else { currentUser=null; renderHeaderLoggedOut(); }
     }catch(e){ currentUser=null; renderHeaderLoggedOut(); }
   }
@@ -385,7 +400,7 @@ button#analyze-btn:disabled{background:var(--g4);color:var(--g3);box-shadow:none
 
   function showError(msg){ errorBanner.textContent=msg; errorBanner.style.display='block'; }
   function hideError(){ errorBanner.style.display='none'; }
-  function setBusy(isBusy){ btn.disabled=isBusy; input.disabled=isBusy; btn.querySelector('span').textContent=isBusy?'Analyzing…':'Analyze'; }
+  function setBusy(isBusy){ btn.disabled=isBusy; input.disabled=isBusy; btn.querySelector('span').textContent=isBusy?'Analyzing…':'Analyze My Market'; }
 
   async function runAnalyze(rawUrl){
     hideError(); setBusy(true);

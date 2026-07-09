@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -335,6 +336,1323 @@ html{overflow-x:clip;}
 #toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(10px);background:rgba(10,10,10,.94);color:#fff;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-size:13.5px;font-weight:400;padding:12px 20px;border-radius:980px;display:flex;align-items:center;gap:9px;box-shadow:0 10px 32px rgba(0,0,0,.22);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:99999;white-space:nowrap;}
 #toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 #toast svg{color:#B6FF1E;flex-shrink:0;}
+
+/* ══════ ADDITIONAL LANDING PAGE DESIGN CSS ══════ */
+.home-inner{
+  position:relative;z-index:1;
+  max-width:760px;width:100%;margin:0 auto;
+}
+.home-eyebrow{
+  display:inline-flex;align-items:center;gap:0;
+  font-size:12.5px;font-weight:600;letter-spacing:.01em;
+  border-radius:980px;background:var(--g6);
+  padding:3px;margin-bottom:26px;
+}
+.home-eyebrow-dot{display:none;}
+.home-eyebrow-tag{
+  color:#fff;background:var(--ink);border-radius:980px;
+  padding:7px 15px;font-weight:600;
+}
+.home-eyebrow-brand{
+  color:var(--g2);padding:7px 15px;font-weight:500;
+}
+.home-h1{
+  font-size:clamp(30px,4.2vw,46px);
+  font-weight:600;letter-spacing:-.045em;
+  line-height:1.18;color:var(--ink);
+  margin-bottom:20px;
+}
+.home-h1 em{
+  font-style:normal;
+  background:linear-gradient(100deg,var(--bluedeep) 10%,var(--limedeep) 90%);
+  -webkit-background-clip:text;background-clip:text;color:transparent;
+}
+.home-sub{
+  font-size:clamp(15px,1.4vw,17px);
+  font-weight:400;color:var(--g2);
+  line-height:1.55;letter-spacing:.002em;
+  max-width:480px;margin:0 auto 36px;
+}
+/* url input — light pill, two-part like a search bar */
+.url-form{
+  display:flex;flex-direction:column;align-items:center;gap:14px;
+  width:100%;max-width:460px;margin:0 auto;
+}
+.url-box{
+  width:100%;display:flex;align-items:center;gap:8px;
+  border:1px solid var(--g4);border-radius:980px;
+  background:#fff;overflow:clip;padding:5px 5px 5px 0;
+  box-shadow:0 2px 10px rgba(10,10,10,.04);
+  transition:border-color .2s,box-shadow .2s,background .2s;
+}
+.url-box:focus-within{
+  border-color:var(--ink);
+  box-shadow:0 2px 14px rgba(10,10,10,.08);
+}
+.url-prefix{
+  padding:0 0 0 20px;font-size:14.5px;color:var(--g3);
+  font-weight:400;flex-shrink:0;white-space:nowrap;line-height:1;
+}
+#url-input{
+  flex:1;min-width:0;border:none;outline:none;
+  background:transparent;font-size:14.5px;color:var(--ink);
+  padding:12px 8px 12px 6px;
+}
+#url-input::placeholder{color:var(--g3);}
+.url-submit{
+  background:var(--lime);color:#0A0A0A;border:none;cursor:pointer;
+  font-family:var(--font-num);font-size:14.5px;font-weight:500;letter-spacing:var(--tk-md);
+  padding:0 20px;height:40px;
+  border-radius:980px;
+  transition:background .18s,transform .12s,box-shadow .18s;
+  white-space:nowrap;flex-shrink:0;
+  display:flex;align-items:center;gap:7px;
+}
+.url-submit:hover{background:var(--limedeep);box-shadow:0 6px 20px rgba(182,255,30,.35);}
+.url-submit:active{transform:scale(.98);}
+.url-submit svg{width:13px;height:13px;display:none;}
+.home-note{font-size:12px;color:var(--g3);font-weight:400;}
+/* proof strip — graphic stat blocks, light cards */
+.proof-strip{
+  display:grid;grid-template-columns:repeat(4,1fr);
+  gap:12px;margin-top:64px;max-width:760px;margin-left:auto;margin-right:auto;
+}
+.proof-item{
+  text-align:left;border-radius:var(--r-md);padding:18px 16px;
+  background:#fff;border:1px solid var(--g5);
+  box-shadow:0 2px 10px rgba(10,10,10,.03);
+  transition:transform .25s var(--ease2),box-shadow .25s;
+  animation:fadeUp .6s var(--ease2) backwards;
+}
+.proof-item:hover{transform:translateY(-3px);box-shadow:0 10px 24px rgba(10,10,10,.07);}
+.proof-item:nth-child(1){animation-delay:.05s;}
+.proof-item:nth-child(2){animation-delay:.12s;}
+.proof-item:nth-child(3){animation-delay:.19s;}
+.proof-item:nth-child(4){animation-delay:.26s;}
+.proof-n{
+  font-size:24px;font-weight:700;color:var(--ink);
+  letter-spacing:-.02em;display:block;
+  font-variant-numeric:tabular-nums;margin-bottom:4px;
+}
+.proof-l{font-size:11.5px;color:var(--g3);line-height:1.35;}
+.proof-div{display:none;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+
+/* ═══════ TOAST ═══════ */
+#toast{
+  position:fixed;bottom:28px;left:50%;
+  transform:translateX(-50%) translateY(10px);
+  background:rgba(10,10,10,.94);color:#fff;
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  font-size:13.5px;font-weight:400;
+  padding:12px 20px;border-radius:980px;
+  display:flex;align-items:center;gap:9px;
+  box-shadow:0 10px 32px rgba(0,0,0,.22);
+  opacity:0;pointer-events:none;
+  transition:opacity .25s,transform .25s;
+  z-index:99999;white-space:nowrap;
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#toast svg{color:#B6FF1E;flex-shrink:0;}
+
+/* ═══════ SHARED UTILS ═══════ */
+.btn-ink{
+  background:var(--blue);color:#fff;border:none;
+  font-size:14px;font-weight:500;
+  padding:11px 22px;border-radius:980px;cursor:pointer;
+  transition:background .18s;display:inline-flex;align-items:center;gap:8px;
+}
+.btn-ink:hover{background:var(--blue2);}
+.btn-ghost-sm{
+  background:var(--g6);color:var(--ink);border:none;
+  font-size:13.5px;font-weight:500;
+  padding:10px 18px;border-radius:980px;cursor:pointer;
+  transition:background .18s;
+}
+.btn-ghost-sm:hover{background:var(--g5);}
+.section-divider{height:1px;background:var(--g6);margin:0;}
+
+/* ═══════ RESPONSIVE ═══════ */
+@media(max-width:1024px){
+  .subreddit-grid{grid-template-columns:repeat(2,1fr);}
+  .metric-row{grid-template-columns:repeat(2,1fr);}
+  .intel-grid{grid-template-columns:1fr;}
+}
+
+/* iOS notch safe areas */
+nav{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,env(safe-area-inset-right));}
+@media(max-width:768px){
+  nav{padding-left:max(18px,env(safe-area-inset-left));padding-right:max(18px,env(safe-area-inset-right));}
+  .report-body,.report-hero-inner{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right));}
+  #modal-bg{padding-bottom:max(24px,env(safe-area-inset-bottom));}
+  #toast{bottom:max(28px,env(safe-area-inset-bottom));}
+}
+/* smooth momentum scroll on iOS */
+body,html{-webkit-overflow-scrolling:touch;}
+/* prevent overscroll bounce dragging the nav */
+body{overscroll-behavior-y:contain;}
+/* prevent horizontal scroll from any single misbehaving element */
+html{overflow-x:clip;}
+
+@media(max-width:768px){
+  nav{grid-template-columns:auto 1fr;padding:0 18px;}
+  .nav-links{display:none!important;}
+  /* Touch targets — Apple HIG 44px minimum on mobile */
+  .nav-logo{padding:8px 0;min-height:44px;display:inline-flex;align-items:center;}
+  .nav-login,.nav-cta,.nav-ghost{min-height:44px;}
+  .pc-btn{min-height:48px;padding:14px 22px;}
+  .ca-btn{min-height:44px;padding:10px 18px;}
+  .ma-approve,.ma-edit,.ma-skip{min-height:48px;padding:14px 22px;}
+  .onb-next,.onb-back,.onb-skip,.form-submit{min-height:48px;}
+  .comm-approve,.comm-view,.thread-open-btn{min-height:44px;}
+  .ds-item{padding:12px 14px;min-height:44px;}
+  .rmchip{padding:8px 14px;min-height:36px;}
+  .modal-close-btn{width:44px;height:44px;}
+  /* prevent iOS zoom on input focus (font-size must be >=16px) */
+  input,textarea,select{font-size:16px!important;}
+  /* Small screens — final polish */
+  .home-h1{letter-spacing:-.035em;line-height:1.1;}
+  .home-eyebrow{margin-bottom:24px;}
+  .rep-head h1,.report-h{font-size:clamp(26px,7vw,34px);line-height:1.15;letter-spacing:-.03em;}
+  .rs-title{font-size:clamp(20px,5.4vw,24px);}
+  .viz-grid-3{grid-template-columns:1fr;gap:12px;}
+  .viz-card{padding:22px 22px;}
+  .live-ticker{gap:14px;padding:16px 18px;flex-direction:column;align-items:stretch;}
+  .lt-metric{min-width:0;justify-content:space-between;}
+  .lt-sep{display:none;}
+  .gap-row{grid-template-columns:110px 1fr 60px;gap:14px;}
+  .gap-name{font-size:13px;}
+  .gap-count{font-size:14px;}
+  .proj-viz{padding:24px 20px;}
+  .proj-h-value{font-size:32px;letter-spacing:-1.1px;}
+  .map-canvas{height:260px;}
+  .map-node b{font-size:11px;}
+  .map-legend{gap:14px;font-size:12px;text-align:center;}
+  .rmchip{font-size:12px;padding:7px 12px;}
+  .sub-icon{width:36px;height:36px;font-size:15px;}
+  .sub-name{font-size:15px;}
+  .thread-card{grid-template-columns:1fr;padding:22px 20px;}
+  .thread-score-col{align-self:flex-start;}
+  .rep-close{padding:44px 0 72px;}
+  .cta-actions{width:100%;flex-direction:column;}
+  .cta-actions .btn{width:100%;}
+
+  .nav-actions{grid-column:auto;justify-self:end;}
+  .nav-ghost{display:none;}
+  .home-h1{font-size:clamp(30px,8vw,42px);}
+  .hb{display:none;}
+  .home-sub{margin-bottom:38px;}
+  .url-prefix{display:none;}
+  #url-input{padding-left:22px;}
+  .url-box{flex-direction:row;}
+  .proof-strip{gap:22px;margin-top:56px;}
+  .proof-div{display:none;}
+  .report-hero{padding:52px 20px 40px;}
+  .report-body{padding:0 20px 64px;}
+  .report-section{padding-top:56px;}
+  .subreddit-grid{grid-template-columns:1fr;}
+  .thread-card{padding:20px;gap:16px;}
+  .pricing-grid{grid-template-columns:1fr;}
+  .report-cta-section{padding:56px 20px 64px;}
+  .upvote-timeline{grid-template-columns:repeat(2,1fr);}
+  .auth-split{flex-direction:column;}
+  .auth-left{width:100%;padding:36px 24px;order:2;}
+  .auth-right{padding:44px 24px;order:1;}
+  .form-row{grid-template-columns:1fr;}
+  #s-dashboard{flex-direction:column;}
+  .dash-sidebar{
+    width:100%;position:relative;top:0;
+    flex-direction:row;flex-wrap:wrap;
+    padding:10px;border-right:none;border-bottom:1px solid var(--g5);
+    height:auto;overflow-y:visible;
+  }
+  .dash-main{margin-left:0;padding:26px 18px;}
+  .metric-row{grid-template-columns:repeat(2,1fr);}
+  .ds-section-label{display:none;}
+  .ds-item{padding:8px 11px;}
+}
+@media(max-width:480px){
+  .url-box{flex-direction:column;padding:8px;border-radius:24px;gap:8px;}
+  #url-input{width:100%;text-align:center;padding:12px;}
+  .url-submit{width:100%;justify-content:center;}
+  .modal-actions{flex-direction:column;}
+  .ma-approve,.ma-edit,.ma-skip{width:100%;}
+}
+@media(prefers-reduced-motion:reduce){
+  *{animation:none!important;transition:none!important;}
+  .screen{animation:none;}
+}
+/* ═══════════════════════════════════════════════════════════════
+   HOMEPAGE — full-page marketing sections below hero
+   Each section pushes toward the URL input at end.
+   Design system: Fustat headings, ink+lime, hairlines, plenty of air.
+═══════════════════════════════════════════════════════════════ */
+#s-home{
+  min-height:0!important;height:auto;
+  padding:0;
+  align-items:stretch;
+  background:#fff;
+}
+#s-home::before{display:none;}  /* kill inherited pseudo-element that dims background */
+.home-hero{
+  padding:calc(var(--navh) + 32px) 24px 96px;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;position:relative;z-index:1;
+  min-height:100vh;
+  background:#fff;
+  background-image:radial-gradient(rgba(10,10,10,.08) 1px,transparent 1px);
+  background-size:22px 22px;
+}
+.home-hero::before{
+  content:'';position:absolute;inset:0;z-index:0;pointer-events:none;
+  background:radial-gradient(ellipse 60% 50% at 50% 30%,transparent 0%,rgba(255,255,255,.55) 70%,#fff 100%);
+}
+.home-hero > *{position:relative;z-index:1;}
+.home-inner{max-width:820px;width:100%;position:relative;z-index:1;}
+
+/* Section shell — every section identical rhythm */
+.hp-sec{
+  padding:96px 24px;position:relative;
+  border-top:1px solid var(--g5);
+  text-align:left;
+}
+.hp-sec-in{max-width:1080px;margin:0 auto;width:100%;}
+.hp-sec-eyebrow{
+  font-family:var(--font-num);
+  font-size:11px;font-weight:600;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--g2);margin:0 0 20px 0;
+  display:inline-flex;align-items:center;gap:8px;
+}
+.hp-sec-eyebrow::before{
+  content:"";width:6px;height:6px;border-radius:50%;background:var(--lime);
+}
+.hp-sec-title{
+  font-family:var(--font-num);
+  font-size:clamp(28px,3.6vw,44px);font-weight:600;color:var(--ink);
+  letter-spacing:-.028em;line-height:1.1;
+  margin:0 0 20px 0;max-width:720px;
+}
+.hp-sec-lede{
+  font-size:clamp(15px,1.7vw,18px);color:var(--g2);line-height:1.65;
+  max-width:600px;letter-spacing:var(--tk-sm);margin:0;
+}
+
+/* ── LIVE PROOF STRIP ─────────────────────────────────────────
+   Right below hero, thin band showing real activity numbers.
+   Not stats — social proof formatted as intel. */
+.hp-proof{
+  background:#0A0A0A;color:#fff;
+  padding:44px 24px;overflow:clip;
+  border-top:none;text-align:left;
+}
+.hp-proof-in{
+  max-width:1200px;margin:0 auto;
+  display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+  align-items:center;text-align:left;
+}
+.hp-proof-cell{
+  padding:0 32px;border-left:1px solid rgba(255,255,255,.1);
+}
+.hp-proof-cell:first-child{border-left:none;padding-left:0;}
+.hp-proof-cell:last-child{padding-right:0;}
+.hp-proof-n{
+  font-family:var(--font-num);
+  font-size:36px;font-weight:600;letter-spacing:-.028em;
+  color:var(--lime);line-height:1;margin-bottom:8px;
+  font-variant-numeric:tabular-nums;
+}
+.hp-proof-l{
+  font-size:13px;color:rgba(255,255,255,.55);letter-spacing:var(--tk-sm);
+  line-height:1.4;
+}
+
+/* ── HOW IT WORKS ─────────────────────────────────────────
+   3 columns, big numbers, one sentence each. Visual hierarchy > words. */
+.hp-steps{
+  margin-top:64px;display:grid;grid-template-columns:repeat(3,1fr);gap:0;
+  border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);
+}
+.hp-step{
+  padding:44px 32px;border-left:1px solid var(--g5);
+  position:relative;
+}
+.hp-step:first-child{border-left:none;}
+.hp-step-n{
+  font-family:var(--font-num);
+  font-size:56px;font-weight:600;color:var(--ink);letter-spacing:-.045em;
+  line-height:1;margin-bottom:24px;font-variant-numeric:tabular-nums;
+  display:flex;align-items:baseline;gap:8px;
+}
+.hp-step-n span{
+  font-size:14px;font-weight:500;color:var(--g3);letter-spacing:.02em;
+  text-transform:uppercase;
+}
+.hp-step-h{
+  font-family:var(--font-num);
+  font-size:22px;font-weight:600;color:var(--ink);letter-spacing:-.02em;
+  margin-bottom:10px;line-height:1.25;
+}
+.hp-step-d{
+  font-size:14.5px;color:var(--g2);line-height:1.6;letter-spacing:var(--tk-sm);
+}
+
+/* ── WHY REDDIT — split content ─────────────────────────────
+   Two columns: educational left, visual right. */
+.hp-why-grid{
+  margin-top:56px;display:grid;grid-template-columns:1.05fr .95fr;gap:80px;
+  align-items:center;
+}
+.hp-why-points{display:flex;flex-direction:column;gap:32px;}
+.hp-why-point{
+  display:flex;gap:20px;align-items:flex-start;
+}
+.hp-why-icon{
+  width:44px;height:44px;border-radius:12px;background:var(--lime);
+  flex-shrink:0;display:grid;place-items:center;
+  box-shadow:0 4px 12px rgba(182,255,30,.25);
+}
+.hp-why-icon svg{width:20px;height:20px;color:#0A0A0A;}
+.hp-why-txt h4{
+  font-family:var(--font-num);
+  font-size:17px;font-weight:600;letter-spacing:-.015em;
+  margin-bottom:6px;
+}
+.hp-why-txt p{
+  font-size:14.5px;color:var(--g2);line-height:1.6;letter-spacing:var(--tk-sm);
+}
+.hp-why-viz{
+  background:var(--g6);border-radius:var(--r-xl);
+  padding:36px 32px;position:relative;overflow:clip;
+  min-height:400px;display:flex;flex-direction:column;justify-content:space-between;
+}
+.hp-viz-search{
+  background:#fff;border-radius:var(--r-md);border:1px solid var(--g5);
+  padding:12px 16px;display:flex;align-items:center;gap:10px;
+  font-size:13px;color:var(--g2);
+  box-shadow:0 2px 8px rgba(0,0,0,.03);
+}
+.hp-viz-search::before{
+  content:"";width:14px;height:14px;border:2px solid var(--g3);border-radius:50%;
+  flex-shrink:0;position:relative;
+}
+.hp-viz-search span{color:var(--ink);font-weight:500;}
+.hp-viz-results{margin-top:16px;display:flex;flex-direction:column;gap:10px;}
+.hp-viz-result{
+  background:#fff;border-radius:var(--r-md);border:1px solid var(--g5);
+  padding:14px 16px;
+}
+.hp-viz-result.hit{border:1px solid var(--ink);box-shadow:0 4px 12px rgba(0,0,0,.06);}
+.hp-viz-r-url{
+  font-size:11px;color:var(--g3);letter-spacing:.02em;margin-bottom:4px;
+}
+.hp-viz-r-title{
+  font-family:var(--font-num);
+  font-size:14px;font-weight:600;color:#1a0dab;letter-spacing:var(--tk-sm);
+  line-height:1.3;
+}
+.hp-viz-result.hit .hp-viz-r-title{color:var(--ink);}
+.hp-viz-r-snippet{
+  font-size:12px;color:var(--g2);line-height:1.5;margin-top:4px;
+}
+.hp-viz-badge{
+  display:inline-flex;align-items:center;gap:6px;background:var(--lime);color:#0A0A0A;
+  border-radius:980px;padding:4px 10px;
+  font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;
+  margin-top:8px;
+}
+.hp-viz-caption{
+  font-size:12px;color:var(--g3);text-align:center;margin-top:16px;
+  letter-spacing:var(--tk-sm);
+}
+
+/* ── WHAT YOU GET — report preview ─────────────────────────
+   Faux-report card teasing the deliverable. */
+.hp-report-preview{
+  margin-top:56px;background:#fff;border:1px solid var(--g5);
+  border-radius:var(--r-xl);overflow:clip;
+  box-shadow:0 20px 60px rgba(0,0,0,.06);
+  position:relative;
+}
+.hp-report-topbar{
+  padding:16px 24px;border-bottom:1px solid var(--g5);
+  display:flex;align-items:center;gap:12px;
+  font-size:12.5px;color:var(--g2);background:var(--g6);
+}
+.hp-report-dot{width:10px;height:10px;border-radius:50%;background:#f56;}
+.hp-report-dot.y{background:#fb2;}
+.hp-report-dot.g{background:#4c4;}
+.hp-report-url{
+  margin-left:auto;background:#fff;border:1px solid var(--g5);
+  border-radius:var(--r-sm);padding:4px 12px;color:var(--g1);
+  font-family:var(--font-num);font-size:12px;
+}
+.hp-report-body{padding:44px 40px;}
+.hp-report-h{
+  font-family:var(--font-num);
+  font-size:clamp(20px,2.4vw,26px);font-weight:600;color:var(--ink);
+  letter-spacing:-.02em;line-height:1.2;margin-bottom:8px;
+}
+.hp-report-h b{color:var(--lime-deep);}
+.hp-report-sub{
+  font-size:14px;color:var(--g2);margin-bottom:32px;
+}
+.hp-report-grid{
+  display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:32px;
+}
+.hp-report-cell{
+  border:1px solid var(--g5);border-radius:var(--r-md);padding:20px 22px;
+}
+.hp-report-cell-l{font-size:12px;color:var(--g2);margin-bottom:8px;letter-spacing:var(--tk-sm);}
+.hp-report-cell-v{
+  font-family:var(--font-num);
+  font-size:28px;font-weight:600;color:var(--ink);letter-spacing:-.02em;
+  font-variant-numeric:tabular-nums;line-height:1;
+}
+.hp-report-thread{
+  background:var(--g6);border-radius:var(--r-md);padding:20px 22px;
+  display:grid;grid-template-columns:auto 1fr;gap:16px;align-items:center;
+}
+.hp-report-score{
+  width:54px;height:54px;border-radius:var(--r-md);
+  background:conic-gradient(var(--lime) 306deg,var(--g4) 0);
+  display:grid;place-items:center;position:relative;
+}
+.hp-report-score::before{
+  content:"";position:absolute;inset:5px;border-radius:calc(var(--r-md) - 4px);background:#fff;
+}
+.hp-report-score span{
+  position:relative;font-family:var(--font-num);font-size:18px;font-weight:600;
+  letter-spacing:-.02em;color:var(--ink);
+}
+.hp-report-thread-t{
+  font-family:var(--font-num);
+  font-size:14.5px;font-weight:600;color:var(--ink);letter-spacing:var(--tk-sm);
+  line-height:1.35;margin-bottom:4px;
+}
+.hp-report-thread-m{
+  font-size:12px;color:var(--g2);letter-spacing:var(--tk-sm);
+}
+
+/* ── OBJECTIONS ─────────────────────────────────────────
+   Three "so is this ok?" questions, straight answers. */
+.hp-obj-grid{
+  margin-top:56px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;
+}
+.hp-obj{
+  background:#fff;border:1px solid var(--g5);border-radius:var(--r-lg);
+  padding:32px 28px;transition:border-color .18s;
+}
+.hp-obj:hover{border-color:var(--ink);}
+.hp-obj-q{
+  font-family:var(--font-num);
+  font-size:16px;font-weight:600;color:var(--ink);letter-spacing:-.015em;
+  margin-bottom:12px;line-height:1.35;
+}
+.hp-obj-a{
+  font-size:14px;color:var(--g2);line-height:1.65;letter-spacing:var(--tk-sm);
+}
+.hp-obj-a b{color:var(--ink);font-weight:600;}
+
+/* ── PRICING PREVIEW ─────────────────────────────────────
+   Compact 3-column, driving to same URL input rather than plan selector.
+   Full pricing lives on report page. */
+.hp-price-grid{
+  margin-top:56px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;
+}
+.hp-price{
+  border:1px solid var(--g5);border-radius:var(--r-lg);
+  padding:32px 28px;position:relative;background:#fff;
+  transition:transform .2s var(--ease),box-shadow .2s;
+}
+.hp-price.featured{
+  background:#0A0A0A;color:#fff;border-color:#0A0A0A;
+  transform:scale(1.03);
+  box-shadow:0 20px 40px rgba(0,0,0,.15);
+}
+.hp-price-tier{
+  font-size:12px;font-weight:600;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--g2);margin-bottom:12px;
+}
+.hp-price.featured .hp-price-tier{color:var(--lime);}
+.hp-price-num{
+  font-family:var(--font-num);
+  font-size:42px;font-weight:600;letter-spacing:-.028em;line-height:1;
+  color:var(--ink);margin-bottom:6px;font-variant-numeric:tabular-nums;
+}
+.hp-price.featured .hp-price-num{color:#fff;}
+.hp-price-num span{font-size:16px;color:var(--g3);font-weight:500;letter-spacing:0;}
+.hp-price.featured .hp-price-num span{color:rgba(255,255,255,.5);}
+.hp-price-desc{
+  font-size:13.5px;color:var(--g2);line-height:1.5;
+  padding-bottom:20px;border-bottom:1px solid var(--g5);margin-bottom:20px;
+}
+.hp-price.featured .hp-price-desc{color:rgba(255,255,255,.65);border-bottom-color:rgba(255,255,255,.15);}
+.hp-price-feats{display:flex;flex-direction:column;gap:11px;}
+.hp-price-feat{
+  display:flex;align-items:flex-start;gap:10px;
+  font-size:13.5px;color:var(--g1);line-height:1.45;letter-spacing:var(--tk-sm);
+}
+.hp-price.featured .hp-price-feat{color:rgba(255,255,255,.85);}
+.hp-price-feat svg{
+  width:13px;height:13px;color:var(--ink);flex-shrink:0;margin-top:3px;
+}
+.hp-price.featured .hp-price-feat svg{color:var(--lime);}
+.hp-price-tag{
+  position:absolute;top:-11px;left:50%;transform:translateX(-50%);
+  background:var(--lime);color:#0A0A0A;
+  font-family:var(--font-num);
+  font-size:11px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  border-radius:980px;padding:5px 12px;
+}
+
+/* ── FINAL CTA ─────────────────────────────────────
+   Dark panel that ends the page. Same URL form. */
+.hp-final{
+  background:#0A0A0A;color:#fff;padding:120px 24px;
+  border-top:none;text-align:center;
+}
+.hp-final-in{max-width:720px;margin:0 auto;}
+.hp-final h2{
+  font-family:var(--font-num);
+  font-size:clamp(32px,4.4vw,54px);font-weight:600;letter-spacing:-.032em;
+  line-height:1.08;margin-bottom:20px;
+}
+.hp-final h2 em{font-style:normal;color:var(--lime);}
+.hp-final p{
+  font-size:clamp(15px,1.7vw,18px);color:rgba(255,255,255,.65);
+  line-height:1.6;margin-bottom:44px;
+}
+
+
+/* ── FOOTER ─────────────────────────────────────*/
+.hp-foot{
+  background:#0A0A0A;color:rgba(255,255,255,.5);
+  padding:40px 24px 44px;border-top:1px solid #1a1a1a;
+  text-align:center;font-size:13px;letter-spacing:var(--tk-sm);
+}
+.hp-foot .brand{
+  color:#fff;font-weight:600;font-family:var(--font-num);
+  letter-spacing:-.015em;
+}
+
+/* ═══════ RESPONSIVE ═══════ */
+@media(max-width:900px){
+  .hp-proof-in{grid-template-columns:repeat(2,1fr);gap:24px;}
+  .hp-proof-cell{padding:20px 24px;border-left:none;border-top:1px solid rgba(255,255,255,.1);}
+  .hp-proof-cell:nth-child(-n+2){border-top:none;}
+  .hp-steps{grid-template-columns:1fr;}
+  .hp-step{border-left:none;border-top:1px solid var(--g5);padding:36px 28px;}
+  .hp-step:first-child{border-top:none;}
+  .hp-why-grid{grid-template-columns:1fr;gap:48px;}
+  .hp-report-grid{grid-template-columns:1fr;}
+  .hp-obj-grid{grid-template-columns:1fr;}
+  .hp-price-grid{grid-template-columns:1fr;gap:20px;}
+  .hp-price.featured{transform:none;}
+}
+@media(max-width:640px){
+  .hp-sec{padding:64px 20px;}
+  .hp-proof{padding:32px 20px;}
+  .hp-proof-in{grid-template-columns:1fr;}
+  .hp-proof-cell{padding:16px 0;}
+  .hp-proof-cell:not(:first-child){border-top:1px solid rgba(255,255,255,.1);}
+  .hp-proof-n{font-size:28px;}
+  .hp-step-n{font-size:44px;}
+  .hp-report-body{padding:28px 20px;}
+  .hp-final{padding:80px 20px;}
+}
+
+/* Section header wrapper — ensures eyebrow, title, lede share one left edge */
+.hp-sec-head{margin-bottom:56px;max-width:720px;text-align:left;}
+.hp-sec-head.center{margin-left:auto;margin-right:auto;text-align:center;}
+.hp-sec-head.center .hp-sec-eyebrow{align-self:center;}
+.hp-sec-head.center .hp-sec-title,
+.hp-sec-head.center .hp-sec-lede{margin-left:auto;margin-right:auto;}
+
+/* ────── FOOTER — a proper multi-column footer, not a one-liner ────── */
+.hp-foot{
+  background:#0A0A0A;color:rgba(255,255,255,.55);
+  padding:56px 24px 40px 24px;
+  border-top:1px solid rgba(255,255,255,.06);
+  text-align:left;
+}
+.hp-foot-in{
+  max-width:1080px;margin:0 auto;
+  display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:56px;
+  padding-bottom:56px;border-bottom:1px solid #1a1a1a;
+}
+.hp-foot-brand{}
+.hp-foot-mark{
+  display:flex;align-items:center;gap:10px;margin-bottom:20px;
+}
+.hp-foot-mark-icon{
+  width:32px;height:32px;background:var(--lime);border-radius:var(--r-sm);
+  display:grid;place-items:center;color:#0A0A0A;font-family:var(--font-num);
+  font-weight:700;font-size:16px;
+}
+.hp-foot-mark-name{
+  font-family:var(--font-num);font-weight:600;font-size:17px;color:#fff;
+  letter-spacing:-.015em;
+}
+.hp-foot-tag{
+  font-size:14px;color:rgba(255,255,255,.55);line-height:1.6;
+  max-width:340px;margin-bottom:20px;
+}
+.hp-foot-tag b{color:#fff;font-weight:500;}
+.hp-foot-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
+  border-radius:980px;padding:6px 14px;
+  font-size:12px;color:rgba(255,255,255,.6);
+}
+.hp-foot-badge::before{
+  content:"";width:6px;height:6px;border-radius:50%;background:#4c4;
+  animation:pulse 2s ease infinite;
+}
+.hp-foot-col h5{
+  font-family:var(--font-num);font-size:12px;font-weight:600;
+  color:#fff;letter-spacing:.09em;text-transform:uppercase;margin-bottom:20px;
+}
+.hp-foot-col ul{list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:14px;}
+.hp-foot-col a{
+  color:rgba(255,255,255,.55);text-decoration:none;font-size:14px;
+  letter-spacing:var(--tk-sm);transition:color .18s;
+}
+.hp-foot-col a:hover{color:#fff;}
+.hp-foot-bottom{
+  max-width:1080px;margin:0 auto;padding-top:28px;
+  display:flex;justify-content:space-between;align-items:center;gap:20px;
+  flex-wrap:wrap;font-size:12.5px;color:rgba(255,255,255,.4);
+}
+.hp-foot-bottom-links{display:flex;gap:24px;flex-wrap:wrap;}
+.hp-foot-bottom-links a{color:rgba(255,255,255,.4);text-decoration:none;transition:color .18s;}
+.hp-foot-bottom-links a:hover{color:#fff;}
+
+@media(max-width:900px){
+  .hp-foot-in{grid-template-columns:1fr 1fr;gap:40px;}
+  .hp-foot-brand{grid-column:1/-1;}
+}
+@media(max-width:520px){
+  .hp-foot-in{grid-template-columns:1fr;gap:36px;padding-bottom:36px;}
+  .hp-foot{padding:56px 20px 32px;}
+  .hp-foot-bottom{flex-direction:column;align-items:flex-start;gap:14px;}
+}
+
+/* Section head — mobile spacing tighter */
+@media(max-width:640px){
+  .hp-sec-head{margin-bottom:40px;}
+}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   SECTION IDENTITY LAYER — each section gets a small visual signature
+   so they feel like distinct chapters, not repeated templates.
+═══════════════════════════════════════════════════════════════ */
+
+/* Section number counter — appears above every eyebrow */
+.hp-sec-num{
+  font-family:var(--font-num);
+  font-size:11px;font-weight:600;letter-spacing:.14em;
+  color:var(--g3);margin-bottom:14px;
+  display:flex;align-items:center;gap:12px;
+}
+.hp-sec-num::before{
+  content:"";width:24px;height:1px;background:var(--g4);
+}
+.hp-sec-num.on-dark{color:rgba(255,255,255,.35);}
+.hp-sec-num.on-dark::before{background:rgba(255,255,255,.15);}
+
+/* Sections get subtle backgrounds so they read as distinct */
+.hp-sec.hp-sec-alt{background:linear-gradient(180deg,#fafafa 0%,#fff 100%);}
+
+/* ────── HOW IT WORKS — add animated arrow between steps ────── */
+.hp-steps{position:relative;}
+.hp-step{position:relative;}
+.hp-step:not(:last-child)::after{
+  content:"→";
+  position:absolute;right:-14px;top:44px;z-index:2;
+  width:28px;height:28px;border-radius:50%;
+  background:#fff;border:1px solid var(--g5);
+  display:grid;place-items:center;
+  font-family:var(--font-num);font-size:14px;font-weight:600;color:var(--ink);
+}
+
+/* ────── LIVE PROOF — subtle grid pattern overlay ────── */
+.hp-proof{position:relative;}
+.hp-proof::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);
+  background-size:44px 44px;
+  mask-image:radial-gradient(ellipse at center,#000 0%,transparent 80%);
+  -webkit-mask-image:radial-gradient(ellipse at center,#000 0%,transparent 80%);
+}
+.hp-proof-in{position:relative;z-index:1;}
+
+/* ────── WHY REDDIT — enrich the mock SERP ────── */
+.hp-viz-r-hit{
+  position:absolute;top:14px;right:14px;
+  background:var(--lime);color:#0A0A0A;
+  font-family:var(--font-num);font-size:10px;font-weight:600;letter-spacing:.09em;
+  padding:4px 9px;border-radius:980px;text-transform:uppercase;
+}
+.hp-viz-result.hit{position:relative;}
+
+/* ────── OBJECTIONS — add a "?" mark visually ────── */
+.hp-obj{position:relative;overflow:clip;}
+.hp-obj::before{
+  content:"?";
+  position:absolute;top:-20px;right:20px;
+  font-family:var(--font-num);font-size:120px;font-weight:600;
+  color:var(--g6);z-index:0;line-height:1;letter-spacing:-.05em;
+}
+.hp-obj-q,.hp-obj-a{position:relative;z-index:1;}
+
+/* ═══════════════════════════════════════════════════════════════
+   FINAL CTA — completely rebuilt with visual weight
+═══════════════════════════════════════════════════════════════ */
+.hp-final{
+  background:#0A0A0A;color:#fff;
+  padding:88px 24px 96px;
+  border-top:none;text-align:center;position:relative;overflow:clip;
+}
+.hp-final::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 60% 50% at 50% 40%,rgba(182,255,30,.06) 0%,transparent 70%);
+}
+.hp-final::after{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);
+  background-size:44px 44px;
+  mask-image:radial-gradient(ellipse at center,#000 0%,transparent 70%);
+  -webkit-mask-image:radial-gradient(ellipse at center,#000 0%,transparent 70%);
+}
+.hp-final-in{max-width:820px;margin:0 auto;position:relative;z-index:2;}
+.hp-final-tag{
+  display:inline-flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);
+  border-radius:980px;padding:8px 16px;margin-bottom:32px;
+  font-family:var(--font-num);
+  font-size:12px;color:rgba(255,255,255,.75);letter-spacing:.06em;
+}
+.hp-final-tag::before{
+  content:"";width:6px;height:6px;border-radius:50%;background:var(--lime);
+  animation:pulse 2s ease infinite;
+}
+.hp-final h2{
+  font-family:var(--font-num);
+  font-size:clamp(28px,3.4vw,38px);font-weight:600;letter-spacing:-.028em;
+  line-height:1.1;margin-bottom:16px;
+}
+.hp-final h2 em{font-style:normal;color:var(--lime);}
+.hp-final p{
+  font-size:15px;color:rgba(255,255,255,.55);
+  line-height:1.55;margin:0 auto 32px;max-width:420px;
+}
+
+
+/* Trust row below CTA — proof line */
+.hp-final-trust{
+  margin-top:56px;padding-top:36px;
+  border-top:1px solid rgba(255,255,255,.08);
+  display:flex;align-items:center;justify-content:center;gap:32px;flex-wrap:wrap;
+}
+.hp-final-trust-cell{
+  display:flex;align-items:center;gap:10px;
+  font-size:13px;color:rgba(255,255,255,.5);letter-spacing:var(--tk-sm);
+}
+.hp-final-trust-cell svg{
+  width:16px;height:16px;color:var(--lime);flex-shrink:0;
+}
+.hp-final-trust-divider{
+  width:1px;height:20px;background:rgba(255,255,255,.1);
+}
+
+@media(max-width:640px){
+  .hp-final{padding:60px 20px 64px;}
+  .hp-final-trust{gap:20px;padding-top:28px;margin-top:44px;}
+  .hp-final-trust-divider{display:none;}
+  .hp-step:not(:last-child)::after{display:none;}
+  .hp-obj::before{font-size:80px;top:-10px;right:14px;}
+}
+
+/* Ensure hero and CTA URL forms are pixel-identical */
+.home-hero .url-form,
+.hp-final .url-form{max-width:520px;margin:0 auto;}
+.home-hero #url-input,
+.hp-final #url-input-2{font-size:15px;}
+
+/* ═══════ FINAL CTA — extraordinary close-out ═══════ */
+.hp-final-eyebrow{
+  display:inline-flex;align-items:center;gap:10px;
+  font-family:var(--font-num);
+  font-size:12px;font-weight:600;letter-spacing:.14em;
+  text-transform:uppercase;color:rgba(255,255,255,.5);
+  margin-bottom:36px;padding:8px 16px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:980px;
+}
+.hp-final-dot{
+  width:6px;height:6px;border-radius:50%;background:var(--lime);
+  box-shadow:0 0 0 0 rgba(182,255,30,.5);
+  animation:hpFinalPulse 2s ease-in-out infinite;
+}
+@keyframes hpFinalPulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(182,255,30,.5);}
+  50%{box-shadow:0 0 0 8px rgba(182,255,30,0);}
+}
+.hp-final-microline{
+  margin-top:32px;display:flex;gap:24px;justify-content:center;flex-wrap:wrap;
+  font-size:13px;color:rgba(255,255,255,.4);letter-spacing:var(--tk-sm);
+}
+.hp-final-microline span{font-family:var(--font-num);font-weight:500;}
+@media(max-width:640px){
+  .hp-final-eyebrow{font-size:11px;margin-bottom:28px;padding:7px 14px;}
+  .hp-final-microline{gap:14px;font-size:12px;margin-top:24px;}
+}
+
+/* CTA URL box — pixel-identical to the hero URL box (white pill on dark bg) */
+.hp-final .url-form{margin:0 auto;max-width:520px;}
+.hp-final .url-box{
+  background:#fff;
+  border-color:transparent;
+  box-shadow:0 20px 60px rgba(0,0,0,.4),0 0 0 1px rgba(255,255,255,.06);
+}
+.hp-final .url-box:focus-within{
+  box-shadow:0 20px 60px rgba(0,0,0,.4),0 0 0 1px var(--lime),0 0 0 4px rgba(182,255,30,.12);
+}
+.hp-final .url-prefix{color:var(--g3);}
+.hp-final #url-input-2{
+  flex:1;min-width:0;
+  color:var(--ink);
+  background:transparent;
+  border:none;
+  outline:none;
+  font-size:15px;
+  padding:12px 8px 12px 6px;
+}
+.hp-final #url-input-2::placeholder{color:var(--g3);}
+.hp-final .home-note{color:rgba(255,255,255,.45);margin-top:24px;}
+
+/* Pricing tier CTA buttons */
+.hp-price-cta{
+  display:block;width:100%;
+  margin-top:24px;padding:14px 20px;min-height:48px;
+  border-radius:980px;border:1px solid var(--g4);
+  background:#fff;color:var(--ink);
+  font-family:var(--font-num);
+  font-size:14.5px;font-weight:600;letter-spacing:var(--tk-md);
+  cursor:pointer;text-align:center;
+  transition:transform .16s var(--ease),background .18s,border-color .18s;
+}
+.hp-price-cta:hover{background:var(--g6);border-color:var(--ink);}
+.hp-price-cta:active{transform:scale(.98);}
+.hp-price.featured .hp-price-cta{
+  background:var(--lime);color:var(--ink);border-color:var(--lime);
+  box-shadow:0 8px 24px rgba(182,255,30,.25);
+}
+.hp-price.featured .hp-price-cta:hover{background:#a6ed12;border-color:#a6ed12;}
+
+
+/* ═══════════════════════════════════════════════════════════════
+   HOMEPAGE CLARITY ADDITIONS — v20
+   Three new elements to make Flintel's value tangible to founders.
+═══════════════════════════════════════════════════════════════ */
+
+/* ── OUTCOME PREVIEW STRIP (right after live-proof) ─────────
+   Shows a real signal card so founders see the deliverable */
+.hp-outcome{
+  padding:80px 24px;background:#fff;
+  border-top:1px solid var(--g5);
+  text-align:left;position:relative;
+}
+.hp-outcome-in{max-width:1080px;margin:0 auto;}
+.hp-outcome-lead{
+  display:grid;grid-template-columns:1fr 1fr;gap:56px;
+  align-items:center;margin-bottom:0;
+}
+.hp-outcome-copy .hp-sec-num{margin-bottom:14px;}
+.hp-outcome-h{
+  font-family:var(--font-num);
+  font-size:clamp(26px,3.2vw,40px);font-weight:600;
+  letter-spacing:-.028em;line-height:1.1;
+  color:var(--ink);margin:0 0 16px 0;
+}
+.hp-outcome-h em{font-style:normal;background:var(--lime);padding:0 8px;border-radius:6px;}
+.hp-outcome-p{
+  font-size:15.5px;color:var(--g2);line-height:1.65;letter-spacing:var(--tk-sm);
+  margin:0 0 24px 0;
+}
+.hp-outcome-list{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:12px;}
+.hp-outcome-list li{
+  display:flex;gap:12px;align-items:flex-start;
+  font-size:14.5px;color:var(--g1);line-height:1.5;
+}
+.hp-outcome-list svg{
+  width:18px;height:18px;color:var(--ink);flex-shrink:0;margin-top:2px;
+  background:var(--lime);border-radius:6px;padding:3px;
+}
+
+/* Signal card mockup — matches the actual dashboard style */
+.hp-outcome-card{
+  background:#fff;border:1px solid var(--g5);border-radius:var(--r-xl);
+  padding:0;overflow:clip;box-shadow:0 24px 60px rgba(10,10,10,.06);
+}
+.hp-outcome-card-bar{
+  padding:12px 20px;border-bottom:1px solid var(--g5);
+  display:flex;align-items:center;gap:8px;background:var(--g6);
+  font-size:12px;color:var(--g2);
+}
+.hp-outcome-card-dot{width:9px;height:9px;border-radius:50%;background:#f56;}
+.hp-outcome-card-dot.y{background:#fb2;}
+.hp-outcome-card-dot.g{background:#4c4;}
+.hp-outcome-card-url{
+  margin-left:auto;background:#fff;border:1px solid var(--g5);
+  border-radius:8px;padding:3px 12px;color:var(--g1);
+  font-family:var(--font-num);font-size:11.5px;
+}
+.hp-outcome-card-body{padding:24px;}
+.hp-outcome-signal{
+  display:flex;gap:14px;align-items:flex-start;
+}
+.hp-outcome-score{
+  width:52px;height:52px;border-radius:12px;background:var(--lime);
+  display:grid;place-items:center;flex-shrink:0;
+  font-family:var(--font-num);font-size:18px;font-weight:600;
+  letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--ink);
+}
+.hp-outcome-signal-body{flex:1;min-width:0;}
+.hp-outcome-signal-h{
+  font-family:var(--font-num);
+  font-size:15px;font-weight:600;letter-spacing:-.01em;
+  color:var(--ink);line-height:1.35;margin-bottom:4px;
+}
+.hp-outcome-signal-meta{
+  font-size:11.5px;color:var(--g3);letter-spacing:var(--tk-sm);
+  display:flex;gap:6px;flex-wrap:wrap;
+}
+.hp-outcome-signal-meta b{color:var(--g1);font-weight:500;}
+.hp-outcome-signal-text{
+  color:var(--g1);font-size:13.5px;line-height:1.55;
+  margin:12px 0 14px 0;padding:12px 14px;
+  background:var(--g6);border-radius:10px;border-left:3px solid var(--ink);
+}
+.hp-outcome-signal-pills{display:flex;gap:6px;flex-wrap:wrap;}
+.hp-outcome-pill{
+  font-size:11px;color:var(--g2);padding:4px 9px;
+  border:1px solid var(--g5);border-radius:980px;background:#fff;
+  font-family:var(--font-num);
+}
+.hp-outcome-pill.lime{
+  background:var(--lime);color:var(--ink);border-color:var(--lime);
+  font-weight:600;
+}
+.hp-outcome-cta-note{
+  margin-top:14px;padding-top:14px;border-top:1px dashed var(--g4);
+  display:flex;gap:8px;align-items:center;
+  font-size:12.5px;color:var(--g2);
+}
+.hp-outcome-cta-note strong{color:var(--ink);font-weight:600;}
+.hp-outcome-cta-note svg{width:14px;height:14px;color:var(--ink);flex-shrink:0;}
+
+/* ── REAL EXAMPLE — replaces engine section content ─────────
+   Shows a real Reddit thread + placed comment mockup */
+.hp-example-frame{
+  margin-top:56px;
+  display:grid;grid-template-columns:1fr 1fr;gap:24px;
+  align-items:stretch;
+}
+.hp-example-col{
+  background:#fff;border:1px solid var(--g5);border-radius:var(--r-xl);
+  padding:0;overflow:clip;display:flex;flex-direction:column;
+}
+.hp-example-col-head{
+  padding:14px 20px;border-bottom:1px solid var(--g5);
+  display:flex;align-items:center;justify-content:space-between;
+  font-family:var(--font-num);font-size:11px;font-weight:600;
+  letter-spacing:.11em;text-transform:uppercase;color:var(--g2);
+}
+.hp-example-col-head .badge{
+  padding:4px 10px;border-radius:980px;
+  font-size:10.5px;
+}
+.hp-example-col-head .badge.without{background:var(--g5);color:var(--g2);}
+.hp-example-col-head .badge.with{background:var(--lime);color:var(--ink);}
+.hp-example-col-body{padding:20px 20px 24px 20px;flex:1;}
+
+/* Google SERP mock (both columns share) */
+.hp-serp-mock{
+  background:var(--g6);border-radius:12px;padding:14px 16px;margin-bottom:16px;
+}
+.hp-serp-q{
+  display:flex;align-items:center;gap:10px;
+  background:#fff;border:1px solid var(--g5);border-radius:980px;
+  padding:8px 14px;font-size:13px;color:var(--g1);margin-bottom:12px;
+}
+.hp-serp-q svg{width:14px;height:14px;color:var(--g3);}
+.hp-serp-result{
+  padding:10px 12px;border-radius:8px;margin-bottom:6px;
+  font-family:Arial,sans-serif;
+}
+.hp-serp-result:last-child{margin-bottom:0;}
+.hp-serp-result.reddit{background:#fff;border:1px solid var(--g5);}
+.hp-serp-result.hit{
+  background:#fff;border:2px solid var(--ink);
+  box-shadow:0 4px 14px rgba(10,10,10,.08);
+}
+.hp-serp-url{
+  font-size:10.5px;color:var(--g3);
+  letter-spacing:.02em;margin-bottom:2px;
+}
+.hp-serp-title{
+  font-size:12.5px;font-weight:500;color:#1a0dab;
+  line-height:1.3;letter-spacing:-.01em;
+}
+.hp-serp-snip{
+  font-size:11px;color:var(--g2);line-height:1.4;
+  margin-top:3px;
+}
+
+/* Reddit comment card */
+.hp-rc{background:#fff;border:1px solid var(--g5);border-radius:12px;padding:14px 16px;}
+.hp-rc-head{
+  display:flex;align-items:center;gap:8px;
+  font-size:11.5px;color:var(--g3);margin-bottom:8px;
+}
+.hp-rc-head b{color:var(--g1);font-weight:600;}
+.hp-rc-body{
+  font-size:13px;color:var(--g1);line-height:1.55;letter-spacing:var(--tk-sm);
+}
+.hp-rc-body strong{color:var(--ink);font-weight:600;background:var(--lime);padding:0 3px;border-radius:3px;}
+.hp-rc-actions{
+  margin-top:10px;padding-top:10px;border-top:1px solid var(--g5);
+  display:flex;gap:12px;font-size:11px;color:var(--g3);align-items:center;
+}
+.hp-rc-actions svg{width:12px;height:12px;}
+
+/* Without-Flintel state: empty */
+.hp-empty-state{
+  padding:30px 20px;text-align:center;color:var(--g3);
+  border:1px dashed var(--g4);border-radius:12px;
+  font-size:13px;line-height:1.5;
+}
+.hp-empty-state svg{
+  width:32px;height:32px;color:var(--g4);margin-bottom:10px;
+}
+.hp-empty-state b{color:var(--g2);font-weight:600;}
+
+/* ── TIMELINE — "Your first 30 days" ───────────────────── */
+.hp-timeline{
+  margin-top:56px;position:relative;
+}
+.hp-timeline-track{
+  position:absolute;left:24px;top:24px;bottom:24px;width:2px;background:var(--g5);
+}
+.hp-timeline-step{
+  position:relative;padding-left:72px;padding-bottom:36px;
+}
+.hp-timeline-step:last-child{padding-bottom:0;}
+.hp-timeline-marker{
+  position:absolute;left:0;top:0;
+  width:50px;height:50px;border-radius:14px;
+  background:#fff;border:2px solid var(--ink);
+  display:grid;place-items:center;
+  font-family:var(--font-num);font-size:13px;font-weight:600;
+  letter-spacing:-.01em;color:var(--ink);
+}
+.hp-timeline-marker.hi{background:var(--lime);border-color:var(--lime);}
+.hp-timeline-marker span{font-size:9.5px;color:var(--g2);letter-spacing:.05em;text-transform:uppercase;margin-top:1px;}
+.hp-timeline-marker.hi span{color:var(--ink);}
+.hp-timeline-step-h{
+  font-family:var(--font-num);
+  font-size:19px;font-weight:600;letter-spacing:-.015em;
+  color:var(--ink);margin:4px 0 8px 0;line-height:1.25;
+}
+.hp-timeline-step-p{
+  font-size:14.5px;color:var(--g2);line-height:1.6;letter-spacing:var(--tk-sm);
+  margin:0;max-width:560px;
+}
+.hp-timeline-step-p em{font-style:normal;color:var(--ink);font-weight:600;}
+
+/* Responsive */
+@media(max-width:900px){
+  .hp-outcome-lead{grid-template-columns:1fr;gap:36px;}
+  .hp-example-frame{grid-template-columns:1fr;}
+}
+@media(max-width:640px){
+  .hp-outcome{padding:60px 20px;}
+  .hp-outcome-h{font-size:24px;}
+  .hp-outcome-card-body{padding:18px;}
+  .hp-timeline-track{left:18px;}
+  .hp-timeline-step{padding-left:56px;padding-bottom:28px;}
+  .hp-timeline-marker{width:40px;height:40px;font-size:11.5px;}
+  .hp-example-col-body{padding:16px;}
+}
+
+
+
+
+/* ═══════════════════════════════════════════════════════════════
+   04 · THE COST OF WAITING — refined, quiet, editorial
+   Design intent: mature, sober, one accent (lime), no red, no pulse.
+   Feels like reading a Bloomberg terminal, not a landing page.
+═══════════════════════════════════════════════════════════════ */
+.hp-cost{
+  padding:120px 24px;
+  background:#0A0A0A;color:#fff;
+  border-top:none;position:relative;overflow:clip;
+  text-align:left;
+}
+.hp-cost::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 70% 50% at 50% 20%,rgba(182,255,30,.04),transparent 65%);
+}
+.hp-cost::after{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:.4;
+  background-image:linear-gradient(rgba(255,255,255,.02) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);
+  background-size:56px 56px;
+  mask-image:radial-gradient(ellipse at center,#000 0%,transparent 70%);
+  -webkit-mask-image:radial-gradient(ellipse at center,#000 0%,transparent 70%);
+}
+.hp-cost-in{max-width:1120px;margin:0 auto;position:relative;z-index:1;}
+
+/* ── HEAD ────────────────────────────────────────────── */
+.hp-cost-head{max-width:720px;margin-bottom:72px;}
+.hp-cost-head .hp-sec-num{margin-bottom:24px;}
+.hp-cost-title{
+  font-family:var(--font-num);
+  font-size:clamp(32px,4.4vw,54px);font-weight:600;
+  letter-spacing:-.035em;line-height:1.05;
+  color:#fff;margin:0 0 20px 0;
+}
+.hp-cost-title-alt{color:rgba(255,255,255,.45);}
+.hp-cost-lede{
+  font-size:clamp(15px,1.6vw,17px);color:rgba(255,255,255,.6);
+  line-height:1.7;max-width:600px;margin:0;letter-spacing:var(--tk-sm);
+}
+
+/* ── METRICS ROW — three quiet counters ───────────────── */
+.hp-cost-metrics{
+  display:flex;align-items:stretch;gap:0;
+  border-top:1px solid rgba(255,255,255,.08);
+  border-bottom:1px solid rgba(255,255,255,.08);
+  margin-bottom:72px;padding:44px 0;
+}
+.hp-cost-metric{
+  flex:1;padding:0 40px;display:flex;flex-direction:column;justify-content:space-between;
+  min-height:120px;
+}
+.hp-cost-metric:first-child{padding-left:0;}
+.hp-cost-metric:last-child{padding-right:0;}
+.hp-cost-divider{
+  width:1px;background:rgba(255,255,255,.08);align-self:stretch;
+}
+.hp-cost-metric-l{
+  font-family:var(--font-num);
+  font-size:11.5px;font-weight:600;letter-spacing:.11em;
+  text-transform:uppercase;color:rgba(255,255,255,.5);
+  margin-bottom:20px;
+}
+.hp-cost-metric-v{
+  display:flex;flex-direction:column;gap:6px;
+}
+.hp-cost-metric-v > span:first-child{
+  font-family:var(--font-num);
+  font-size:clamp(40px,4.5vw,56px);font-weight:600;
+  letter-spacing:-.045em;line-height:1;
+  color:#fff;font-variant-numeric:tabular-nums;
+  transition:opacity .35s ease,color .35s ease;
+}
+.hp-cost-metric-v.accent > span:first-child{color:var(--lime);}
+.hp-cost-metric-v > span:first-child.tick{
+  opacity:.35;
+}
+.hp-cost-metric-suffix{
+  font-size:12.5px;color:rgba(255,255,255,.4);
+  letter-spacing:var(--tk-sm);line-height:1.5;
+}
+
+/* ── COMPARISON ────────────────────────────────────────
+   Editorial data-visualization: like reading a market report */
+.hp-cost-comparison{
+  padding:0;
+}
+.hp-cost-cmp-head{margin-bottom:36px;}
+.hp-cost-cmp-eyebrow{
+  font-family:var(--font-num);
+  font-size:11.5px;font-weight:600;letter-spacing:.11em;
+  text-transform:uppercase;color:rgba(255,255,255,.5);
+  margin-bottom:10px;
+}
+.hp-cost-cmp-title{
+  font-family:var(--font-num);
+  font-size:clamp(20px,2.4vw,26px);font-weight:600;letter-spacing:-.025em;
+  color:#fff;line-height:1.25;max-width:680px;
+}
+.hp-cost-cmp-grid{
+  display:flex;flex-direction:column;gap:0;
+  border-top:1px solid rgba(255,255,255,.08);
+}
+.hp-cost-cmp-row{
+  display:grid;grid-template-columns:180px 1fr 100px;gap:32px;align-items:center;
+  padding:22px 0;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.hp-cost-cmp-row.hp-cost-cmp-flintel{
+  border-bottom:none;
+}
+.hp-cost-cmp-name{
+  font-family:var(--font-num);
+  font-size:15px;font-weight:500;letter-spacing:var(--tk-sm);
+  color:rgba(255,255,255,.72);
+}
+.hp-cost-cmp-flintel .hp-cost-cmp-name{
+  color:#fff;font-weight:600;
+}
+.hp-cost-cmp-time{
+  font-family:var(--font-num);
+  font-size:14px;font-weight:500;letter-spacing:var(--tk-sm);
+  color:rgba(255,255,255,.5);text-align:right;
+  font-variant-numeric:tabular-nums;
+}
+.hp-cost-cmp-flintel .hp-cost-cmp-time{
+  color:var(--lime);font-weight:600;
+}
+.hp-cost-cmp-bar{
+  height:3px;background:rgba(255,255,255,.06);border-radius:3px;overflow:clip;
+}
+.hp-cost-cmp-fill{
+  height:100%;border-radius:3px;background:rgba(255,255,255,.35);
+  transform-origin:left center;
+  animation:barGrow 1.2s cubic-bezier(.28,.11,.32,1) both;
+}
+.hp-cost-cmp-fill.lime{background:var(--lime);height:5px;margin-top:-1px;}
+@keyframes barGrow{
+  from{transform:scaleX(0);}
+  to{transform:scaleX(1);}
+}
+
+/* Responsive */
+@media(max-width:900px){
+  .hp-cost{padding:80px 20px;}
+  .hp-cost-metrics{flex-direction:column;padding:0;gap:0;}
+  .hp-cost-metric{padding:32px 0;min-height:0;}
+  .hp-cost-metric:not(:first-child){border-top:1px solid rgba(255,255,255,.08);}
+  .hp-cost-divider{display:none;}
+  .hp-cost-cmp-row{grid-template-columns:1fr auto;gap:8px 20px;}
+  .hp-cost-cmp-bar{grid-column:1/-1;order:3;}
+}
+@media(max-width:640px){
+  .hp-cost{padding:64px 20px;}
+  .hp-cost-head{margin-bottom:48px;}
+  .hp-cost-metrics{margin-bottom:56px;}
+  .hp-cost-metric-l{font-size:10.5px;margin-bottom:14px;}
+  .hp-cost-metric-v > span:first-child{font-size:38px;}
+  .hp-cost-cmp-row{padding:18px 0;}
+}
+
 </style>
 </head>
 <body>
@@ -360,33 +1678,453 @@ html{overflow-x:clip;}
 
 <!-- ═══════════════ SCREEN 1: HOME ═══════════════ -->
 <div class="screen active" id="s-home">
-  <div style="padding:calc(var(--navh) + 32px) 24px 96px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:100vh;">
-    <div class="home-inner">
-      <div class="home-eyebrow">
-        <span class="home-eyebrow-tag">Introducing</span>
-        <span class="home-eyebrow-brand">Flintel.ai</span>
+  <div class="home-hero"><div class="home-inner">
+    <div class="home-eyebrow">
+      <span class="home-eyebrow-tag">Introducing</span>
+      <span class="home-eyebrow-brand">Flintel.ai</span>
+    </div>
+    <h1 class="home-h1">
+      Your buyers are on Reddit,<br class="hb">
+      talking about your <em>competitors</em> right now.
+    </h1>
+    <p class="home-sub">
+      Enter your website. Flintel reads it, finds where your buyers are talking, and builds you a live market report.
+    </p>
+    <div class="url-form">
+      <div class="url-box">
+        <span class="url-prefix">https://</span>
+        <input id="url-input" type="text"
+          placeholder="yourwebsite.com"
+          onkeydown="if(event.key==='Enter')startAnalysis()">
+        <button class="url-submit" id="url-submit-btn" onclick="startAnalysis()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          Analyze My Market
+        </button>
       </div>
-      <h1 class="home-h1">
-        Your buyers are on Reddit,<br class="hb">
-        talking about your <em>competitors</em> right now.
-      </h1>
-      <p class="home-sub">
-        Enter your website. Flintel reads it, finds where your buyers are talking, and builds you a live market report.
-      </p>
+      <div class="home-note">Free market report · Ready in about a minute</div>
+    </div>
+  </div></div><!-- /.home-hero -->
+
+  <!-- ═══════════════ LIVE PROOF (dark strip) ═══════════════ -->
+  <section class="hp-proof">
+    <div class="hp-proof-in">
+      <div class="hp-proof-cell">
+        <div class="hp-proof-n">847</div>
+        <div class="hp-proof-l">Subreddits monitored, every hour, in every buyer language</div>
+      </div>
+      <div class="hp-proof-cell">
+        <div class="hp-proof-n">2.1M</div>
+        <div class="hp-proof-l">Threads scored for buyer intent in the last 30 days</div>
+      </div>
+      <div class="hp-proof-cell">
+        <div class="hp-proof-n">&lt;48h</div>
+        <div class="hp-proof-l">From signup to first comment placed inside a live thread</div>
+      </div>
+      <div class="hp-proof-cell">
+        <div class="hp-proof-n">94%</div>
+        <div class="hp-proof-l">Average relevance score across placed comments</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ OUTCOME PREVIEW — what founders will see ═══════════════ -->
+  <section class="hp-outcome">
+    <div class="hp-outcome-in">
+      <div class="hp-outcome-lead">
+        <div class="hp-outcome-copy">
+          <div class="hp-sec-num">What you get</div>
+          <h2 class="hp-outcome-h">A dashboard of buyers <em>ready to hear from you</em>, delivered every day.</h2>
+          <p class="hp-outcome-p">Not analytics. Not another dashboard to check. Real buyer conversations, scored by how close they are to buying — with a comment already drafted for you.</p>
+          <ul class="hp-outcome-list">
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <span><strong>Every high-intent thread</strong>, with intent score 0–100</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <span><strong>Google rank + monthly search volume</strong> — so you know which threads keep sending traffic for years</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <span><strong>A ready-to-post reply</strong>, written to match the conversation and mention your product naturally</span>
+            </li>
+            <li>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              <span><strong>You approve every comment</strong> — nothing gets posted without your green light</span>
+            </li>
+          </ul>
+        </div>
+
+        <div class="hp-outcome-card">
+          <div class="hp-outcome-card-bar">
+            <span class="hp-outcome-card-dot"></span>
+            <span class="hp-outcome-card-dot y"></span>
+            <span class="hp-outcome-card-dot g"></span>
+            <div class="hp-outcome-card-url">flintel.io/dashboard</div>
+          </div>
+          <div class="hp-outcome-card-body">
+            <div class="hp-outcome-signal">
+              <div class="hp-outcome-score">94</div>
+              <div class="hp-outcome-signal-body">
+                <div class="hp-outcome-signal-h">r/SaaS — Best Stripe alternative for a SaaS with global customers?</div>
+                <div class="hp-outcome-signal-meta">
+                  <span><b>u/fintech_founder</b></span><span>·</span>
+                  <span>2 hours ago</span><span>·</span>
+                  <span>reddit</span>
+                </div>
+                <div class="hp-outcome-signal-text">
+                  "Building a SaaS that offers both subscription and one-time payment. Non-technical founder here — recommend a good alternative to Stripe? Ideally lower fees and easier to maintain."
+                </div>
+                <div class="hp-outcome-signal-pills">
+                  <div class="hp-outcome-pill lime">Ranks #1 on Google</div>
+                  <div class="hp-outcome-pill">8,400 searches/mo</div>
+                  <div class="hp-outcome-pill">347 upvotes</div>
+                  <div class="hp-outcome-pill">89 comments</div>
+                </div>
+                <div class="hp-outcome-cta-note">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                  <span><strong>Reply draft ready</strong> — 3-sentence, human-written, mentions your product naturally.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ REAL EXAMPLE — before vs after Flintel ═══════════════ -->
+  <section class="hp-sec">
+    <div class="hp-sec-in">
+      <div class="hp-sec-head">
+        <div class="hp-sec-num">01 · A real example</div>
+        <div class="hp-sec-eyebrow">Before vs After Flintel</div>
+        <h2 class="hp-sec-title">Here's what founders are missing — and what Flintel places instead.</h2>
+        <p class="hp-sec-lede">The same buyer, the same Google search, the same Reddit thread. The only difference is whether your product is inside the conversation.</p>
+      </div>
+
+      <div class="hp-example-frame">
+
+        <!-- WITHOUT FLINTEL -->
+        <div class="hp-example-col">
+          <div class="hp-example-col-head">
+            <span>Without Flintel</span>
+            <span class="badge without">Today</span>
+          </div>
+          <div class="hp-example-col-body">
+            <div class="hp-serp-mock">
+              <div class="hp-serp-q">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+                <span>best stripe alternative for SaaS</span>
+              </div>
+              <div class="hp-serp-result reddit">
+                <div class="hp-serp-url">reddit.com › r/SaaS › comments</div>
+                <div class="hp-serp-title">Best Stripe alternative for a SaaS with global customers?</div>
+                <div class="hp-serp-snip">89 comments · 347 upvotes · Ranks #1 on Google</div>
+              </div>
+            </div>
+            <div class="hp-empty-state">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+              <div><b>Your product isn't in this thread.</b><br>Buyers scroll through 89 comments — Paddle, Lemon Squeezy, Adyen all mentioned. You're invisible.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- WITH FLINTEL -->
+        <div class="hp-example-col">
+          <div class="hp-example-col-head">
+            <span>With Flintel</span>
+            <span class="badge with">Week 2</span>
+          </div>
+          <div class="hp-example-col-body">
+            <div class="hp-serp-mock">
+              <div class="hp-serp-q">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+                <span>best stripe alternative for SaaS</span>
+              </div>
+              <div class="hp-serp-result hit">
+                <div class="hp-serp-url">reddit.com › r/SaaS › comments</div>
+                <div class="hp-serp-title">Best Stripe alternative for a SaaS with global customers?</div>
+                <div class="hp-serp-snip">89 comments · 347 upvotes · Ranks #1 on Google</div>
+              </div>
+            </div>
+            <div class="hp-rc">
+              <div class="hp-rc-head">
+                <b>u/founder_from_karachi</b>
+                <span>· 2y account · 4.2k karma · 2 days ago</span>
+              </div>
+              <div class="hp-rc-body">
+                honestly depends on ticket size. for subs we moved off stripe last year, been using <strong>your product</strong> since — the tax handling alone saved us hiring an accountant. fees a bit higher but the compliance headache went away.
+              </div>
+              <div class="hp-rc-actions">
+                <span>↑ 47</span>
+                <span>💬 8 replies</span>
+                <span style="margin-left:auto;color:var(--ink);font-weight:600;">Recommends your product</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ WHY REDDIT ═══════════════ -->
+  <section class="hp-sec" style="background:var(--g6);">
+    <div class="hp-sec-in">
+      <div class="hp-sec-head">
+        <div class="hp-sec-num">02 · The math</div>
+        <div class="hp-sec-eyebrow">Why this compounds</div>
+        <h2 class="hp-sec-title">One thread. 8,400 buyers. Every month. Forever.</h2>
+        <p class="hp-sec-lede">Google ads stop working the day you stop paying. A Reddit thread ranking #1 for "best [your category] alternative" sends buyers to your product every month for years — long after you've forgotten Flintel exists.</p>
+      </div>
+      <div class="hp-why-grid">
+        <div class="hp-why-points">
+          <div class="hp-why-point">
+            <div class="hp-why-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.35-4.35"/></svg>
+            </div>
+            <div class="hp-why-txt">
+              <h4>An ad costs money forever. A comment costs money once.</h4>
+              <p>Google ads: $8 per click, gone the moment you stop paying. One Flintel placement on a page-1 Reddit thread: seen by 8,400 buyers monthly, for the life of that thread. The math isn't close.</p>
+            </div>
+          </div>
+          <div class="hp-why-point">
+            <div class="hp-why-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            </div>
+            <div class="hp-why-txt">
+              <h4>Founders trust Reddit strangers more than your marketing.</h4>
+              <p>When your buyer Googles "best [your category]", they scroll past the ads and click Reddit. Because someone else's story means more than your landing page ever will. Flintel makes sure that story mentions you.</p>
+            </div>
+          </div>
+          <div class="hp-why-point">
+            <div class="hp-why-icon">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+            </div>
+            <div class="hp-why-txt">
+              <h4>Your competitors are already there. You're not.</h4>
+              <p>Open Google right now. Search "best [your category]." Count how many times competitors are mentioned in the top Reddit results. That number is how far behind you already are — and how much Flintel closes each month.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="hp-why-viz">
+          <div class="hp-viz-search">
+            <span>best Stripe alternative for SaaS</span>
+          </div>
+          <div class="hp-viz-results">
+            <div class="hp-viz-result">
+              <div class="hp-viz-r-url">stripe.com › pricing</div>
+              <div class="hp-viz-r-title">Stripe Pricing | Pay only for successful transactions</div>
+            </div>
+            <div class="hp-viz-result hit">
+              <div class="hp-viz-r-url">reddit.com › r/SaaS › comments</div>
+              <div class="hp-viz-r-title">Best Stripe alternative for a SaaS with global customers?</div>
+              <div class="hp-viz-r-snippet">"...we've been running Paddle for 18 months and honestly the tax handling alone is worth the extra 1.5%..."</div>
+              <div class="hp-viz-badge">Flintel placed you here</div>
+            </div>
+            <div class="hp-viz-result">
+              <div class="hp-viz-r-url">g2.com › categories</div>
+              <div class="hp-viz-r-title">Best Payment Processing Software 2026 — G2</div>
+            </div>
+          </div>
+          <div class="hp-viz-caption">A real Google search. Your comment sits inside the top result — for years.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ WHAT YOU GET (report preview) ═══════════════ -->
+  <section class="hp-sec hp-sec-alt">
+    <div class="hp-sec-in">
+      <div class="hp-sec-head">
+        <div class="hp-sec-num">03 · The reveal</div>
+        <div class="hp-sec-eyebrow">What you'll learn in 30 seconds</div>
+        <h2 class="hp-sec-title">Things about your own market you don't know yet.</h2>
+        <p class="hp-sec-lede">Which subreddits your buyers actually trust. Which competitor gets mentioned the most (it's usually not who you think). Which threads still rank on Google from 3 years ago. Free, no signup — because once you see it, you don't need convincing.</p>
+      </div>
+      <div class="hp-report-preview">
+        <div class="hp-report-topbar">
+          <span class="hp-report-dot"></span>
+          <span class="hp-report-dot y"></span>
+          <span class="hp-report-dot g"></span>
+          <div class="hp-report-url">getflintel.com/report/preview</div>
+        </div>
+        <div class="hp-report-body">
+          <div class="hp-report-h">Your buyers gather in <b>6 subreddits</b>. Your competitors are mentioned <b>847 times</b> a month. You are mentioned <b>4 times</b>.</div>
+          <div class="hp-report-sub">This is your competitive gap, quantified. Flintel closes it in 48 hours.</div>
+
+          <div class="hp-report-grid">
+            <div class="hp-report-cell">
+              <div class="hp-report-cell-l">Buyer signals detected</div>
+              <div class="hp-report-cell-v">847</div>
+            </div>
+            <div class="hp-report-cell">
+              <div class="hp-report-cell-l">High-intent threads</div>
+              <div class="hp-report-cell-v">42</div>
+            </div>
+            <div class="hp-report-cell">
+              <div class="hp-report-cell-l">Google page-1 posts</div>
+              <div class="hp-report-cell-v">18</div>
+            </div>
+          </div>
+
+          <div class="hp-report-thread">
+            <div class="hp-report-score"><span>85</span></div>
+            <div>
+              <div class="hp-report-thread-t">"Wise held $68K and closed my business account — 5 months, still no access"</div>
+              <div class="hp-report-thread-m">r/digitalnomad · Ranks #1 on Google · 8,400 searches/mo · 757 upvotes</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ 04 · THE COST OF WAITING — refined, mature ═══════════════ -->
+  <section class="hp-cost">
+    <div class="hp-cost-in">
+
+      <div class="hp-cost-head">
+        <div class="hp-sec-num on-dark">04 · The cost of waiting</div>
+        <h2 class="hp-cost-title">
+          Reddit doesn't wait.<br>
+          <span class="hp-cost-title-alt">Your competitors don't either.</span>
+        </h2>
+        <p class="hp-cost-lede">Every day you delay, a few more high-intent threads pick up a few more comments. None of them mention you. This is what Flintel quietly closes — every day, in the background.</p>
+      </div>
+
+      <div class="hp-cost-metrics">
+        <div class="hp-cost-metric">
+          <div class="hp-cost-metric-l">Buyers Googling your category</div>
+          <div class="hp-cost-metric-v"><span id="cost-buyers">247</span><span class="hp-cost-metric-suffix">since you opened this tab</span></div>
+        </div>
+        <div class="hp-cost-divider"></div>
+        <div class="hp-cost-metric">
+          <div class="hp-cost-metric-l">Competitor mentions today</div>
+          <div class="hp-cost-metric-v"><span id="cost-threads">18</span><span class="hp-cost-metric-suffix">new Reddit comments recommending others</span></div>
+        </div>
+        <div class="hp-cost-divider"></div>
+        <div class="hp-cost-metric">
+          <div class="hp-cost-metric-l">Buyer LTV unclaimed</div>
+          <div class="hp-cost-metric-v accent"><span id="cost-lost">$3,420</span><span class="hp-cost-metric-suffix">estimated, while this page loaded</span></div>
+        </div>
+      </div>
+
+      <div class="hp-cost-comparison">
+        <div class="hp-cost-cmp-head">
+          <div class="hp-cost-cmp-eyebrow">Time to first customer contact</div>
+          <div class="hp-cost-cmp-title">Every other channel takes weeks. Flintel takes 48 hours.</div>
+        </div>
+        <div class="hp-cost-cmp-grid">
+          <div class="hp-cost-cmp-row">
+            <div class="hp-cost-cmp-name">Content SEO</div>
+            <div class="hp-cost-cmp-bar"><div class="hp-cost-cmp-fill" style="width:100%;"></div></div>
+            <div class="hp-cost-cmp-time">6 months</div>
+          </div>
+          <div class="hp-cost-cmp-row">
+            <div class="hp-cost-cmp-name">Cold outbound</div>
+            <div class="hp-cost-cmp-bar"><div class="hp-cost-cmp-fill" style="width:24%;"></div></div>
+            <div class="hp-cost-cmp-time">3 weeks</div>
+          </div>
+          <div class="hp-cost-cmp-row">
+            <div class="hp-cost-cmp-name">Google Ads</div>
+            <div class="hp-cost-cmp-bar"><div class="hp-cost-cmp-fill" style="width:9%;"></div></div>
+            <div class="hp-cost-cmp-time">7 days</div>
+          </div>
+          <div class="hp-cost-cmp-row hp-cost-cmp-flintel">
+            <div class="hp-cost-cmp-name">Flintel</div>
+            <div class="hp-cost-cmp-bar"><div class="hp-cost-cmp-fill lime" style="width:3%;"></div></div>
+            <div class="hp-cost-cmp-time">48 hours</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ═══════════════ PRICING ═══════════════ -->
+  <section class="hp-sec hp-sec-alt">
+    <div class="hp-sec-in">
+      <div class="hp-sec-head center">
+        <div class="hp-sec-num">05 · The investment</div>
+        <div class="hp-sec-eyebrow">Pricing</div>
+        <h2 class="hp-sec-title">One customer covers six months of Flintel.</h2>
+        <p class="hp-sec-lede">If your product's LTV is $2,000+, one Reddit placement that converts pays for a full quarter. Most customers see their first attributed signup inside week two. Cancel anytime — but you won't.</p>
+      </div>
+      <div class="hp-price-grid">
+        <div class="hp-price">
+          <div class="hp-price-tier">Starter</div>
+          <div class="hp-price-num">$799<span>/mo</span></div>
+          <div class="hp-price-desc">For founders testing the Reddit channel with one product line.</div>
+          <div class="hp-price-feats">
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>5 comments placed per month</div>
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Monthly market report</div>
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>You approve before we post</div>
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Weekly performance email</div>
+          </div>
+          <button class="hp-price-cta" type="button" onclick="document.getElementById('url-input').focus();window.scrollTo({top:0,behavior:'smooth'});">Get started</button>
+        </div>
+        <div class="hp-price featured">
+          <div class="hp-price-tag">Most chosen</div>
+          <div class="hp-price-tier">Growth</div>
+          <div class="hp-price-num">$1,999<span>/mo</span></div>
+          <div class="hp-price-desc">For teams ready to own the Reddit conversation in their category.</div>
+          <div class="hp-price-feats">
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>15 comments placed per month</div>
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Upvote boost on every comment</div>
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Competitor intelligence dashboard</div>
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>New threads added automatically</div>
+          </div>
+          <button class="hp-price-cta" type="button" onclick="document.getElementById('url-input').focus();window.scrollTo({top:0,behavior:'smooth'});">Get started</button>
+        </div>
+        <div class="hp-price">
+          <div class="hp-price-tier">Scale</div>
+          <div class="hp-price-num">$3,999<span>/mo</span></div>
+          <div class="hp-price-desc">For companies scaling multiple products through Reddit at once.</div>
+          <div class="hp-price-feats">
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>40 comments placed per month</div>
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Weekly 30-min strategy call</div>
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Dedicated account manager</div>
+            <div class="hp-price-feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>Custom keyword targeting</div>
+          </div>
+          <button class="hp-price-cta" type="button" onclick="document.getElementById('url-input').focus();window.scrollTo({top:0,behavior:'smooth'});">Talk to sales</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═══════════════ FINAL CTA — the closing statement ═══════════════ -->
+  <section class="hp-final">
+    <div class="hp-final-in">
+      <div class="hp-final-eyebrow">
+        <span class="hp-final-dot"></span>
+        Your competitors already know
+      </div>
+      <h2>See what you're missing.<br><em>In 30 seconds. Free.</em></h2>
+      <p>Every day your buyers ask Google a question about your category. Every day, the answer isn't you. Enter your URL — Flintel will show you exactly which threads you should be inside right now.</p>
       <div class="url-form">
         <div class="url-box">
           <span class="url-prefix">https://</span>
-          <input id="url-input" type="text" placeholder="yourwebsite.com"
-            onkeydown="if(event.key==='Enter')startAnalysis()">
-          <button class="url-submit" id="url-submit-btn" onclick="startAnalysis()">
+          <input id="url-input-2" type="text" placeholder="yourwebsite.com"
+            onkeydown="if(event.key==='Enter'){document.getElementById('url-input').value=this.value;startAnalysis();}">
+          <button class="url-submit" onclick="document.getElementById('url-input').value=document.getElementById('url-input-2').value;startAnalysis();">
             Analyze My Market
           </button>
         </div>
-        <div class="home-note">Free market report · Ready in about a minute</div>
+      </div>
+      <div class="hp-final-microline">
+        <span>✓ Free report</span>
+        <span>✓ No signup</span>
+        <span>✓ Ready in 30 seconds</span>
       </div>
     </div>
-  </div>
+  </section>
+
+  
 </div>
+
 
 <!-- ═══════════════ SCREEN 2: SCANNING ═══════════════ -->
 <div class="screen" id="s-scan">
@@ -1105,6 +2843,46 @@ function showToast(msg) {
     showScreen('s-home');
   }
 })();
+
+/* ── COST-OF-WAITING COUNTERS (decorative, landing page only) ───── */
+(function(){
+  let buyers = 247, threads = 18, lostCents = 342000;
+  let inView = false;
+
+  const fmt      = n     => n.toLocaleString('en-US');
+  const fmtMoney = cents => '$' + Math.floor(cents/100).toLocaleString('en-US');
+
+  function softTick(el){
+    if(!el) return;
+    el.classList.add('tick');
+    setTimeout(() => el.classList.remove('tick'), 350);
+  }
+
+  const b = () => document.getElementById('cost-buyers');
+  const t = () => document.getElementById('cost-threads');
+  const l = () => document.getElementById('cost-lost');
+
+  const section = document.querySelector('.hp-cost');
+  if (section && 'IntersectionObserver' in window) {
+    new IntersectionObserver(entries => {
+      inView = entries[0].isIntersecting;
+    }, { threshold: 0.15 }).observe(section);
+  } else {
+    inView = true;
+  }
+
+  setInterval(() => {
+    if (!inView) return;
+    buyers   += Math.floor(Math.random()*3) + 1;
+    lostCents += Math.floor(Math.random()*2400) + 1200;
+    if (Math.random() < 0.22) threads += 1;
+
+    const bel = b(); if (bel) { softTick(bel); setTimeout(() => bel.textContent = fmt(buyers), 175); }
+    const tel = t(); if (tel && tel.textContent !== fmt(threads)) { softTick(tel); setTimeout(() => tel.textContent = fmt(threads), 175); }
+    const lel = l(); if (lel) { softTick(lel); setTimeout(() => lel.textContent = fmtMoney(lostCents), 175); }
+  }, 4500);
+})();
+
 </script>
 </body>
 </html>

@@ -1,22 +1,55 @@
 """
 Flintel — Website Market Intelligence + Reddit Signal Tracking
 ----------------------------------------------------------------
-(See project docs for full architecture notes — unchanged from the
-existing backend. This revision adds: 
-  1. /api/stats/public — used by the Report/homepage proof strip.
-  2. /api/report/market-momentum — powers the "Section 03: Your market
-     is moving" report card (competitor complaint volume trend, intent
-     search-phrase trend, competitor bar chart, and an honestly-null
-     "threads ranking on Google Page 1" field, since no SERP-tracking
-     integration exists in this codebase).
+(See project docs for full architecture notes.)
 
-Everything else in this file — every route, every collection, every
-query, every isolation guarantee — is 100% unchanged from the existing
-2.3.0 backend. All new code lives in one clearly-marked additive block
-and reuses the SAME user_email-scoping pattern used everywhere else in
-this file (see signals_filter = {"user_email": user_email} throughout).
-No existing function was edited, renamed, or reordered.
-)
+v2.5.0 changes (this revision), on top of the previously-shipped
+2.4.0 backend:
+
+  1. GLOBAL DOMAIN CACHE — Claude + the website scrape are now only ever
+     run ONCE per domain, world-wide, across ALL users. The first person
+     (anywhere) to analyze "getflintel.com" triggers the real fetch +
+     Claude call. Every request for that same domain after that — from
+     that same user in another tab, or from a completely different user —
+     reuses the cached report. No second Claude call, no second scrape.
+     See find_global_cached_report() and the top of analyze().
+
+  2. BUG FIX — "2nd tab shows 0/0 matches": this was caused by Claude
+     returning a slightly different `discovery_keywords` list on every
+     call (LLM output isn't byte-identical run to run), so the keyword
+     set used to match against `web_data` drifted between analyses of
+     the *same* domain. The global cache in (1) fixes this at the root:
+     since a domain is only ever analyzed once, its discovery_keywords
+     never change, so keyword-matching results stay stable no matter how
+     many users or tabs re-analyze the same domain.
+
+  3. FULL REPORT PERSISTENCE — store_flintel_web_data() previously only
+     persisted a hand-picked subset of report fields (company_summary,
+     buyer_pain_points, competitors, unique_value_prop,
+     discovery_keywords), silently dropping target_audience,
+     recommended_channels, confidence_notes, problem_solved, etc. That
+     made the cache in (1) lossy. Fixed by also storing the full raw
+     report dict under "report_full", so a cache-hit can return the
+     exact same JSON shape the frontend already knows how to render.
+
+  4. DOMAIN NORMALIZATION — domain is now always lower-cased at the one
+     place it's derived (analyze()), so "GetFlintel.com" and
+     "getflintel.com" are treated as the same cache key / same tracking
+     pair instead of silently becoming two different domains.
+
+  5. LOGGING — every step of analyze() (cache hit/miss, keyword match
+     count, persisted count) is now logged at INFO level so this is
+     visible in Render's log viewer without guessing.
+
+Everything else in this file — every other route, every collection,
+every query, every isolation guarantee — is UNCHANGED from 2.4.0. No
+existing function was removed or had its behavior changed beyond what's
+described above. The user_email-scoping pattern used everywhere else
+(signals_filter = {"user_email": user_email}) is untouched; the new
+global cache intentionally does NOT filter by user_email because its
+whole point is to be a world-wide, cross-user cache of "has this domain
+ever been analyzed by anyone" — flintel_user_signals (each user's own
+matched threads) remains fully per-user and isolated exactly as before.
 """
 
 import asyncio
@@ -75,7 +108,7 @@ flintel_user_signals_collection = db["flintel_user_signals"]
 flintel_tracking_state_collection = db["flintel_tracking_state"]
 flintel_counters_collection  = db["flintel_counters"]
 
-app = FastAPI(title="Flintel — Website Market Intelligence", version="2.4.0")
+app = FastAPI(title="Flintel — Website Market Intelligence", version="2.5.0")
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -447,6 +480,41 @@ async def _next_sequence(user_email: str, domain: str) -> int:
     return counter_doc["value"]
 
 
+# ============================================================================
+# NEW (v2.5.0) — GLOBAL, WORLD-WIDE DOMAIN CACHE
+# ============================================================================
+#
+# Purpose: a given domain should only ever go through fetch_site_text() +
+# analyze_with_claude() ONE TIME, ever, no matter which user (or how many
+# different users) submit it. Every subsequent request for that same
+# domain — from the same user in another tab, or a totally different
+# user — should reuse the exact same report instead of paying for another
+# Claude call and another site scrape.
+#
+# This intentionally looks up flintel_web_data WITHOUT a user_email filter
+# (unlike every other query in this file) because its entire job is to be
+# a cross-user cache. This does NOT weaken per-user isolation anywhere
+# else: flintel_user_signals (each user's own matched Reddit/web threads),
+# flintel_tracking_state (each user's own live-tracker keyword state), and
+# every other collection are still always queried with
+# {"user_email": user_email}, exactly as before. Only the *report itself*
+# (company summary, competitors, discovery keywords, etc. — which is a
+# property of the DOMAIN, not of the user who happened to request it) is
+# shared.
+# ============================================================================
+
+async def find_global_cached_report(domain: str) -> dict | None:
+    """
+    Returns the most recent flintel_web_data document ever created for this
+    domain, by ANY user, or None if nobody — anywhere — has analyzed this
+    domain yet. This is the single source of truth for "do we need to call
+    Claude, or can we just reuse what we already know about this domain."
+    """
+    return await flintel_web_data_collection.find_one(
+        {"domain": domain}, sort=[("created_at", -1)]
+    )
+
+
 async def store_flintel_web_data(user_email: str, domain: str, url: str, report: dict) -> dict:
     sequence = await _next_sequence(user_email, domain)
 
@@ -460,6 +528,11 @@ async def store_flintel_web_data(user_email: str, domain: str, url: str, report:
         "buyer_pain_points":  report.get("buyer_pain_points", []),
         "competitors":        report.get("competitors") or [],
         "unique_value_prop":  report.get("unique_value_prop", ""),
+        # NEW (v2.5.0): the complete raw report JSON, so this document can
+        # fully stand in for a fresh Claude call (used by the global cache
+        # above). Previously target_audience, recommended_channels,
+        # problem_solved, and confidence_notes were silently dropped here.
+        "report_full":        report,
         "created_at":         datetime.now(timezone.utc),
     }
     try:
@@ -747,38 +820,10 @@ async def compute_dashboard_stats(user_email: str) -> dict:
 
 
 # ============================================================================
-# NEW — SECTION 03 REPORT CARD: "Your market is moving — and it's moving
-# toward you"
-# ============================================================================
-#
-# Everything below is 100% ADDITIVE. No function above this block was
-# edited, renamed, reordered, or has its behavior changed in any way.
-#
-# ISOLATION GUARANTEE: every query below filters on {"user_email": user_email},
-# the exact same pattern already used throughout compute_dashboard_stats()
-# above. user_email is always the value from the authenticated session
-# (via get_current_user, reading request.session — never from client input),
-# so one user's competitor volume, intent-phrase volume, and bar chart can
-# never mix with another user's data, for the same reason /api/dashboard-stats
-# already can't mix users: the filter is applied at the database-query level,
-# not reconstructed or trusted from anything the client sends.
-#
-# HONESTY GUARANTEE: "Threads ranking on Google Page 1" has no underlying
-# data source anywhere in this codebase — nothing here queries Google or
-# stores SERP-ranking history. Rather than fabricate a number for it (which
-# would violate the same "never invent facts" principle already applied in
-# ANALYSIS_SYSTEM_PROMPT and in public_stats()'s fail-soft-to-null pattern),
-# it is returned as null with an explicit "not yet available" reason string,
-# so the frontend can hide/skip that card instead of rendering a fake number.
+# SECTION 03 REPORT CARD: "Your market is moving — and it's moving toward
+# you" (unchanged from 2.4.0)
 # ============================================================================
 
-# Pure heuristic used ONLY to classify already-existing discovery_keywords
-# as "intent" phrasing (comparison/recommendation-seeking language) for the
-# "'Anyone use X?' search phrases" card. This does NOT touch
-# ANALYSIS_SYSTEM_PROMPT, does NOT change the discovery_keywords schema, and
-# does NOT alter store_flintel_web_data / match_existing_web_data / any
-# existing keyword-matching code path in any way — it only reads keywords
-# that already exist in a user's own latest report.
 INTENT_PHRASE_MARKERS = [
     "anyone use", "anyone tried", " vs ", "alternative to", "alternative for",
     "recommend", "worth it", "switch from", "switching from", "better than",
@@ -791,17 +836,6 @@ def _is_intent_phrase(keyword: str) -> bool:
 
 
 async def _volume_trend(user_email: str, text_pattern: str, days_back: int = 90) -> dict:
-    """
-    Read-only comparison of matched-signal volume in the most recent third
-    of the window vs. the two-thirds before it, using ONLY
-    flintel_user_signals.matched_at (a field that already exists and is
-    already user-scoped by every other query in this file). No new
-    collection, no new write path, no mutation of any state.
-
-    ALWAYS filtered by user_email first in the query dict below — this is
-    the same isolation guarantee used by signals_filter in
-    compute_dashboard_stats() above.
-    """
     now = datetime.now(timezone.utc)
     recent_start = now - timedelta(days=days_back // 3)
     baseline_start = now - timedelta(days=days_back)
@@ -830,14 +864,6 @@ async def _volume_trend(user_email: str, text_pattern: str, days_back: int = 90)
 
 
 async def _competitor_complaint_volume(user_email: str, competitors: list[dict], days_back: int = 90) -> dict:
-    """
-    "Competitor complaint volume" card. Volume = count of THIS user's own
-    matched_signals (flintel_user_signals, already user-scoped) whose text
-    mentions any competitor name from THIS user's own latest report — same
-    competitor list already used by compute_dashboard_stats()'s
-    competitor_gap, just aggregated as a single combined trend instead of
-    per-competitor counts.
-    """
     names = [c.get("name") for c in competitors if isinstance(c, dict) and c.get("name")]
     if not names:
         return {"current_period_count": 0, "baseline_period_count": 0, "pct_change_vs_prior_period": None}
@@ -847,13 +873,6 @@ async def _competitor_complaint_volume(user_email: str, competitors: list[dict],
 
 
 async def _intent_phrase_volume(user_email: str, discovery_keywords: list[str], days_back: int = 90) -> dict:
-    """
-    "'Anyone use X?' search phrases" card. Filters THIS user's own latest
-    report's discovery_keywords down to the ones that read as comparison /
-    recommendation-seeking language (via _is_intent_phrase — a pure string
-    heuristic, not a schema change), then reuses _volume_trend() against
-    THIS user's own flintel_user_signals.
-    """
     intent_keywords = [kw for kw in discovery_keywords if _is_intent_phrase(kw)]
     if not intent_keywords:
         return {
@@ -870,14 +889,6 @@ async def _intent_phrase_volume(user_email: str, discovery_keywords: list[str], 
 
 
 def _build_competitor_bar_chart(competitor_gap: list[dict], your_mentions: int) -> dict:
-    """
-    Pure reshape of data ALREADY computed by compute_dashboard_stats()
-    (competitor_gap + your_mentions passed in as arguments) — no new query
-    is issued here, no new source of truth is introduced. Adds the
-    "talked about Nx more" headline stat honestly: if your_mentions is 0,
-    the multiple is returned as None (never a fabricated ratio, never a
-    division by zero).
-    """
     bars = sorted(
         [{"name": c["name"], "mentions": c["mentions"], "is_you": False} for c in competitor_gap],
         key=lambda c: c["mentions"],
@@ -895,26 +906,6 @@ def _build_competitor_bar_chart(competitor_gap: list[dict], your_mentions: int) 
 
 
 async def compute_market_momentum(user_email: str) -> dict:
-    """
-    Assembles the full "Section 03 — Your market is moving" report card
-    for THIS user only. Every piece of data plugged in here traces back to
-    a query filtered on {"user_email": user_email}:
-      - competitor_gap / your_mentions / domain: reuses
-        compute_dashboard_stats(user_email)'s existing, already-correct,
-        already user-scoped computation verbatim — not recomputed, not
-        duplicated, just read from its return value.
-      - competitor_complaint_volume / intent_search_phrases: new read-only
-        aggregations against flintel_user_signals_collection, each call
-        passing user_email through to _volume_trend()'s
-        {"user_email": user_email, ...} filter.
-      - page_one_threads: honestly null. No SERP-ranking integration
-        exists anywhere in this file — nothing queries Google, nothing
-        stores ranking history. Faking this number here would be exactly
-        the kind of fabrication ANALYSIS_SYSTEM_PROMPT explicitly forbids
-        Claude from doing, and that public_stats() explicitly avoids by
-        failing soft to null. Wire this to a real SERP-checking worker
-        before ever returning a number for it.
-    """
     base_stats = await compute_dashboard_stats(user_email)
     competitor_gap = base_stats["competitor_gap"]
     your_mentions = base_stats["your_mentions"]
@@ -942,7 +933,7 @@ async def compute_market_momentum(user_email: str) -> dict:
 
 
 # ============================================================================
-# END SECTION 03 ADDITION
+# END SECTION 03
 # ============================================================================
 
 
@@ -963,6 +954,10 @@ async def on_startup():
     await users_collection.create_index([("email", 1)], unique=True, name="email_unique")
     await flintel_web_data_collection.create_index([("user_email", 1), ("domain", 1)])
     await flintel_web_data_collection.create_index([("user_email", 1), ("created_at", -1)])
+    # NEW (v2.5.0): supports find_global_cached_report()'s
+    # {"domain": domain} sort=[("created_at", -1)] lookup efficiently,
+    # across all users.
+    await flintel_web_data_collection.create_index([("domain", 1), ("created_at", -1)], name="domain_global_cache")
     await flintel_counters_collection.create_index(
         [("user_email", 1), ("domain", 1), ("counter_name", 1)],
         unique=True, name="counter_unique",
@@ -992,10 +987,42 @@ async def analyze(payload: AnalyzeRequest, user: dict = Depends(get_current_user
     except ValueError:
         raise HTTPException(status_code=400, detail="Please enter a valid website address.")
 
-    domain = urlparse(url).netloc.replace("www.", "")
+    # NEW (v2.5.0): lower-cased so "GetFlintel.com" and "getflintel.com"
+    # are always the same cache key / same tracking pair / same matches.
+    domain = urlparse(url).netloc.replace("www.", "").lower()
 
-    site_data = await fetch_site_text(url)
-    report = await analyze_with_claude(domain, site_data)
+    logger.info("[ANALYZE] request received | domain=%s | user=%s", domain, user["email"])
+
+    # --- GLOBAL DOMAIN CACHE (v2.5.0) -------------------------------------
+    # Look up whether ANYONE, ever, has already analyzed this domain. If
+    # so, skip the site fetch AND the Claude call entirely and reuse that
+    # report. This is what makes "1 domain = 1 Claude call, world-wide"
+    # true, and is also what fixes discovery_keywords drifting between
+    # repeated analyses of the same domain (the root cause of the
+    # "2nd tab shows 0/0" bug).
+    cached = await find_global_cached_report(domain)
+
+    if cached:
+        logger.info(
+            "[ANALYZE][CACHE-HIT] domain=%s was first analyzed by user=%s at %s. "
+            "Skipping site fetch + Claude call for user=%s — reusing cached report.",
+            domain, cached.get("user_email"), cached.get("created_at"), user["email"],
+        )
+        report = cached.get("report_full") or {
+            "company_summary":    cached.get("company_summary", ""),
+            "buyer_pain_points":  cached.get("buyer_pain_points", []),
+            "competitors":        cached.get("competitors", []),
+            "unique_value_prop":  cached.get("unique_value_prop", ""),
+            "discovery_keywords": cached.get("discovery_keywords", []),
+        }
+    else:
+        logger.info(
+            "[ANALYZE][CACHE-MISS] domain=%s has never been analyzed before — "
+            "fetching site + calling Claude for user=%s", domain, user["email"],
+        )
+        site_data = await fetch_site_text(url)
+        report = await analyze_with_claude(domain, site_data)
+    # -----------------------------------------------------------------------
 
     flintel_doc = await store_flintel_web_data(user["email"], domain, url, report)
 
@@ -1003,9 +1030,15 @@ async def analyze(payload: AnalyzeRequest, user: dict = Depends(get_current_user
     if not keywords:
         keywords = [domain]
 
+    logger.info("[ANALYZE][MATCH] domain=%s user=%s matching web_data against keywords=%s",
+                domain, user["email"], keywords)
     matches = await match_existing_web_data(keywords)
+    logger.info("[ANALYZE][MATCH] domain=%s user=%s found %d raw web_data matches",
+                domain, user["email"], len(matches))
 
     persisted_count = await _persist_matches_for_user(user["email"], domain, matches)
+    logger.info("[ANALYZE][MATCH] domain=%s user=%s persisted %d/%d matches into flintel_user_signals",
+                domain, user["email"], persisted_count, len(matches))
     if persisted_count != len(matches):
         logger.warning(
             "analyze(): only persisted %d/%d matches for user=%s domain=%s "
@@ -1021,6 +1054,9 @@ async def analyze(payload: AnalyzeRequest, user: dict = Depends(get_current_user
         "matched_keywords": keywords,
         "matches_found": len(matches),
         "matches": matches,
+        # NEW (v2.5.0): lets the frontend show something like "Instant —
+        # this domain was already analyzed" vs. "Fresh analysis" if wanted.
+        "cache_hit": bool(cached),
     })
 
 
@@ -1107,39 +1143,17 @@ async def dashboard_stats(user: dict = Depends(get_current_user)):
 
 @app.get("/api/report/market-momentum")
 async def market_momentum(user: dict = Depends(get_current_user)):
-    """
-    Powers the "Section 03 — Your market is moving" report card (the three
-    trend cards, the competitor bar chart, and the "talked about Nx more"
-    callout). Scoped to the logged-in user via get_current_user, exactly
-    like every other authenticated route in this file — user_email is
-    read from the signed session cookie, never accepted from the client,
-    so this can never return another user's data.
-    """
     momentum = await compute_market_momentum(user["email"])
     return JSONResponse(momentum)
 
 
 @app.get("/api/stats/public")
 async def public_stats():
-    """
-    Small, honest, PUBLIC (no auth) aggregate for the marketing homepage
-    proof strip. Counts DISTINCT domains that have ever been analyzed by
-    ANY user, across flintel_web_data. This is a real aggregate query
-    against real stored data — not an estimate, not a client-side
-    incrementing counter, and not gated behind login (it doesn't expose
-    any per-user data, just a count).
-
-    If this endpoint is ever removed, the corresponding #proof-domains
-    fetch in web.html must be removed too, rather than replaced with a
-    hardcoded number.
-    """
     try:
         domains = await flintel_web_data_collection.distinct("domain")
         return JSONResponse({"domains_analyzed": len(domains)})
     except Exception as exc:
         logger.error("public_stats() failed: %s", exc)
-        # Fail soft: null tells the frontend to hide the stat rather than
-        # show a fabricated fallback number.
         return JSONResponse({"domains_analyzed": None})
 
 

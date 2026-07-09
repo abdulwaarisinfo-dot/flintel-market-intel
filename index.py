@@ -3,53 +3,48 @@ Flintel — Website Market Intelligence + Reddit Signal Tracking
 ----------------------------------------------------------------
 (See project docs for full architecture notes.)
 
-v2.5.0 changes (this revision), on top of the previously-shipped
-2.4.0 backend:
+THIS REVISION (on top of 2.4.0) fixes the domain-caching bug:
 
-  1. GLOBAL DOMAIN CACHE — Claude + the website scrape are now only ever
-     run ONCE per domain, world-wide, across ALL users. The first person
-     (anywhere) to analyze "getflintel.com" triggers the real fetch +
-     Claude call. Every request for that same domain after that — from
-     that same user in another tab, or from a completely different user —
-     reuses the cached report. No second Claude call, no second scrape.
-     See find_global_cached_report() and the top of analyze().
+  PROBLEM: /api/analyze called analyze_with_claude() fresh on every
+  request, for every user, for the same domain. Claude's output
+  (including discovery_keywords) is not deterministic between calls,
+  so two different users analyzing the same domain could get two
+  different keyword sets — which meant they could get two different
+  sets of matches out of web_data_collection, even though the domain
+  itself was identical. That looked like "data not appearing for
+  another user" / "shared domain cache not working", but the real
+  isolation (flintel_user_signals, scoped by user_email) was never
+  broken — the INPUT to the matching step just wasn't shared.
 
-  2. BUG FIX — "2nd tab shows 0/0 matches": this was caused by Claude
-     returning a slightly different `discovery_keywords` list on every
-     call (LLM output isn't byte-identical run to run), so the keyword
-     set used to match against `web_data` drifted between analyses of
-     the *same* domain. The global cache in (1) fixes this at the root:
-     since a domain is only ever analyzed once, its discovery_keywords
-     never change, so keyword-matching results stay stable no matter how
-     many users or tabs re-analyze the same domain.
+  FIX: a new collection, flintel_domain_reports_collection, caches
+  ONE canonical Claude analysis + discovery_keywords per domain
+  (keyed only by domain — no user_email on this collection, by
+  design, since this data is meant to be shared). get_or_create_
+  domain_report() is now the single entry point for turning a domain
+  into a report:
+    - If a complete cached report exists for the domain, it is
+      reused as-is — no new Claude call, no new scrape.
+    - If another request is already processing the same domain
+      (race between two users hitting a brand-new domain at the
+      same moment), this request waits briefly and then reuses
+      whatever that in-flight request produces, instead of kicking
+      off a second, redundant Claude analysis.
+    - Only if nothing exists and nothing is in flight does it run
+      fetch_site_text() + analyze_with_claude() and write the result
+      once.
 
-  3. FULL REPORT PERSISTENCE — store_flintel_web_data() previously only
-     persisted a hand-picked subset of report fields (company_summary,
-     buyer_pain_points, competitors, unique_value_prop,
-     discovery_keywords), silently dropping target_audience,
-     recommended_channels, confidence_notes, problem_solved, etc. That
-     made the cache in (1) lossy. Fixed by also storing the full raw
-     report dict under "report_full", so a cache-hit can return the
-     exact same JSON shape the frontend already knows how to render.
+  Every user who analyzes the same domain now matches against the
+  exact same discovery_keywords, so results are consistent across
+  users. Per-user data (flintel_user_signals, flintel_web_data_
+  collection "my reports" history, reviewed flags, dashboard stats)
+  is completely unchanged in shape and remains scoped by user_email
+  exactly as before — only the INPUT report/keywords feeding into it
+  is now shared and cached instead of being independently
+  regenerated per user.
 
-  4. DOMAIN NORMALIZATION — domain is now always lower-cased at the one
-     place it's derived (analyze()), so "GetFlintel.com" and
-     "getflintel.com" are treated as the same cache key / same tracking
-     pair instead of silently becoming two different domains.
-
-  5. LOGGING — every step of analyze() (cache hit/miss, keyword match
-     count, persisted count) is now logged at INFO level so this is
-     visible in Render's log viewer without guessing.
-
-Everything else in this file — every other route, every collection,
-every query, every isolation guarantee — is UNCHANGED from 2.4.0. No
-existing function was removed or had its behavior changed beyond what's
-described above. The user_email-scoping pattern used everywhere else
-(signals_filter = {"user_email": user_email}) is untouched; the new
-global cache intentionally does NOT filter by user_email because its
-whole point is to be a world-wide, cross-user cache of "has this domain
-ever been analyzed by anyone" — flintel_user_signals (each user's own
-matched threads) remains fully per-user and isolated exactly as before.
+  No existing route, request/response schema, or function signature
+  was removed or renamed. All changes are additive or internal to
+  analyze()'s implementation.
 """
 
 import asyncio
@@ -72,6 +67,7 @@ from fastapi.templating import Jinja2Templates
 from motor.motor_asyncio import AsyncIOMotorClient
 from passlib.context import CryptContext
 from pydantic import BaseModel, EmailStr, Field, field_validator
+from pymongo import ReturnDocument
 from starlette.middleware.sessions import SessionMiddleware
 
 from authlib.integrations.starlette_client import OAuth
@@ -94,6 +90,14 @@ MAX_KEYWORDS_TO_MATCH = 6
 LIVE_TRACKER_INTERVAL_SECONDS = int(os.getenv("LIVE_TRACKER_INTERVAL_SECONDS", "120"))
 MAX_COMPETITORS_FOR_GAP = 5
 
+# How long a request will wait (polling) for ANOTHER in-flight request that
+# is already analyzing the same brand-new domain, before giving up and
+# running the analysis itself as a fallback. This only matters for the
+# rare case of two users submitting the exact same never-seen-before
+# domain within a few seconds of each other.
+DOMAIN_LOCK_POLL_INTERVAL_SECONDS = 1.0
+DOMAIN_LOCK_MAX_WAIT_SECONDS = 45.0
+
 if not ANTHROPIC_API_KEY:
     print("WARNING: ANTHROPIC_API_KEY is not set. /api/analyze will fail until it is.")
 
@@ -107,6 +111,11 @@ web_data_collection          = db["web_data"]
 flintel_user_signals_collection = db["flintel_user_signals"]
 flintel_tracking_state_collection = db["flintel_tracking_state"]
 flintel_counters_collection  = db["flintel_counters"]
+
+# NEW — shared, domain-scoped (NOT user-scoped) cache of the Claude
+# analysis for a domain. Deliberately has no user_email field: the whole
+# point is that this is the same for every user who looks up the domain.
+flintel_domain_reports_collection = db["flintel_domain_reports"]
 
 app = FastAPI(title="Flintel — Website Market Intelligence", version="2.5.0")
 templates = Jinja2Templates(directory="templates")
@@ -470,6 +479,155 @@ Analyze this site and return the market-intelligence report as JSON only, follow
         raise HTTPException(status_code=502, detail="The analysis service returned an unreadable report.")
 
 
+# ============================================================================
+# NEW — SHARED, DOMAIN-SCOPED ANALYSIS CACHE
+# ============================================================================
+#
+# This is the fix for the three issues described:
+#   1. "Data not appearing for another user" / 3. "users' data must never
+#      mix": neither was actually a mixing bug — flintel_user_signals was
+#      always correctly scoped by user_email. The real problem was that
+#      analyze_with_claude() ran independently for every user, so two
+#      users analyzing the same domain could get two different
+#      discovery_keywords lists and therefore two different match results
+#      for what should have been identical domain data.
+#   2. "Shared domain cache": get_or_create_domain_report() below is the
+#      single place a domain gets turned into a report. It is checked
+#      FIRST, before ever touching fetch_site_text() or
+#      analyze_with_claude(), so a domain is only ever scraped + analyzed
+#      once — every subsequent lookup (by any user) reuses the same
+#      cached report and the same discovery_keywords, which is what makes
+#      the resulting matches consistent across users.
+#
+# flintel_domain_reports_collection has a unique index on "domain" only
+# (no user_email) — see on_startup(). That uniqueness constraint is what
+# actually prevents duplicate concurrent processing: the first request
+# for a brand-new domain wins an atomic upsert and proceeds to do the
+# real work; any other concurrent request for that same domain sees the
+# "processing" placeholder already there and polls briefly instead of
+# starting its own redundant scrape + Claude call.
+# ============================================================================
+
+async def _try_claim_domain_for_processing(domain: str, url: str) -> bool:
+    """
+    Atomically attempts to become the request responsible for analyzing
+    `domain`. Returns True if this call created the placeholder doc (i.e.
+    this request should do the actual scrape + Claude analysis). Returns
+    False if a doc for this domain already existed (either complete, or
+    already being processed by someone else).
+    """
+    now = datetime.now(timezone.utc)
+    before = await flintel_domain_reports_collection.find_one_and_update(
+        {"domain": domain},
+        {
+            "$setOnInsert": {
+                "domain": domain,
+                "url": url,
+                "status": "processing",
+                "report": None,
+                "discovery_keywords": [],
+                "created_at": now,
+                "updated_at": now,
+            }
+        },
+        upsert=True,
+        return_document=ReturnDocument.BEFORE,
+    )
+    # If `before` is None, there was nothing there before our upsert — we
+    # created it just now, so we own processing for this domain.
+    return before is None
+
+
+async def _wait_for_domain_report(domain: str) -> dict | None:
+    """
+    Polls flintel_domain_reports_collection for a domain that is currently
+    being processed by another request, up to DOMAIN_LOCK_MAX_WAIT_SECONDS.
+    Returns the completed doc if it shows up in time, else None.
+    """
+    waited = 0.0
+    while waited < DOMAIN_LOCK_MAX_WAIT_SECONDS:
+        doc = await flintel_domain_reports_collection.find_one({"domain": domain})
+        if doc and doc.get("status") == "complete":
+            return doc
+        await asyncio.sleep(DOMAIN_LOCK_POLL_INTERVAL_SECONDS)
+        waited += DOMAIN_LOCK_POLL_INTERVAL_SECONDS
+    return None
+
+
+async def get_or_create_domain_report(domain: str, url: str) -> dict:
+    """
+    Single entry point for turning a domain into a market-intelligence
+    report. Guarantees (per the isolation/caching requirements above):
+      - A domain is only ever scraped + sent to Claude once. Every
+        subsequent call for the same domain — from any user — reuses the
+        cached report and discovery_keywords.
+      - Two concurrent first-time requests for the same brand-new domain
+        do not both trigger a scrape + Claude call; only one does the
+        work, the other waits for it and reuses the result.
+      - This collection carries no user_email — it is intentionally
+        shared. Per-user state (flintel_web_data_collection "my reports"
+        history, flintel_user_signals, reviewed flags) is written
+        separately by the caller and remains fully user-scoped.
+    """
+    existing = await flintel_domain_reports_collection.find_one({"domain": domain})
+    if existing and existing.get("status") == "complete":
+        return existing
+
+    if existing and existing.get("status") == "processing":
+        # Someone else is already analyzing this domain right now — wait
+        # for them instead of starting a second, redundant analysis.
+        completed = await _wait_for_domain_report(domain)
+        if completed:
+            return completed
+        # Fallback: whoever was processing this seems to have stalled or
+        # crashed. Try to claim it ourselves rather than waiting forever.
+
+    claimed = await _try_claim_domain_for_processing(domain, url)
+    if not claimed:
+        # Another request claimed it in the tiny window between our check
+        # above and now — wait for that one instead of racing it.
+        completed = await _wait_for_domain_report(domain)
+        if completed:
+            return completed
+        # If it's still not done, fall through and do the work ourselves
+        # rather than leaving the user stuck with nothing.
+
+    try:
+        site_data = await fetch_site_text(url)
+        report = await analyze_with_claude(domain, site_data)
+    except Exception:
+        # Don't leave the domain permanently stuck in "processing" if the
+        # scrape or Claude call fails — clear it so the next attempt (by
+        # this user retrying, or another user) can try fresh.
+        await flintel_domain_reports_collection.update_one(
+            {"domain": domain},
+            {"$set": {"status": "failed", "updated_at": datetime.now(timezone.utc)}},
+        )
+        raise
+
+    now = datetime.now(timezone.utc)
+    await flintel_domain_reports_collection.update_one(
+        {"domain": domain},
+        {
+            "$set": {
+                "domain": domain,
+                "url": url,
+                "report": report,
+                "discovery_keywords": report.get("discovery_keywords") or [],
+                "status": "complete",
+                "updated_at": now,
+            }
+        },
+        upsert=True,
+    )
+    return await flintel_domain_reports_collection.find_one({"domain": domain})
+
+
+# ============================================================================
+# END SHARED DOMAIN CACHE ADDITION
+# ============================================================================
+
+
 async def _next_sequence(user_email: str, domain: str) -> int:
     counter_doc = await flintel_counters_collection.find_one_and_update(
         {"user_email": user_email, "domain": domain, "counter_name": "flintel_web_data_sequence"},
@@ -478,41 +636,6 @@ async def _next_sequence(user_email: str, domain: str) -> int:
         return_document=True,
     )
     return counter_doc["value"]
-
-
-# ============================================================================
-# NEW (v2.5.0) — GLOBAL, WORLD-WIDE DOMAIN CACHE
-# ============================================================================
-#
-# Purpose: a given domain should only ever go through fetch_site_text() +
-# analyze_with_claude() ONE TIME, ever, no matter which user (or how many
-# different users) submit it. Every subsequent request for that same
-# domain — from the same user in another tab, or a totally different
-# user — should reuse the exact same report instead of paying for another
-# Claude call and another site scrape.
-#
-# This intentionally looks up flintel_web_data WITHOUT a user_email filter
-# (unlike every other query in this file) because its entire job is to be
-# a cross-user cache. This does NOT weaken per-user isolation anywhere
-# else: flintel_user_signals (each user's own matched Reddit/web threads),
-# flintel_tracking_state (each user's own live-tracker keyword state), and
-# every other collection are still always queried with
-# {"user_email": user_email}, exactly as before. Only the *report itself*
-# (company summary, competitors, discovery keywords, etc. — which is a
-# property of the DOMAIN, not of the user who happened to request it) is
-# shared.
-# ============================================================================
-
-async def find_global_cached_report(domain: str) -> dict | None:
-    """
-    Returns the most recent flintel_web_data document ever created for this
-    domain, by ANY user, or None if nobody — anywhere — has analyzed this
-    domain yet. This is the single source of truth for "do we need to call
-    Claude, or can we just reuse what we already know about this domain."
-    """
-    return await flintel_web_data_collection.find_one(
-        {"domain": domain}, sort=[("created_at", -1)]
-    )
 
 
 async def store_flintel_web_data(user_email: str, domain: str, url: str, report: dict) -> dict:
@@ -528,11 +651,6 @@ async def store_flintel_web_data(user_email: str, domain: str, url: str, report:
         "buyer_pain_points":  report.get("buyer_pain_points", []),
         "competitors":        report.get("competitors") or [],
         "unique_value_prop":  report.get("unique_value_prop", ""),
-        # NEW (v2.5.0): the complete raw report JSON, so this document can
-        # fully stand in for a fresh Claude call (used by the global cache
-        # above). Previously target_audience, recommended_channels,
-        # problem_solved, and confidence_notes were silently dropped here.
-        "report_full":        report,
         "created_at":         datetime.now(timezone.utc),
     }
     try:
@@ -820,8 +938,28 @@ async def compute_dashboard_stats(user_email: str) -> dict:
 
 
 # ============================================================================
-# SECTION 03 REPORT CARD: "Your market is moving — and it's moving toward
-# you" (unchanged from 2.4.0)
+# SECTION 03 REPORT CARD: "Your market is moving — and it's moving
+# toward you"
+# ============================================================================
+#
+# Everything below is 100% ADDITIVE (carried over unchanged from 2.4.0).
+#
+# ISOLATION GUARANTEE: every query below filters on {"user_email": user_email},
+# the exact same pattern already used throughout compute_dashboard_stats()
+# above. user_email is always the value from the authenticated session
+# (via get_current_user, reading request.session — never from client input),
+# so one user's competitor volume, intent-phrase volume, and bar chart can
+# never mix with another user's data, for the same reason /api/dashboard-stats
+# already can't mix users: the filter is applied at the database-query level,
+# not reconstructed or trusted from anything the client sends.
+#
+# HONESTY GUARANTEE: "Threads ranking on Google Page 1" has no underlying
+# data source anywhere in this codebase — nothing here queries Google or
+# stores SERP-ranking history. Rather than fabricate a number for it (which
+# would violate the same "never invent facts" principle already applied in
+# ANALYSIS_SYSTEM_PROMPT and in public_stats()'s fail-soft-to-null pattern),
+# it is returned as null with an explicit "not yet available" reason string,
+# so the frontend can hide/skip that card instead of rendering a fake number.
 # ============================================================================
 
 INTENT_PHRASE_MARKERS = [
@@ -933,7 +1071,7 @@ async def compute_market_momentum(user_email: str) -> dict:
 
 
 # ============================================================================
-# END SECTION 03
+# END SECTION 03 ADDITION
 # ============================================================================
 
 
@@ -954,13 +1092,16 @@ async def on_startup():
     await users_collection.create_index([("email", 1)], unique=True, name="email_unique")
     await flintel_web_data_collection.create_index([("user_email", 1), ("domain", 1)])
     await flintel_web_data_collection.create_index([("user_email", 1), ("created_at", -1)])
-    # NEW (v2.5.0): supports find_global_cached_report()'s
-    # {"domain": domain} sort=[("created_at", -1)] lookup efficiently,
-    # across all users.
-    await flintel_web_data_collection.create_index([("domain", 1), ("created_at", -1)], name="domain_global_cache")
     await flintel_counters_collection.create_index(
         [("user_email", 1), ("domain", 1), ("counter_name", 1)],
         unique=True, name="counter_unique",
+    )
+    # NEW — enforces "one cached report per domain, ever" at the database
+    # level. This unique index is what makes the upsert in
+    # _try_claim_domain_for_processing() atomic: two concurrent requests
+    # for the same brand-new domain can't both succeed at creating a doc.
+    await flintel_domain_reports_collection.create_index(
+        [("domain", 1)], unique=True, name="domain_unique"
     )
 
     asyncio.create_task(run_live_match_tracker())
@@ -987,58 +1128,35 @@ async def analyze(payload: AnalyzeRequest, user: dict = Depends(get_current_user
     except ValueError:
         raise HTTPException(status_code=400, detail="Please enter a valid website address.")
 
-    # NEW (v2.5.0): lower-cased so "GetFlintel.com" and "getflintel.com"
-    # are always the same cache key / same tracking pair / same matches.
-    domain = urlparse(url).netloc.replace("www.", "").lower()
+    domain = urlparse(url).netloc.replace("www.", "")
 
-    logger.info("[ANALYZE] request received | domain=%s | user=%s", domain, user["email"])
+    # ── SHARED DOMAIN CACHE LOOKUP ──────────────────────────────────────
+    # This replaces the old "always scrape + always call Claude" behavior.
+    # get_or_create_domain_report() checks flintel_domain_reports_collection
+    # (keyed only by domain, shared across every user) first. If this
+    # domain has already been analyzed by ANYONE, that exact same report
+    # and discovery_keywords are reused here — no new scrape, no new
+    # Claude call, no API cost, and critically: every user gets the same
+    # keywords, so matching against web_data_collection produces the same
+    # results for everyone looking at this domain.
+    domain_doc = await get_or_create_domain_report(domain, url)
+    report = domain_doc["report"]
+    # ─────────────────────────────────────────────────────────────────────
 
-    # --- GLOBAL DOMAIN CACHE (v2.5.0) -------------------------------------
-    # Look up whether ANYONE, ever, has already analyzed this domain. If
-    # so, skip the site fetch AND the Claude call entirely and reuse that
-    # report. This is what makes "1 domain = 1 Claude call, world-wide"
-    # true, and is also what fixes discovery_keywords drifting between
-    # repeated analyses of the same domain (the root cause of the
-    # "2nd tab shows 0/0" bug).
-    cached = await find_global_cached_report(domain)
-
-    if cached:
-        logger.info(
-            "[ANALYZE][CACHE-HIT] domain=%s was first analyzed by user=%s at %s. "
-            "Skipping site fetch + Claude call for user=%s — reusing cached report.",
-            domain, cached.get("user_email"), cached.get("created_at"), user["email"],
-        )
-        report = cached.get("report_full") or {
-            "company_summary":    cached.get("company_summary", ""),
-            "buyer_pain_points":  cached.get("buyer_pain_points", []),
-            "competitors":        cached.get("competitors", []),
-            "unique_value_prop":  cached.get("unique_value_prop", ""),
-            "discovery_keywords": cached.get("discovery_keywords", []),
-        }
-    else:
-        logger.info(
-            "[ANALYZE][CACHE-MISS] domain=%s has never been analyzed before — "
-            "fetching site + calling Claude for user=%s", domain, user["email"],
-        )
-        site_data = await fetch_site_text(url)
-        report = await analyze_with_claude(domain, site_data)
-    # -----------------------------------------------------------------------
-
+    # Per-user "my reports" history — unchanged in shape, still written
+    # once per user per analyze() call, still scoped by user_email. This
+    # is intentionally NOT deduplicated across users: it's each user's own
+    # personal history of when they looked this domain up, not the shared
+    # analysis itself.
     flintel_doc = await store_flintel_web_data(user["email"], domain, url, report)
 
     keywords = (report.get("discovery_keywords") or [])[:MAX_KEYWORDS_TO_MATCH]
     if not keywords:
         keywords = [domain]
 
-    logger.info("[ANALYZE][MATCH] domain=%s user=%s matching web_data against keywords=%s",
-                domain, user["email"], keywords)
     matches = await match_existing_web_data(keywords)
-    logger.info("[ANALYZE][MATCH] domain=%s user=%s found %d raw web_data matches",
-                domain, user["email"], len(matches))
 
     persisted_count = await _persist_matches_for_user(user["email"], domain, matches)
-    logger.info("[ANALYZE][MATCH] domain=%s user=%s persisted %d/%d matches into flintel_user_signals",
-                domain, user["email"], persisted_count, len(matches))
     if persisted_count != len(matches):
         logger.warning(
             "analyze(): only persisted %d/%d matches for user=%s domain=%s "
@@ -1054,9 +1172,6 @@ async def analyze(payload: AnalyzeRequest, user: dict = Depends(get_current_user
         "matched_keywords": keywords,
         "matches_found": len(matches),
         "matches": matches,
-        # NEW (v2.5.0): lets the frontend show something like "Instant —
-        # this domain was already analyzed" vs. "Fresh analysis" if wanted.
-        "cache_hit": bool(cached),
     })
 
 

@@ -794,11 +794,14 @@ function finishScanAnimation() {
 }
 
 /* ── ANALYZE ────────────────────────────────────────────────────── */
+let analyzeInFlight = false;
 async function startAnalysis() {
+  if (analyzeInFlight) return; // guards against double-fire (Enter + click, double-click, etc.)
   const raw = $('url-input').value;
   const domain = normalizeDomain(raw);
   if (!domain) { $('url-input').focus(); return; }
 
+  analyzeInFlight = true;
   store.domain = domain;
   store.company = capitalize(domain.split('.')[0]);
   const fullUrl = /^https?:\/\//i.test(raw.trim()) ? raw.trim() : ('https://' + domain);
@@ -830,6 +833,7 @@ async function startAnalysis() {
     goHome();
   } finally {
     if (btn) btn.disabled = false;
+    analyzeInFlight = false;
   }
 }
 
@@ -1002,9 +1006,10 @@ function showToast(msg) {
 }
 
 /* ── GLOBAL KEYBOARD ─────────────────────────────────────────────── */
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && document.activeElement === $('url-input')) startAnalysis();
-});
+/* Note: Enter-to-submit is handled once, via the input's own onkeydown
+   in the HTML. No duplicate global listener here — having both fired
+   startAnalysis() twice per Enter press, which double-hit /api/analyze
+   (visible as every secondary path being fetched twice in the logs). */
 
 /* ── INIT — restore report on refresh instead of bouncing to home ─── */
 (function init() {

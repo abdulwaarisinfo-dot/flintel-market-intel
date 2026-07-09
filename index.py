@@ -2,7 +2,7 @@
 Flintel — Website Market Intelligence + Reddit Signal Tracking
 ----------------------------------------------------------------
 (See project docs for full architecture notes — unchanged from the
-existing backend. This revision adds:
+existing backend. This revision adds: 
   1. /api/stats/public — used by the Report/homepage proof strip.
   2. /api/report/market-momentum — powers the "Section 03: Your market
      is moving" report card (competitor complaint volume trend, intent

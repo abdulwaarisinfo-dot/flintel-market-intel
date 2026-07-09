@@ -1,1402 +1,1019 @@
-
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Flintel — Get recommended inside the threads your buyers already read</title>
-<meta name="description" content="Flintel finds the Google-ranked Reddit threads your buyers are already reading, and places genuine, helpful comments recommending you inside them.">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Flintel — Your buyers are on Reddit</title>
+<meta name="description" content="Enter your website. Flintel finds the exact Reddit threads your buyers read, places your product inside them, and boosts it to the top — done for you.">
+<meta property="og:title" content="Flintel — Your buyers are on Reddit">
+<meta property="og:description" content="Done-for-you Reddit intelligence. Free market report in 30 seconds.">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0A0A0A">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%23B6FF1E'/%3E%3Cpath d='M16 6c.6 5 3.4 7.8 8.4 8.4-5 .6-7.8 3.4-8.4 8.4-.6-5-3.4-7.8-8.4-8.4 5-.6 7.8-3.4 8.4-8.4z' fill='%230A0A0A'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,wght@1,400;1,500;1,600&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400..700&family=Fustat:wght@400..800&display=swap" rel="stylesheet">
 <style>
-
-/* ==========================================================================
-   TOKENS
-   Ink charcoal ground, ember spark accent, sage for confirmed matches.
-   Newsreader italic (editorial/thread-reading register) + Inter + JetBrains Mono.
-   ========================================================================== */
-
-:root {
-  --ink:          #15171C;
-  --ink-raised:   #1C1F26;
-  --ink-raised-2: #23262F;
-  --line:         rgba(255,255,255,.08);
-  --line-strong:  rgba(255,255,255,.14);
-  --paper:        #ECE9E2;
-  --paper-dim:    #C9C6BF;
-  --muted:        #888D97;
-  --muted-2:      #5C6069;
-
-  --ember:        #FFB020;
-  --ember-dim:    #B8811A;
-  --ember-wash:   rgba(255,176,32,.12);
-  --sage:         #4FD1AE;
-  --sage-wash:    rgba(79,209,174,.12);
-  --red:          #FF6259;
-  --red-wash:     rgba(255,98,89,.12);
-
-  --font-display: 'Newsreader', Georgia, serif;
-  --font-body:    'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono:    'JetBrains Mono', 'SF Mono', monospace;
-
-  --step--1: 0.8125rem;
-  --step-0:  0.9375rem;
-  --step-1:  1.125rem;
-  --step-2:  1.5rem;
-  --step-3:  2rem;
-  --step-4:  2.75rem;
-  --step-5:  3.75rem;
-  --step-6:  5rem;
-
-  --sp-1: 4px;  --sp-2: 8px;  --sp-3: 12px; --sp-4: 16px;
-  --sp-5: 24px; --sp-6: 32px; --sp-7: 48px; --sp-8: 64px; --sp-9: 96px;
-
-  --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-
-  --ease: cubic-bezier(.16,.84,.44,1);
+/* ═══════════════════════════════════════════════════════════════
+   FLINTEL — SIGNAL SYSTEM  (unchanged — design is 100% as-is)
+═══════════════════════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;-webkit-text-size-adjust:100%;}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text","Inter","Segoe UI",Roboto,sans-serif;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  background:#fff;color:#0A0A0A;
+  overflow-x:clip;min-height:100vh;
 }
-
-* { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-@media (prefers-reduced-motion: reduce) {
-  html { scroll-behavior: auto; }
-  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+button,input,textarea{font-family:inherit;}
+input,textarea{-webkit-appearance:none;}
+::selection{background:rgba(104,99,252,.18);}
+h1,h2,h3,h4,h5,h6,
+.nav-logo,.home-h1,.scan-title,.report-h,.rs-title,.thread-title,.step-card-title,
+.rcta-h,.dash-title,.dash-section-title,.camp-thread-title,.intel-title,.ht-title,
+.modal-title,.sub-name,.proof-n,.rh-plan-name{
+  font-family:"Fustat","Inter",-apple-system,BlinkMacSystemFont,sans-serif;
 }
-
-body {
-  margin: 0;
-  background: var(--ink);
-  color: var(--paper);
-  font-family: var(--font-body);
-  font-size: var(--step-0);
-  line-height: 1.55;
-  -webkit-font-smoothing: antialiased;
+html{background:#fff;} body{background:#fff;}
+:root{
+  --ink:#0A0A0A; --blue:#6863FC; --lime:#B6FF1E; --white:#FFFFFF;
+  --blue2:#7D78FF; --bluedeep:#4B46D6; --limedeep:#93CC00;
+  --g1:rgba(10,10,10,.82); --g2:rgba(10,10,10,.60); --g3:rgba(10,10,10,.42);
+  --g4:rgba(10,10,10,.16); --g5:rgba(10,10,10,.09); --g6:rgba(10,10,10,.045);
+  --hair:rgba(10,10,10,.12);
+  --on-dark-2:rgba(255,255,255,.62); --on-dark-3:rgba(255,255,255,.42); --on-dark-hair:rgba(255,255,255,.12);
+  --green:var(--blue); --gbg:var(--lime); --amber:var(--bluedeep);
+  --abg:rgba(104,99,252,.12); --red:var(--ink); --rbg:rgba(10,10,10,.06);
+  --navh:68px; --ease:cubic-bezier(.28,.11,.32,1); --ease2:cubic-bezier(.16,1,.3,1);
+  --r-sm:10px; --r-md:14px; --r-lg:20px; --r-xl:24px;
+  --font-num:"Fustat","Inter",-apple-system,sans-serif;
+  --tk-2xl:-0.045em; --tk-xl:-0.038em; --tk-lg:-0.028em; --tk-md:-0.020em; --tk-sm:-0.010em;
+  --cap-size:11px; --cap-weight:600; --cap-tracking:0.09em;
 }
-
-h1, h2, h3, .display {
-  font-family: var(--font-display);
-  font-style: italic;
-  font-weight: 500;
-  color: var(--paper);
-  line-height: 1.12;
-  letter-spacing: -0.01em;
-  margin: 0;
+:focus-visible{outline:2px solid var(--blue);outline-offset:3px;border-radius:var(--r-sm);}
+.screen{display:none;min-height:100vh;animation:fadeIn .5s var(--ease);}
+.screen.active{display:flex;flex-direction:column;}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:translateY(0);}}
+nav{
+  position:fixed;top:0;left:0;right:0;z-index:999;height:var(--navh);padding:0 max(24px,4vw);
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+  background:rgba(255,255,255,.72);backdrop-filter:saturate(140%) blur(20px);-webkit-backdrop-filter:saturate(140%) blur(20px);
+  border-bottom:1px solid rgba(10,10,10,.08);
 }
-
-.mono { font-family: var(--font-mono); letter-spacing: -0.02em; }
-a { color: inherit; }
-
-:focus-visible {
-  outline: 2px solid var(--ember);
-  outline-offset: 3px;
-  border-radius: 4px;
+.nav-logo{grid-column:1;display:inline-flex;align-items:center;gap:10px;font-size:16px;font-weight:600;color:var(--ink);letter-spacing:-.02em;text-decoration:none;cursor:pointer;justify-self:start;min-height:44px;padding:6px 0;}
+.nav-logo-icon{width:28px;height:28px;background:var(--lime);border-radius:var(--r-sm);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.nav-logo-icon svg{width:13px;height:13px;fill:#0A0A0A;}
+.nav-links{grid-column:2;display:flex;align-items:center;gap:34px;justify-self:center;}
+.nav-links.hidden{visibility:hidden;pointer-events:none;}
+.nav-links a{min-height:44px;display:inline-flex;align-items:center;padding:6px 0;font-size:14px;font-weight:400;color:var(--g2);cursor:pointer;transition:color .18s;white-space:nowrap;}
+.nav-links a:hover{color:var(--ink);}
+.nav-actions{grid-column:3;display:flex;align-items:center;gap:8px;justify-self:end;flex-shrink:0;}
+.nav-login{font-size:13.5px;font-weight:600;color:#fff;background:var(--ink);border:none;cursor:pointer;padding:11px 20px;min-height:44px;border-radius:980px;display:inline-flex;align-items:center;transition:transform .16s var(--ease),opacity .16s;}
+.nav-login:hover{opacity:.85;} .nav-login:active{transform:scale(.97);}
+.nav-ghost{font-size:13px;font-weight:400;color:var(--ink);background:none;border:none;cursor:pointer;padding:11px 14px;min-height:44px;border-radius:980px;display:inline-flex;align-items:center;transition:opacity .18s;}
+.nav-ghost:hover{opacity:.6;}
+.nav-cta{font-size:13px;font-weight:600;color:#0A0A0A;background:var(--lime);border:none;cursor:pointer;padding:11px 17px;min-height:44px;border-radius:980px;display:inline-flex;align-items:center;transition:transform .16s var(--ease),box-shadow .16s;box-shadow:0 0 0 0 rgba(182,255,30,0);}
+.nav-cta:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(182,255,30,.35);}
+.nav-cta:active{transform:translateY(0) scale(.98);}
+#s-home{align-items:center;justify-content:flex-start;text-align:center;padding:calc(var(--navh) + 72px) 24px 0;position:relative;overflow:visible;background:#fff;background-image:radial-gradient(rgba(10,10,10,.08) 1px,transparent 1px);background-size:22px 22px;background-position:0 0;}
+#s-home::before{display:none;}
+.home-inner{position:relative;z-index:1;max-width:760px;width:100%;margin:0 auto;}
+.home-eyebrow{display:inline-flex;align-items:center;gap:0;font-size:12.5px;font-weight:600;letter-spacing:.01em;border-radius:980px;background:var(--g6);padding:3px;margin-bottom:26px;}
+.home-eyebrow-tag{color:#fff;background:var(--ink);border-radius:980px;padding:7px 15px;font-weight:600;}
+.home-eyebrow-brand{color:var(--g2);padding:7px 15px;font-weight:500;}
+.home-h1{font-size:clamp(30px,4.2vw,46px);font-weight:600;letter-spacing:-.045em;line-height:1.18;color:var(--ink);margin-bottom:20px;}
+.home-h1 em{font-style:normal;background:linear-gradient(100deg,var(--bluedeep) 10%,var(--limedeep) 90%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+.home-sub{font-size:clamp(15px,1.4vw,17px);font-weight:400;color:var(--g2);line-height:1.55;letter-spacing:.002em;max-width:480px;margin:0 auto 36px;}
+.url-form{display:flex;flex-direction:column;align-items:center;gap:14px;width:100%;max-width:460px;margin:0 auto;}
+.url-box{width:100%;display:flex;align-items:center;gap:8px;border:1px solid var(--g4);border-radius:980px;background:#fff;overflow:clip;padding:5px 5px 5px 0;box-shadow:0 2px 10px rgba(10,10,10,.04);transition:border-color .2s,box-shadow .2s,background .2s;}
+.url-box:focus-within{border-color:var(--ink);box-shadow:0 2px 14px rgba(10,10,10,.08);}
+.url-prefix{padding:0 0 0 20px;font-size:14.5px;color:var(--g3);font-weight:400;flex-shrink:0;white-space:nowrap;line-height:1;}
+#url-input{flex:1;min-width:0;border:none;outline:none;background:transparent;font-size:14.5px;color:var(--ink);padding:12px 8px 12px 6px;}
+#url-input::placeholder{color:var(--g3);}
+.url-submit{background:var(--lime);color:#0A0A0A;border:none;cursor:pointer;font-family:var(--font-num);font-size:14.5px;font-weight:500;letter-spacing:var(--tk-md);padding:0 20px;height:40px;border-radius:980px;transition:background .18s,transform .12s,box-shadow .18s;white-space:nowrap;flex-shrink:0;display:flex;align-items:center;gap:7px;}
+.url-submit:hover{background:var(--limedeep);box-shadow:0 6px 20px rgba(182,255,30,.35);}
+.url-submit:active{transform:scale(.98);}
+.url-submit:disabled{opacity:.6;cursor:default;}
+.url-submit svg{width:13px;height:13px;display:none;}
+.home-note{font-size:12px;color:var(--g3);font-weight:400;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px);}to{opacity:1;transform:translateY(0);}}
+#s-scan{align-items:center;justify-content:center;padding:calc(var(--navh) + 64px) 24px 64px;}
+.scan-wrap{max-width:520px;width:100%;margin:0 auto;text-align:left;}
+.scan-url-display{font-size:13px;font-weight:400;color:var(--g2);margin-bottom:36px;display:inline-flex;align-items:center;gap:8px;border:1px solid var(--g5);border-radius:980px;padding:7px 15px;background:var(--g6);}
+.scan-url-display svg{color:var(--g3);}
+.scan-title{font-size:28px;font-weight:600;letter-spacing:-.03em;color:var(--ink);margin-bottom:8px;}
+.scan-subtitle{font-size:16px;color:var(--g2);margin-bottom:40px;}
+.scan-track{height:3px;background:var(--g5);border-radius:980px;margin-bottom:40px;overflow:clip;}
+.scan-fill{height:100%;width:0;background:var(--blue);border-radius:980px;transition:width .8s var(--ease);}
+.scan-steps{display:flex;flex-direction:column;gap:0;}
+.scan-step{display:flex;align-items:flex-start;gap:15px;opacity:.3;transition:opacity .35s;padding:15px 0;border-bottom:1px solid var(--g6);}
+.scan-step:last-child{border-bottom:none;}
+.scan-step.done{opacity:1;} .scan-step.active{opacity:1;}
+.step-icon{width:24px;height:24px;border-radius:980px;display:flex;align-items:center;justify-content:center;flex-shrink:0;margin-top:0;}
+.step-icon.pending{background:var(--g6);color:var(--g4);}
+.step-icon.spinning{background:rgba(104,99,252,.08);}
+.step-icon.checked{background:var(--gbg);}
+.step-icon svg{width:11px;height:11px;}
+.step-icon.spinning svg{animation:spin .7s linear infinite;color:var(--blue);}
+.step-icon.checked svg{color:var(--ink);}
+.step-text{flex:1;}
+.step-label{font-size:15px;font-weight:500;color:var(--ink);line-height:1.4;}
+.step-detail{font-size:13px;color:var(--g2);margin-top:2px;height:0;overflow:clip;transition:height .3s;}
+.scan-step.active .step-detail{height:20px;}
+.scan-step.done .step-detail{height:0;}
+@keyframes spin{to{transform:rotate(360deg);}}
+#s-report{padding-top:var(--navh);background:#fff;}
+.report-hero{padding:72px 22px 56px;background:#fff;color:var(--ink);position:relative;overflow:hidden;background-image:radial-gradient(rgba(10,10,10,.08) 1px,transparent 1px);background-size:22px 22px;background-position:0 0;border-bottom:1px solid var(--g5);}
+.report-hero::before{content:'';position:absolute;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse 60% 55% at 30% 20%,transparent 0%,rgba(255,255,255,.6) 65%,#fff 100%);}
+.report-hero-inner{max-width:980px;margin:0 auto;width:100%;position:relative;z-index:1;}
+.report-breadcrumb{font-size:12px;font-weight:400;color:var(--g3);margin-bottom:24px;display:flex;align-items:center;gap:6px;}
+.report-breadcrumb svg{color:var(--g3);}
+.report-h{font-size:clamp(28px,3.6vw,46px);font-weight:700;letter-spacing:-.035em;color:var(--ink);margin-bottom:18px;line-height:1.1;max-width:820px;}
+.report-h span{background:linear-gradient(100deg,var(--bluedeep),var(--limedeep));-webkit-background-clip:text;background-clip:text;color:transparent;}
+.report-summary{font-size:17px;color:var(--g2);line-height:1.6;max-width:600px;margin-bottom:30px;}
+.report-summary b{color:var(--ink);font-weight:600;}
+.report-meta-chips{display:flex;gap:8px;flex-wrap:wrap;}
+.rmchip{display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:400;color:var(--g2);background:#fff;border:1px solid var(--g5);box-shadow:0 2px 8px rgba(10,10,10,.03);border-radius:980px;padding:8px 15px;}
+.rmchip svg{color:var(--g3);width:13px;height:13px;}
+.report-body{max-width:980px;margin:0 auto;padding:0 22px 88px;width:100%;}
+.report-section{padding-top:88px;}
+.rs-label{font-size:var(--cap-size);font-weight:var(--cap-weight);letter-spacing:var(--cap-tracking);text-transform:uppercase;color:#fff;margin-bottom:14px;display:inline-flex;background:var(--ink);padding:6px 14px;border-radius:var(--r-sm);}
+.rs-title{font-family:var(--font-num);font-size:clamp(22px,2.6vw,30px);font-weight:600;color:var(--ink);letter-spacing:var(--tk-lg);margin-bottom:12px;}
+.rs-desc{font-size:15.5px;color:var(--g2);line-height:1.65;letter-spacing:var(--tk-sm);margin-bottom:38px;max-width:580px;}
+.subreddit-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.sub-card{border:none;border-radius:var(--r-lg);border-left:3px solid var(--g4);padding:26px 26px 24px;background:var(--g6);transition:transform .3s var(--ease),box-shadow .3s var(--ease);cursor:default;animation:fadeUp .55s var(--ease2) backwards;}
+.sub-card:nth-child(1){animation-delay:.03s;} .sub-card:nth-child(2){animation-delay:.09s;}
+.sub-card:nth-child(3){animation-delay:.15s;} .sub-card:nth-child(4){animation-delay:.21s;}
+.sub-card:nth-child(5){animation-delay:.27s;} .sub-card:nth-child(6){animation-delay:.33s;}
+.sub-card:has(.rel-high){border-left-color:var(--lime);}
+.sub-card:has(.rel-med){border-left-color:var(--blue);}
+.sub-card:hover{transform:translateY(-3px);box-shadow:0 14px 32px rgba(0,0,0,.09);}
+.sub-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:18px;gap:12px;}
+.sub-top-left{display:flex;align-items:center;gap:14px;min-width:0;flex:1;}
+.sub-icon{width:40px;height:40px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#fff;font-family:var(--font-num);font-size:16px;font-weight:600;letter-spacing:var(--tk-md);box-shadow:inset 0 -2px 4px rgba(0,0,0,.12),0 2px 6px rgba(0,0,0,.08);}
+.sub-icon svg{width:19px;height:19px;}
+.sub-name{font-family:var(--font-num);font-size:16px;font-weight:600;color:var(--ink);letter-spacing:var(--tk-md);}
+.sub-members{font-size:12.5px;color:var(--g3);margin-top:3px;}
+.rel-badge{font-size:var(--cap-size);font-weight:var(--cap-weight);letter-spacing:var(--cap-tracking);padding:5px 12px;border-radius:980px;flex-shrink:0;text-transform:uppercase;}
+.rel-high{background:var(--gbg);color:var(--ink);font-weight:var(--cap-weight);}
+.rel-med{background:var(--abg);color:var(--amber);font-weight:var(--cap-weight);}
+.sub-quote{font-size:13.5px;color:var(--g1);line-height:1.6;font-style:normal;background:#fff;border-radius:var(--r-md);padding:13px 15px;margin-bottom:16px;}
+.sub-stats{display:flex;gap:16px;flex-wrap:wrap;}
+.sub-stat{font-size:12.5px;color:var(--g3);}
+.sub-stat b{color:var(--g1);font-weight:600;}
+.thread-list{display:flex;flex-direction:column;gap:14px;}
+.thread-card{border:1px solid var(--g5);border-radius:var(--r-lg);padding:24px 26px;background:#fff;display:flex;gap:22px;align-items:flex-start;transition:border-color .25s,box-shadow .25s,transform .25s;animation:fadeUp .55s var(--ease2) backwards;}
+.thread-card:nth-child(1){animation-delay:.03s;} .thread-card:nth-child(2){animation-delay:.09s;}
+.thread-card:nth-child(3){animation-delay:.15s;} .thread-card:nth-child(4){animation-delay:.21s;}
+.thread-card:nth-child(5){animation-delay:.27s;}
+.thread-card:hover{border-color:var(--g4);box-shadow:0 10px 30px rgba(0,0,0,.07);transform:translateY(-2px);}
+.thread-score-col{flex-shrink:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;width:64px;height:64px;border-radius:50%;align-self:flex-start;position:relative;}
+.thread-score-col::before{content:'';position:absolute;inset:5px;border-radius:50%;background:#fff;}
+.tscore{font-size:19px;font-weight:700;letter-spacing:-.02em;font-variant-numeric:tabular-nums;position:relative;z-index:1;}
+.ts-hot{color:var(--limedeep);} .ts-warm{color:var(--bluedeep);} .ts-mid{color:var(--bluedeep);}
+.thread-body{flex:1;min-width:0;}
+.thread-plat{display:flex;align-items:center;gap:7px;margin-bottom:9px;}
+.plat-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.pd-r{background:#B6FF1E;} .pd-x{background:#0A0A0A;} .pd-t{background:#6863FC;}
+.thread-source{font-size:12.5px;font-weight:400;color:var(--g2);}
+.thread-title{font-size:16px;font-weight:600;color:var(--ink);line-height:1.4;margin-bottom:8px;letter-spacing:-.01em;}
+.thread-snippet{font-size:14px;color:var(--g2);line-height:1.6;margin-bottom:14px;}
+.thread-pills{display:flex;gap:7px;flex-wrap:wrap;}
+.tpill{font-size:11.5px;font-weight:400;padding:4px 11px;border-radius:980px;background:var(--g6);color:var(--g2);}
+.tpill.open{background:var(--gbg);color:var(--ink);font-weight:600;}
+.tpill.rank1{background:rgba(104,99,252,.09);color:var(--bluedeep);font-weight:500;}
+.step-cards{display:flex;flex-direction:column;gap:16px;}
+.step-card{border:none;border-radius:var(--r-xl);border-top:3px solid var(--g4);overflow:hidden;background:var(--g6);transition:transform .3s var(--ease),box-shadow .3s var(--ease);animation:fadeUp .55s var(--ease2) backwards;}
+.step-card:nth-child(1){border-top-color:var(--lime);animation-delay:.04s;}
+.step-card:nth-child(2){border-top-color:var(--blue);animation-delay:.1s;}
+.step-card:nth-child(3){border-top-color:var(--lime);animation-delay:.16s;}
+.step-card:hover{transform:translateY(-3px);box-shadow:0 14px 34px rgba(0,0,0,.08);}
+.step-card-head{display:flex;align-items:center;gap:15px;padding:22px 26px 0;border-bottom:none;background:transparent;}
+.step-number{width:30px;height:30px;border-radius:980px;background:var(--ink);color:#fff;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.step-card:nth-child(1) .step-number{background:var(--lime);color:var(--ink);}
+.step-card:nth-child(2) .step-number{background:var(--blue);color:#fff;}
+.step-card:nth-child(3) .step-number{background:var(--lime);color:var(--ink);}
+.step-card-title{font-size:17px;font-weight:600;color:var(--ink);letter-spacing:-.012em;}
+.step-card-body{padding:16px 26px 26px;}
+.step-desc{font-size:14.5px;color:var(--g1);line-height:1.65;margin-bottom:20px;}
+.step-bullets{display:flex;flex-direction:column;gap:10px;margin-bottom:22px;}
+.step-bullet{display:flex;align-items:flex-start;gap:11px;font-size:13.5px;color:var(--g1);line-height:1.5;}
+.bullet-check{width:18px;height:18px;border-radius:980px;background:#fff;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;color:var(--green);}
+.bullet-check svg{width:9px;height:9px;}
+.comment-preview{background:#fff;border:none;border-radius:14px;padding:20px 22px;position:relative;overflow:clip;}
+.cp-label{font-size:var(--cap-size);font-weight:var(--cap-weight);letter-spacing:var(--cap-tracking);text-transform:uppercase;color:var(--g3);margin-bottom:12px;}
+.cp-text{font-size:14px;color:var(--g1);line-height:1.7;}
+.upvote-timeline{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;border:none;border-radius:0;overflow:visible;}
+.uvt-col{padding:18px 16px;border-right:none;text-align:center;background:#fff;border-radius:14px;}
+.uvt-time{font-size:10.5px;font-weight:500;color:var(--g3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:9px;}
+.uvt-action{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:4px;letter-spacing:-.01em;}
+.uvt-detail{font-size:12px;color:var(--g2);}
+.report-cta-section{border-top:1px solid var(--g5);padding:76px 22px 84px;max-width:980px;margin:0 auto;width:100%;display:flex;flex-direction:column;align-items:center;text-align:center;}
+.rcta-label{font-size:12px;font-weight:500;letter-spacing:.05em;text-transform:uppercase;color:var(--blue);margin-bottom:14px;}
+.rcta-h{font-size:clamp(26px,3.4vw,40px);font-weight:600;letter-spacing:-.035em;color:var(--ink);margin-bottom:14px;line-height:1.1;}
+.rcta-sub{font-size:16px;color:var(--g2);margin-bottom:44px;max-width:440px;line-height:1.55;}
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;width:100%;max-width:840px;margin-bottom:30px;}
+.price-card{border:1px solid var(--g5);border-radius:20px;padding:30px 26px;text-align:left;transition:border-color .25s,box-shadow .25s,transform .3s var(--ease);background:#fff;cursor:pointer;position:relative;animation:fadeUp .55s var(--ease2) backwards;}
+.price-card:nth-child(1){animation-delay:.04s;} .price-card:nth-child(2){animation-delay:.1s;} .price-card:nth-child(3){animation-delay:.16s;}
+.price-card:hover{border-color:var(--g4);transform:translateY(-4px);box-shadow:0 14px 38px rgba(0,0,0,.08);}
+.price-card.featured{border-color:var(--ink);background:var(--ink);box-shadow:0 20px 48px rgba(0,0,0,.28);}
+.price-card.featured .pc-tier{color:var(--on-dark-2);}
+.price-card.featured .pc-price,.price-card.featured .pc-placement,.price-card.featured .pc-feat{color:#fff;}
+.price-card.featured .pc-per{color:var(--on-dark-3);}
+.price-card.featured .pc-placement{border-bottom-color:rgba(255,255,255,.14);}
+.price-card.featured:hover{transform:translateY(-6px);}
+.pc-popular{position:absolute;top:-12px;left:50%;transform:translateX(-50%);background:var(--lime);color:var(--ink);font-size:11px;font-weight:700;letter-spacing:.02em;padding:4px 14px;border-radius:980px;white-space:nowrap;}
+.pc-tier{font-size:13px;font-weight:600;color:var(--g2);margin-bottom:14px;letter-spacing:-.005em;}
+.pc-price{font-size:44px;font-weight:700;color:var(--ink);letter-spacing:-.03em;margin-bottom:4px;font-variant-numeric:tabular-nums;}
+.pc-per{font-size:14px;font-weight:400;color:var(--g3);letter-spacing:0;}
+.pc-placement{font-size:13.5px;color:var(--g2);margin-bottom:20px;line-height:1.5;padding-bottom:20px;border-bottom:1px solid var(--g6);}
+.pc-feats{display:flex;flex-direction:column;gap:10px;margin-bottom:26px;}
+.pc-feat{display:flex;align-items:flex-start;gap:9px;font-size:13.5px;color:var(--g1);line-height:1.45;}
+.pc-feat-check{color:var(--blue);flex-shrink:0;margin-top:2px;}
+.pc-feat-check svg{width:11px;height:11px;}
+.pc-btn{width:100%;padding:14px 20px;min-height:48px;border-radius:980px;font-size:15px;font-weight:600;cursor:pointer;transition:background .18s,color .18s;border:none;background:var(--g6);color:var(--ink);}
+.pc-btn:hover{background:var(--g5);}
+.featured .pc-btn{background:var(--lime);color:var(--ink);font-weight:700;}
+.featured .pc-btn:hover{background:var(--limedeep);}
+.featured .pc-feat-check{color:var(--lime);}
+.rcta-note{font-size:13px;color:var(--g3);}
+@media(max-width:1024px){.subreddit-grid{grid-template-columns:repeat(2,1fr);}}
+nav{padding-left:max(24px,env(safe-area-inset-left));padding-right:max(24px,env(safe-area-inset-right));}
+@media(max-width:768px){
+  nav{padding-left:max(18px,env(safe-area-inset-left));padding-right:max(18px,env(safe-area-inset-right));}
+  .report-body,.report-hero-inner{padding-left:max(20px,env(safe-area-inset-left));padding-right:max(20px,env(safe-area-inset-right));}
+  #toast{bottom:max(28px,env(safe-area-inset-bottom));}
 }
-
-.container { max-width: 1180px; margin: 0 auto; padding: 0 var(--sp-6); }
-@media (max-width: 640px) { .container { padding: 0 var(--sp-4); } }
-
-.eyebrow {
-  font-family: var(--font-mono);
-  font-size: var(--step--1);
-  text-transform: uppercase;
-  letter-spacing: 0.12em;
-  color: var(--ember);
-  display: flex; align-items: center; gap: var(--sp-2);
+body,html{-webkit-overflow-scrolling:touch;}
+body{overscroll-behavior-y:contain;}
+html{overflow-x:clip;}
+@media(max-width:768px){
+  nav{grid-template-columns:auto 1fr;padding:0 18px;}
+  .nav-links{display:none!important;}
+  .nav-logo{padding:8px 0;min-height:44px;display:inline-flex;align-items:center;}
+  .nav-login,.nav-cta,.nav-ghost{min-height:44px;}
+  .pc-btn{min-height:48px;padding:14px 22px;}
+  input,textarea,select{font-size:16px!important;}
+  .home-h1{letter-spacing:-.035em;line-height:1.1;}
+  .home-eyebrow{margin-bottom:24px;}
+  .report-h{font-size:clamp(26px,7vw,34px);line-height:1.15;letter-spacing:-.03em;}
+  .rs-title{font-size:clamp(20px,5.4vw,24px);}
+  .viz-grid-3{grid-template-columns:1fr;gap:12px;}
+  .viz-card{padding:22px 22px;}
+  .live-ticker{gap:14px;padding:16px 18px;flex-direction:column;align-items:stretch;}
+  .lt-metric{min-width:0;justify-content:space-between;}
+  .lt-sep{display:none;}
+  .gap-row{grid-template-columns:110px 1fr 60px;gap:14px;}
+  .gap-name{font-size:13px;} .gap-count{font-size:14px;}
+  .rmchip{font-size:12px;padding:7px 12px;}
+  .sub-icon{width:36px;height:36px;font-size:15px;}
+  .sub-name{font-size:15px;}
+  .thread-card{grid-template-columns:1fr;padding:22px 20px;}
+  .thread-score-col{align-self:flex-start;}
+  .nav-actions{grid-column:auto;justify-self:end;}
+  .nav-ghost{display:none;}
+  .home-h1{font-size:clamp(30px,8vw,42px);}
+  .hb{display:none;}
+  .home-sub{margin-bottom:38px;}
+  .url-prefix{display:none;}
+  #url-input{padding-left:22px;}
+  .url-box{flex-direction:row;}
+  .report-hero{padding:52px 20px 40px;}
+  .report-body{padding:0 20px 64px;}
+  .report-section{padding-top:56px;}
+  .subreddit-grid{grid-template-columns:1fr;}
+  .thread-card{padding:20px;gap:16px;}
+  .pricing-grid{grid-template-columns:1fr;}
+  .report-cta-section{padding:56px 20px 64px;}
+  .upvote-timeline{grid-template-columns:repeat(2,1fr);}
 }
-.eyebrow::before { content: ''; width: 14px; height: 1px; background: var(--ember); display: inline-block; }
-
-.thread-list { list-style: none; margin: 0; padding: 0; }
-.thread-list li { position: relative; padding-left: 28px; margin-bottom: var(--sp-4); }
-.thread-list li::before {
-  content: ''; position: absolute; left: 0; top: 8px; width: 14px; height: 14px;
-  border-left: 1.5px solid var(--line-strong); border-bottom: 1.5px solid var(--line-strong);
-  border-bottom-left-radius: 6px;
+@media(max-width:480px){
+  .url-box{flex-direction:column;padding:8px;border-radius:24px;gap:8px;}
+  #url-input{width:100%;text-align:center;padding:12px;}
+  .url-submit{width:100%;justify-content:center;}
 }
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important;} .screen{animation:none;}}
 
-.btn {
-  font-family: var(--font-body); font-size: var(--step--1); font-weight: 600;
-  padding: 12px 22px; border-radius: var(--radius-sm); border: 1px solid transparent;
-  cursor: pointer; transition: transform .15s var(--ease), background .15s var(--ease), border-color .15s var(--ease);
-  display: inline-flex; align-items: center; gap: var(--sp-2); white-space: nowrap;
-}
-.btn:active { transform: scale(.97); }
-.btn-primary { background: var(--ember); color: #201400; }
-.btn-primary:hover { background: #ffbe42; }
-.btn-ghost { background: transparent; color: var(--paper); border-color: var(--line-strong); }
-.btn-ghost:hover { border-color: var(--paper-dim); }
-.btn-sm { padding: 8px 14px; font-size: var(--step--1); }
-.btn:disabled { opacity: .5; cursor: not-allowed; }
+/* ═══════ REPORT VISUALIZATIONS ═══════ */
+.live-ticker{margin-top:48px;display:flex;align-items:center;gap:28px;flex-wrap:wrap;padding:18px 24px;border:1px solid var(--g5);border-radius:var(--r-md);background:linear-gradient(180deg,#fafafa,#fff);}
+.lt-pulse{width:9px;height:9px;border-radius:50%;background:#22C55E;flex-shrink:0;box-shadow:0 0 0 0 rgba(34,197,94,.5);animation:ltPulse 1.8s ease infinite;}
+@keyframes ltPulse{0%,100%{box-shadow:0 0 0 0 rgba(34,197,94,.55)}70%{box-shadow:0 0 0 10px rgba(34,197,94,0)}}
+.lt-label{font-size:var(--cap-size);font-weight:var(--cap-weight);letter-spacing:var(--cap-tracking);text-transform:uppercase;color:#22C55E;}
+.lt-metric{display:flex;align-items:baseline;gap:12px;font-size:14px;color:var(--g2);flex:1;min-width:190px;letter-spacing:var(--tk-sm)}
+.lt-metric b{font-family:var(--font-num);font-size:19px;font-weight:600;color:var(--ink);letter-spacing:var(--tk-md);font-variant-numeric:tabular-nums;min-width:60px;text-align:right}
+.lt-sep{width:1px;height:24px;background:var(--g5);flex-shrink:0}
+.viz-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:14px}
+.viz-card{border:1px solid var(--g5);border-radius:var(--r-lg);padding:28px 28px;background:#fff;transition:border-color .3s var(--ease),box-shadow .3s var(--ease);}
+.viz-card:hover{border-color:var(--g4);box-shadow:0 12px 32px rgba(0,0,0,.05)}
+.viz-title{font-size:13px;font-weight:500;color:var(--g2);letter-spacing:var(--tk-sm);line-height:1.4}
+.viz-value{font-family:var(--font-num);font-size:34px;font-weight:600;color:var(--ink);letter-spacing:var(--tk-xl);margin:10px 0 8px;font-variant-numeric:tabular-nums;line-height:1;}
+.viz-value .unit{font-size:17px;color:var(--g3);font-weight:500;letter-spacing:var(--tk-md);margin-left:3px}
+.viz-delta{font-size:12px;font-weight:600;color:#22C55E;letter-spacing:var(--tk-sm);display:flex;align-items:center;gap:6px}
+.viz-delta.neutral{color:var(--g3);}
+.viz-delta svg{width:10px;height:10px}
+.viz-note{font-size:12px;color:var(--g3);margin-top:22px;line-height:1.5;}
+.gap-viz{margin-top:32px;border-top:1px solid var(--g5);border-bottom:1px solid var(--g5);padding:8px 0}
+.gap-row{display:grid;grid-template-columns:180px 1fr 84px;gap:24px;align-items:center;padding:18px 0;border-bottom:1px solid var(--g6);}
+.gap-row:last-child{border-bottom:none}
+.gap-name{font-size:14px;font-weight:500;color:var(--ink);letter-spacing:-.005em}
+.gap-name.you{color:var(--ink);font-weight:600;display:flex;align-items:center;gap:8px}
+.gap-name.you::before{content:"";width:8px;height:8px;background:var(--lime);border-radius:2px;box-shadow:0 0 0 3px rgba(182,255,30,.25);flex-shrink:0}
+.gap-bar{height:30px;background:var(--g6);border-radius:var(--r-sm);overflow:clip;position:relative;}
+.gap-fill{height:100%;width:0;background:linear-gradient(90deg,#2A2A2A,#0A0A0A);border-radius:var(--r-sm);transition:width 1.4s var(--ease);}
+.gap-fill.you{background:linear-gradient(90deg,#B6FF1E,#8DE500)}
+.gap-fill.you::after{content:"";position:absolute;top:0;right:0;bottom:0;width:100%;background:linear-gradient(90deg,transparent,rgba(255,255,255,.35),transparent);transform:translateX(-100%);animation:shimmer 2.4s ease 1.6s infinite}
+@keyframes shimmer{50%,100%{transform:translateX(100%)}}
+.gap-count{font-family:var(--font-num);font-size:16px;font-weight:600;color:var(--ink);text-align:right;font-variant-numeric:tabular-nums;letter-spacing:var(--tk-md)}
+.gap-caption{margin-top:24px;padding:18px 22px;background:var(--g6);border-radius:var(--r-md);font-size:14px;color:var(--g1);line-height:1.65;border-left:3px solid var(--lime);}
+.gap-caption b{color:var(--ink);font-weight:600}
+.empty-note{padding:22px;border:1px dashed var(--g4);border-radius:var(--r-md);color:var(--g3);font-size:13.5px;line-height:1.6;text-align:center;}
 
-.card { background: var(--ink-raised); border: 1px solid var(--line); border-radius: var(--radius-lg); }
-.hairline { border: none; border-top: 1px solid var(--line); margin: 0; }
-
-.input {
-  width: 100%; background: var(--ink); border: 1px solid var(--line-strong); color: var(--paper);
-  font-family: var(--font-body); font-size: var(--step-0); padding: 12px 14px; border-radius: var(--radius-sm);
-  transition: border-color .15s var(--ease);
-}
-.input:focus { border-color: var(--ember); outline: none; }
-.input::placeholder { color: var(--muted-2); }
-
-.label {
-  font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .08em;
-  color: var(--muted); display: block; margin-bottom: var(--sp-2);
-}
-
-.badge { font-family: var(--font-mono); font-size: 11px; padding: 3px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: .04em; }
-.badge-ember { background: var(--ember-wash); color: var(--ember); }
-.badge-sage  { background: var(--sage-wash); color: var(--sage); }
-.badge-muted { background: rgba(255,255,255,.06); color: var(--muted); }
-
-.spinner {
-  width: 16px; height: 16px; border: 2px solid rgba(255,255,255,.2); border-top-color: var(--ember);
-  border-radius: 50%; animation: spin .7s linear infinite;
-}
-@keyframes spin { to { transform: rotate(360deg); } }
-
-.toast {
-  position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
-  background: var(--ink-raised-2); border: 1px solid var(--line-strong); color: var(--paper);
-  padding: 12px 20px; border-radius: var(--radius-sm); font-size: var(--step--1);
-  opacity: 0; transition: all .25s var(--ease); z-index: 999; pointer-events: none;
-}
-.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
-.toast.error { border-color: rgba(255,98,89,.4); }
-
-.skeleton {
-  background: linear-gradient(90deg, var(--ink-raised) 25%, var(--ink-raised-2) 37%, var(--ink-raised) 63%);
-  background-size: 400% 100%; animation: shimmer 1.4s ease infinite; border-radius: var(--radius-sm);
-}
-@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
-
-/* ==========================================================================
-   LANDING PAGE
-   ========================================================================== */
-
-.nav {
-  position: sticky; top: 0; z-index: 50; background: rgba(21,23,28,.82);
-  backdrop-filter: blur(10px); border-bottom: 1px solid var(--line);
-}
-.nav-inner { display: flex; align-items: center; justify-content: space-between; padding: var(--sp-4) 0; }
-.logo { display: flex; align-items: center; gap: 10px; font-weight: 600; font-size: var(--step-0); }
-.logo-mark { width: 22px; height: 22px; background: var(--ember); border-radius: 5px; position: relative; flex-shrink: 0; }
-.logo-mark::after {
-  content: ''; position: absolute; inset: 6px 6px 6px 8px;
-  border-left: 1.5px solid #201400; border-bottom: 1.5px solid #201400; border-bottom-left-radius: 3px;
-}
-.nav-links { display: flex; align-items: center; gap: var(--sp-6); }
-.nav-links a { font-size: var(--step--1); color: var(--muted); text-decoration: none; transition: color .15s; }
-.nav-links a:hover { color: var(--paper); }
-.nav-actions { display: flex; align-items: center; gap: var(--sp-3); }
-
-.hero { padding: var(--sp-9) 0 var(--sp-8); display: grid; grid-template-columns: 1.05fr 0.95fr; gap: var(--sp-8); align-items: center; }
-.hero-copy h1 { font-size: clamp(2.5rem, 4.5vw, var(--step-6)); margin: var(--sp-4) 0 var(--sp-5); }
-.hero-copy h1 em { color: var(--ember); font-style: italic; }
-.hero-sub { font-size: var(--step-1); color: var(--paper-dim); max-width: 46ch; margin-bottom: var(--sp-6); }
-.hero-ctas { display: flex; gap: var(--sp-4); align-items: center; margin-bottom: var(--sp-7); }
-.hero-ctas .fine { font-size: var(--step--1); color: var(--muted); }
-
-.proof-strip { display: flex; gap: var(--sp-7); flex-wrap: wrap; }
-.proof-stat .num { font-family: var(--font-mono); font-size: var(--step-2); color: var(--paper); display: block; }
-.proof-stat .lbl { font-size: 12px; color: var(--muted); }
-
-.thread-mock { padding: var(--sp-5); position: relative; overflow: hidden; }
-.thread-mock::before {
-  content: 'GOOGLE — PAGE 1 · r/saas'; font-family: var(--font-mono); font-size: 10px; color: var(--muted-2);
-  letter-spacing: .08em; display: block; margin-bottom: var(--sp-4);
-}
-.tm-title {
-  font-family: var(--font-body); font-weight: 600; font-size: var(--step-0); color: var(--paper);
-  margin-bottom: var(--sp-5); padding-bottom: var(--sp-4); border-bottom: 1px solid var(--line);
-}
-.tm-comment { display: flex; gap: var(--sp-3); margin-bottom: var(--sp-4); }
-.tm-comment .avatar { width: 24px; height: 24px; border-radius: 50%; background: var(--ink-raised-2); flex-shrink: 0; margin-top: 2px; }
-.tm-body { flex: 1; min-width: 0; }
-.tm-meta { font-size: 11px; color: var(--muted-2); margin-bottom: 4px; font-family: var(--font-mono); }
-.tm-text { font-size: var(--step--1); color: var(--paper-dim); }
-.tm-comment.nested { margin-left: 30px; }
-.tm-comment.nested .tm-body { border-left: 1.5px solid var(--line-strong); padding-left: var(--sp-3); }
-.tm-comment.planted { animation: plant 2.4s var(--ease) infinite; }
-.tm-comment.planted .tm-body {
-  border-left: 1.5px solid var(--ember); padding-left: var(--sp-3);
-  background: linear-gradient(90deg, var(--ember-wash), transparent 60%); border-radius: 0 8px 8px 0;
-}
-.tm-comment.planted .tm-text { color: var(--paper); }
-.tm-comment.planted .avatar { background: var(--ember); }
-.tm-planted-tag {
-  display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: 10px;
-  color: var(--ember); margin-top: 6px; text-transform: uppercase; letter-spacing: .06em;
-}
-.tm-planted-tag::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: var(--ember); }
-@keyframes plant { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.15); } }
-
-.section { padding: var(--sp-9) 0; }
-.section-head { max-width: 640px; margin-bottom: var(--sp-7); }
-.section-head h2 { font-size: clamp(1.8rem, 3vw, var(--step-4)); margin: var(--sp-3) 0 var(--sp-4); }
-.section-head p { color: var(--paper-dim); font-size: var(--step-1); }
-
-.how-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-5); }
-.how-card { padding: var(--sp-6); }
-.how-num { font-family: var(--font-mono); color: var(--ember); font-size: var(--step--1); margin-bottom: var(--sp-4); }
-.how-card h3 { font-family: var(--font-body); font-style: normal; font-size: var(--step-0); font-weight: 600; margin-bottom: var(--sp-3); }
-.how-card p { color: var(--muted); font-size: var(--step--1); margin: 0; }
-
-.for-who { display: flex; flex-wrap: wrap; gap: var(--sp-3); }
-.for-chip { padding: 10px 18px; border: 1px solid var(--line-strong); border-radius: 999px; font-size: var(--step--1); color: var(--paper-dim); }
-
-.pricing-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--sp-5); }
-.plan { padding: var(--sp-6); display: flex; flex-direction: column; }
-.plan.featured { border-color: var(--ember); position: relative; }
-.plan.featured::before {
-  content: 'RECOMMENDED'; position: absolute; top: -1px; right: var(--sp-5);
-  background: var(--ember); color: #201400; font-family: var(--font-mono); font-size: 10px;
-  letter-spacing: .06em; padding: 4px 10px; border-radius: 0 0 6px 6px;
-}
-.plan-name { font-size: var(--step-0); font-weight: 600; font-family: var(--font-body); font-style: normal; margin-bottom: var(--sp-2); }
-.plan-price { font-family: var(--font-mono); font-size: var(--step-3); color: var(--paper); margin-bottom: var(--sp-1); }
-.plan-price span { font-size: var(--step--1); color: var(--muted); font-weight: 400; }
-.plan-desc { color: var(--muted); font-size: var(--step--1); margin-bottom: var(--sp-5); }
-.plan-features { list-style: none; padding: 0; margin: 0 0 var(--sp-6); flex: 1; }
-.plan-features li { font-size: var(--step--1); color: var(--paper-dim); padding: var(--sp-2) 0; border-top: 1px solid var(--line); display: flex; gap: var(--sp-2); }
-.plan-features li:first-child { border-top: none; }
-.plan-features li::before { content: '—'; color: var(--ember); flex-shrink: 0; }
-
-.limits-note { display: flex; gap: var(--sp-6); flex-wrap: wrap; margin-top: var(--sp-6); }
-.limits-note .card { padding: var(--sp-5); flex: 1; min-width: 260px; }
-.limits-note h4 { font-family: var(--font-body); font-style: normal; font-size: var(--step--1); font-weight: 600; margin: 0 0 var(--sp-2); color: var(--paper); }
-.limits-note p { font-size: 13px; color: var(--muted); margin: 0; }
-
-.cta-band {
-  text-align: center; padding: var(--sp-9) var(--sp-6); border-radius: var(--radius-lg);
-  background: var(--ink-raised); border: 1px solid var(--line); position: relative; overflow: hidden;
-}
-.cta-band h2 { font-size: clamp(1.8rem, 3.5vw, var(--step-4)); margin-bottom: var(--sp-5); }
-.cta-band-glow { position: absolute; inset: 0; background: radial-gradient(600px 300px at 50% 0%, var(--ember-wash), transparent 70%); pointer-events: none; }
-
-.footer { padding: var(--sp-7) 0; border-top: 1px solid var(--line); }
-.footer-inner { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--sp-4); }
-.footer-inner .muted { color: var(--muted-2); font-size: 13px; }
-
-.modal-overlay {
-  position: fixed; inset: 0; z-index: 200; background: rgba(10,11,14,.7); backdrop-filter: blur(4px);
-  display: none; align-items: center; justify-content: center; padding: var(--sp-4);
-}
-.modal-overlay.open { display: flex; }
-.modal { width: 100%; max-width: 400px; padding: var(--sp-7) var(--sp-6); animation: modal-in .2s var(--ease); }
-@keyframes modal-in { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: none; } }
-.modal-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--sp-6); }
-.modal-head h3 { font-size: var(--step-2); }
-.modal-close { background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1; padding: 0; }
-.modal-close:hover { color: var(--paper); }
-.field { margin-bottom: var(--sp-4); }
-.form-error { font-size: 13px; color: var(--red); background: var(--red-wash); padding: var(--sp-3); border-radius: var(--radius-sm); margin-bottom: var(--sp-4); display: none; }
-.form-error.show { display: block; }
-.divider-or { display: flex; align-items: center; gap: var(--sp-3); color: var(--muted-2); font-size: 12px; margin: var(--sp-5) 0; }
-.divider-or::before, .divider-or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
-.btn-google { width: 100%; justify-content: center; background: var(--ink); border: 1px solid var(--line-strong); color: var(--paper); }
-.btn-google:hover { border-color: var(--paper-dim); }
-.modal-switch { text-align: center; margin-top: var(--sp-5); font-size: var(--step--1); color: var(--muted); }
-.modal-switch button { background: none; border: none; color: var(--ember); cursor: pointer; font-size: inherit; font-weight: 600; padding: 0; }
-.btn-block { width: 100%; justify-content: center; }
-
-@media (max-width: 900px) {
-  .hero { grid-template-columns: 1fr; }
-  .how-grid { grid-template-columns: 1fr 1fr; }
-  .pricing-grid { grid-template-columns: 1fr; }
-  .nav-links { display: none; }
-}
-@media (max-width: 560px) {
-  .how-grid { grid-template-columns: 1fr; }
-  .proof-strip { gap: var(--sp-5); }
-}
-
-/* ==========================================================================
-   DASHBOARD
-   ========================================================================== */
-
-.app-shell { display: grid; grid-template-columns: 232px 1fr; min-height: 100vh; }
-
-.sidebar { border-right: 1px solid var(--line); padding: var(--sp-5) var(--sp-4); display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
-.sidebar .logo { padding: var(--sp-3) var(--sp-2) var(--sp-6); font-weight: 600; }
-.sidebar-nav { list-style: none; margin: 0; padding: 0; flex: 1; }
-.sidebar-nav li { margin-bottom: 2px; }
-.sidebar-nav a {
-  display: flex; align-items: center; gap: var(--sp-3); padding: 10px var(--sp-3); border-radius: var(--radius-sm);
-  color: var(--muted); text-decoration: none; font-size: var(--step--1); transition: background .15s, color .15s;
-}
-.sidebar-nav a svg { flex-shrink: 0; opacity: .8; }
-.sidebar-nav a:hover { color: var(--paper); background: var(--ink-raised); }
-.sidebar-nav a.active { color: var(--paper); background: var(--ink-raised); }
-.sidebar-nav a.active svg { opacity: 1; }
-
-.domain-switcher { margin-bottom: var(--sp-5); }
-.domain-switcher select {
-  width: 100%; background: var(--ink-raised); border: 1px solid var(--line-strong); color: var(--paper);
-  font-family: var(--font-mono); font-size: 12px; padding: 9px 10px; border-radius: var(--radius-sm); cursor: pointer;
-}
-
-.sidebar-footer { padding-top: var(--sp-4); border-top: 1px solid var(--line); }
-.user-chip { display: flex; align-items: center; gap: var(--sp-3); padding: var(--sp-2); }
-.user-avatar {
-  width: 30px; height: 30px; border-radius: 50%; background: var(--ember-wash); color: var(--ember);
-  display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 12px;
-  font-weight: 600; flex-shrink: 0;
-}
-.user-meta { min-width: 0; flex: 1; }
-.user-email { font-size: 12px; color: var(--paper-dim); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.logout-link { font-size: 11px; color: var(--muted-2); background: none; border: none; cursor: pointer; padding: 0; }
-.logout-link:hover { color: var(--paper); }
-
-.main { padding: var(--sp-6) var(--sp-7) var(--sp-9); max-width: 1120px; }
-.page-head { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: var(--sp-6); flex-wrap: wrap; gap: var(--sp-4); }
-.page-head h1 { font-size: var(--step-3); }
-.page-head .sub { color: var(--muted); font-size: var(--step--1); margin-top: 4px; }
-
-.analyzer-empty { padding: var(--sp-9) var(--sp-6); text-align: center; }
-.analyzer-empty .thread-icon {
-  width: 44px; height: 44px; margin: 0 auto var(--sp-5); border: 1.5px solid var(--line-strong);
-  border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center;
-}
-.analyzer-empty h2 { font-size: var(--step-3); margin-bottom: var(--sp-3); }
-.analyzer-empty p { color: var(--muted); max-width: 44ch; margin: 0 auto var(--sp-6); }
-.analyze-form { display: flex; gap: var(--sp-3); max-width: 480px; margin: 0 auto; }
-.analyze-form .input { flex: 1; }
-
-.analyzer-bar { display: flex; gap: var(--sp-3); margin-bottom: var(--sp-7); padding: var(--sp-4); align-items: center; }
-.analyzer-bar .input { flex: 1; }
-.analyzer-bar form { display: flex; gap: var(--sp-3); flex: 1; }
-
-.analyze-progress { display: none; align-items: center; gap: var(--sp-3); color: var(--muted); font-size: var(--step--1); padding: 0 var(--sp-2); }
-.analyze-progress.show { display: flex; }
-
-.report-grid { display: grid; grid-template-columns: 1.3fr 1fr; gap: var(--sp-5); margin-bottom: var(--sp-8); }
-.report-main { padding: var(--sp-6); }
-.report-main .company-summary { font-size: var(--step-1); color: var(--paper); line-height: 1.5; margin-bottom: var(--sp-5); }
-.report-sub-label { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-bottom: var(--sp-3); }
-.pain-points { display: flex; flex-direction: column; gap: var(--sp-2); margin-bottom: var(--sp-6); }
-.pain-point { font-size: var(--step--1); color: var(--paper-dim); padding: var(--sp-3) var(--sp-4); background: var(--ink); border-radius: var(--radius-sm); border-left: 2px solid var(--muted-2); }
-.personas { display: flex; flex-direction: column; gap: var(--sp-4); }
-.persona-item { padding-bottom: var(--sp-3); border-bottom: 1px solid var(--line); }
-.persona-item:last-child { border-bottom: none; padding-bottom: 0; }
-.persona-name { font-weight: 600; font-size: var(--step--1); margin-bottom: 2px; }
-.persona-desc { font-size: 13px; color: var(--muted); }
-
-.report-side { display: flex; flex-direction: column; gap: var(--sp-5); }
-.report-side .card { padding: var(--sp-5); }
-.uvp-card p { font-size: var(--step--1); color: var(--paper-dim); margin: 0; font-style: italic; font-family: var(--font-display); font-size: var(--step-0); }
-.competitor-row { display: flex; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-3) 0; border-top: 1px solid var(--line); }
-.competitor-row:first-of-type { border-top: none; padding-top: 0; }
-.competitor-name { font-size: var(--step--1); font-weight: 600; }
-.competitor-reason { font-size: 12px; color: var(--muted); margin-top: 2px; }
-.keyword-pills { display: flex; flex-wrap: wrap; gap: 6px; }
-.keyword-pill { font-family: var(--font-mono); font-size: 11px; padding: 4px 9px; background: var(--ink); border: 1px solid var(--line); border-radius: 999px; color: var(--paper-dim); }
-.channel-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
-.channel-list li { font-size: var(--step--1); color: var(--paper-dim); }
-
-.stat-strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--sp-4); margin-bottom: var(--sp-7); }
-.stat-card { padding: var(--sp-5); }
-.stat-card .label { margin-bottom: var(--sp-3); }
-.stat-value { font-family: var(--font-mono); font-size: var(--step-3); color: var(--paper); line-height: 1; }
-.stat-delta { font-family: var(--font-mono); font-size: 12px; margin-top: var(--sp-2); }
-.stat-delta.up { color: var(--sage); }
-.stat-delta.down { color: var(--muted); }
-.stat-delta.flat { color: var(--muted-2); }
-.stat-note { font-size: 11px; color: var(--muted-2); margin-top: var(--sp-2); }
-
-.momentum-section { margin-bottom: var(--sp-8); }
-.momentum-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: var(--sp-5); }
-.momentum-card { padding: var(--sp-5); }
-.momentum-card h3 { font-family: var(--font-body); font-style: normal; font-size: var(--step--1); font-weight: 600; margin-bottom: var(--sp-4); color: var(--paper); }
-
-.bar-chart { display: flex; flex-direction: column; gap: var(--sp-3); }
-.bar-row { display: grid; grid-template-columns: 110px 1fr 44px; align-items: center; gap: var(--sp-3); }
-.bar-row .bar-label { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.bar-row.is-you .bar-label { color: var(--ember); font-weight: 600; }
-.bar-track { height: 8px; background: var(--ink); border-radius: 4px; overflow: hidden; }
-.bar-fill { height: 100%; background: var(--muted-2); border-radius: 4px; transition: width .6s var(--ease); }
-.bar-row.is-you .bar-fill { background: var(--ember); }
-.bar-row .bar-count { font-family: var(--font-mono); font-size: 12px; color: var(--paper-dim); text-align: right; }
-.multiple-callout { margin-top: var(--sp-4); padding-top: var(--sp-4); border-top: 1px solid var(--line); font-size: 13px; color: var(--paper-dim); }
-.multiple-callout .mono { color: var(--ember); font-weight: 600; }
-
-.phrase-list { display: flex; flex-direction: column; gap: var(--sp-2); }
-.phrase-item { display: flex; justify-content: space-between; gap: var(--sp-3); font-family: var(--font-mono); font-size: 12px; padding: var(--sp-2) 0; border-top: 1px solid var(--line); }
-.phrase-item:first-child { border-top: none; }
-
-.feed-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--sp-5); }
-.feed-filters { display: flex; gap: var(--sp-2); }
-.filter-chip { font-size: 12px; padding: 7px 14px; border-radius: 999px; border: 1px solid var(--line-strong); color: var(--muted); background: transparent; cursor: pointer; transition: all .15s; }
-.filter-chip.active { border-color: var(--ember); color: var(--ember); background: var(--ember-wash); }
-
-.signal-list { display: flex; flex-direction: column; gap: var(--sp-3); }
-.signal-item { padding: var(--sp-5); display: flex; flex-direction: column; gap: var(--sp-2); transition: border-color .15s; }
-.signal-item.unreviewed { border-left: 2px solid var(--ember); }
-.signal-top { display: flex; justify-content: space-between; align-items: flex-start; gap: var(--sp-4); }
-.signal-meta { display: flex; align-items: center; gap: var(--sp-3); flex-wrap: wrap; font-size: 12px; color: var(--muted); font-family: var(--font-mono); }
-.signal-text { font-size: var(--step--1); color: var(--paper-dim); line-height: 1.5; }
-.signal-actions { display: flex; gap: var(--sp-2); align-items: center; flex-shrink: 0; }
-
-.empty-state { text-align: center; padding: var(--sp-8) var(--sp-5); color: var(--muted); }
-.empty-state .thread-icon { width: 36px; height: 36px; margin: 0 auto var(--sp-4); border: 1.5px solid var(--line-strong); border-radius: var(--radius-sm); display:flex; align-items:center; justify-content:center; }
-.empty-state p { margin: 0; font-size: var(--step--1); }
-
-.load-more-wrap { text-align: center; margin-top: var(--sp-5); }
-
-@media (max-width: 980px) {
-  .app-shell { grid-template-columns: 1fr; }
-  .sidebar { display: none; }
-  .main { padding: var(--sp-5); }
-  .report-grid, .momentum-grid { grid-template-columns: 1fr; }
-  .stat-strip { grid-template-columns: 1fr 1fr; }
-}
-@media (max-width: 560px) {
-  .stat-strip { grid-template-columns: 1fr; }
-  .analyzer-bar form, .analyze-form { flex-direction: column; }
-  .bar-row { grid-template-columns: 80px 1fr 36px; }
-}
-
+/* ═══════ TOAST ═══════ */
+#toast{position:fixed;bottom:28px;left:50%;transform:translateX(-50%) translateY(10px);background:rgba(10,10,10,.94);color:#fff;backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);font-size:13.5px;font-weight:400;padding:12px 20px;border-radius:980px;display:flex;align-items:center;gap:9px;box-shadow:0 10px 32px rgba(0,0,0,.22);opacity:0;pointer-events:none;transition:opacity .25s,transform .25s;z-index:99999;white-space:nowrap;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#toast svg{color:#B6FF1E;flex-shrink:0;}
 </style>
 </head>
 <body>
 
-<!-- ======================================================================
-     PAGE: LANDING  (shown at "/")
-     ====================================================================== -->
-<div id="page-landing">
+<!-- ═══════════════ NAV ═══════════════ -->
+<nav id="main-nav">
+  <a class="nav-logo" onclick="goHome()">
+    <div class="nav-logo-icon">
+      <svg viewBox="0 0 24 24"><path d="M12 2.5c.5 4.2 2.8 6.5 7 7-4.2.5-6.5 2.8-7 7-.5-4.2-2.8-6.5-7-7 4.2-.5 6.5-2.8 7-7z"/></svg>
+    </div>
+    Flintel
+  </a>
+  <div class="nav-links" id="nav-links">
+    <a onclick="goHome()">How it works</a>
+    <a onclick="goHome()">Sources</a>
+    <a onclick="goHome()">Intelligence</a>
+    <a onclick="goHome()">Pricing</a>
+  </div>
+  <div class="nav-actions" id="nav-actions">
+    <button class="nav-login" onclick="comingSoon('Login')">Login</button>
+  </div>
+</nav>
 
-  <nav class="nav">
-    <div class="container nav-inner">
-      <div class="logo"><span class="logo-mark"></span> Flintel</div>
-      <div class="nav-links">
-        <a href="#how">How it works</a>
-        <a href="#for-who">Who it's for</a>
-        <a href="#pricing">Pricing</a>
+<!-- ═══════════════ SCREEN 1: HOME ═══════════════ -->
+<div class="screen active" id="s-home">
+  <div style="padding:calc(var(--navh) + 32px) 24px 96px;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:100vh;">
+    <div class="home-inner">
+      <div class="home-eyebrow">
+        <span class="home-eyebrow-tag">Introducing</span>
+        <span class="home-eyebrow-brand">Flintel.ai</span>
       </div>
-      <div class="nav-actions">
-        <button class="btn btn-ghost btn-sm" id="nav-login" data-open-auth="login">Log in</button>
-        <button class="btn btn-primary btn-sm" id="nav-signup" data-open-auth="signup">Start free analysis</button>
+      <h1 class="home-h1">
+        Your buyers are on Reddit,<br class="hb">
+        talking about your <em>competitors</em> right now.
+      </h1>
+      <p class="home-sub">
+        Enter your website. Flintel reads it, finds where your buyers are talking, and builds you a live market report.
+      </p>
+      <div class="url-form">
+        <div class="url-box">
+          <span class="url-prefix">https://</span>
+          <input id="url-input" type="text" placeholder="yourwebsite.com"
+            onkeydown="if(event.key==='Enter')startAnalysis()">
+          <button class="url-submit" id="url-submit-btn" onclick="startAnalysis()">
+            Analyze My Market
+          </button>
+        </div>
+        <div class="home-note">Free market report · Ready in about a minute</div>
       </div>
     </div>
-  </nav>
+  </div>
+</div>
 
-  <header class="container hero">
-    <div class="hero-copy">
-      <span class="eyebrow">Reddit signal intelligence</span>
-      <h1>Your buyers already found the <em>thread</em>. Make sure they find <em>you</em> in it.</h1>
-      <p class="hero-sub">When someone Googles "best [your category]" or "[competitor] alternative," a Reddit thread is usually the top result. Flintel reads your website, finds every one of those threads, and tracks where your product is missing from the conversation.</p>
-      <div class="hero-ctas">
-        <button class="btn btn-primary" data-open-auth="signup">Analyze my website</button>
-        <span class="fine">Takes about 30 seconds · no card required</span>
+<!-- ═══════════════ SCREEN 2: SCANNING ═══════════════ -->
+<div class="screen" id="s-scan">
+  <div class="scan-wrap">
+    <div class="scan-url-display">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+      <span id="scan-url-label">yourwebsite.com</span>
+    </div>
+    <div class="scan-title">Analyzing your market</div>
+    <div class="scan-subtitle">Reading your site and matching it against tracked Reddit signals</div>
+    <div class="scan-track"><div class="scan-fill" id="scan-fill"></div></div>
+    <div class="scan-steps" id="scan-steps">
+      <div class="scan-step active" id="ss-1">
+        <div class="step-icon spinning"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg></div>
+        <div class="step-text"><div class="step-label">Reading your website</div><div class="step-detail">Extracting product, audience, competitors</div></div>
       </div>
-      <div class="proof-strip">
-        <div class="proof-stat"><span class="num mono" id="proof-domains">—</span><span class="lbl">websites analyzed</span></div>
-        <div class="proof-stat"><span class="num mono">continuous</span><span class="lbl">thread monitoring</span></div>
-        <div class="proof-stat"><span class="num mono">day one</span><span class="lbl">market intelligence report</span></div>
+      <div class="scan-step" id="ss-2">
+        <div class="step-icon pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/></svg></div>
+        <div class="step-text"><div class="step-label">Identifying buyer pain phrases</div><div class="step-detail">What your customers post when frustrated</div></div>
+      </div>
+      <div class="scan-step" id="ss-3">
+        <div class="step-icon pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/></svg></div>
+        <div class="step-text"><div class="step-label">Matching tracked Reddit signals</div><div class="step-detail">Cross-referencing your keywords against stored discussions</div></div>
+      </div>
+      <div class="scan-step" id="ss-4">
+        <div class="step-icon pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/></svg></div>
+        <div class="step-text"><div class="step-label">Scoring competitor mentions</div><div class="step-detail">Building your competitive gap</div></div>
+      </div>
+      <div class="scan-step" id="ss-5">
+        <div class="step-icon pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/></svg></div>
+        <div class="step-text"><div class="step-label">Building your market report</div><div class="step-detail">Compiling communities, threads, momentum</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ SCREEN 3: REPORT ═══════════════ -->
+<div class="screen" id="s-report">
+  <div class="report-hero">
+   <div class="report-hero-inner">
+    <div class="report-breadcrumb">
+      <span>Flintel</span>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="9 18 15 12 9 6"/></svg>
+      <span>Market Report</span>
+    </div>
+    <h1 class="report-h">Your buyers are active across <span id="rh-subs">— communities</span><br>and mention competitors in <span id="rh-posts">— posts</span>.</h1>
+    <p class="report-summary" id="report-summary-text">
+      We analyzed <b id="rs-url">yourwebsite.com</b> and matched it against Reddit discussions already being tracked by Flintel.
+    </p>
+    <div class="report-meta-chips">
+      <div class="rmchip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <span id="rmchip-date">Generated today</span>
+      </div>
+      <div class="rmchip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        90-day data window
+      </div>
+      <div class="rmchip">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Live signal
+      </div>
+    </div>
+   </div>
+  </div>
+  <div class="report-body">
+
+    <div class="live-ticker" role="status" aria-live="polite">
+      <div class="lt-pulse" aria-hidden="true"></div>
+      <div class="lt-label">Flintel is tracking</div>
+      <div class="lt-metric"><span>Matches found</span><b id="tk-matches">0</b></div>
+      <div class="lt-sep"></div>
+      <div class="lt-metric"><span>Communities matched</span><b id="tk-communities">0</b></div>
+      <div class="lt-sep"></div>
+      <div class="lt-metric"><span>Competitors tracked</span><b id="tk-competitors">0</b></div>
+    </div>
+
+    <!-- Section 01: Communities -->
+    <div class="report-section">
+      <div class="rs-label">Section 01</div>
+      <div class="rs-title">Where your buyers talk</div>
+      <div class="rs-desc">Built from real, already-stored Reddit signal matches — grouped by subreddit and ranked by how often your discovery keywords show up there.</div>
+      <div class="subreddit-grid" id="subreddit-grid">
+        <div class="empty-note">No community matches yet — Flintel will keep watching and these will fill in as matching signals come in.</div>
       </div>
     </div>
 
-    <div class="card thread-mock" aria-hidden="true">
-      <div class="tm-title">"Best project management tool for a 10-person team?"</div>
-      <div class="tm-comment">
-        <div class="avatar"></div>
-        <div class="tm-body">
-          <div class="tm-meta">u/pm_throwaway_22 · 340 upvotes</div>
-          <div class="tm-text">We moved off Asana last year, way too much overhead for our size.</div>
+    <!-- Section 02: Top threads -->
+    <div class="report-section">
+      <div class="rs-label">Section 02</div>
+      <div class="rs-title">Top matched threads</div>
+      <div class="rs-desc">Actual stored matches for your discovery keywords, ranked by engagement. Flintel does not yet check Google search-rank for these threads — that field is intentionally left out rather than guessed.</div>
+      <div class="thread-list" id="thread-list">
+        <div class="empty-note">No matched threads yet for this domain.</div>
+      </div>
+    </div>
+
+    <!-- Section 03: Momentum + Gap -->
+    <div class="report-section">
+      <div class="rs-label">Section 03</div>
+      <div class="rs-title">Your market is moving — and it's moving toward you</div>
+      <div class="rs-desc">Real 90-day trend data from your matched signals.</div>
+
+      <div class="viz-grid-3">
+        <div class="viz-card">
+          <div class="viz-title">Competitor complaint volume</div>
+          <div class="viz-value" id="viz-complaint-value">—</div>
+          <div class="viz-delta neutral" id="viz-complaint-delta">Building baseline</div>
+        </div>
+        <div class="viz-card">
+          <div class="viz-title">"Anyone use X?" intent phrases</div>
+          <div class="viz-value" id="viz-intent-value">—</div>
+          <div class="viz-delta neutral" id="viz-intent-delta">Building baseline</div>
+        </div>
+        <div class="viz-card">
+          <div class="viz-title">Threads ranking on Google Page 1</div>
+          <div class="viz-value">—</div>
+          <div class="viz-delta neutral" id="viz-serp-note">Not available yet — no SERP-ranking source is connected.</div>
         </div>
       </div>
-      <div class="tm-comment nested">
-        <div class="avatar"></div>
-        <div class="tm-body">
-          <div class="tm-meta">u/scaling_ops · 88 upvotes</div>
-          <div class="tm-text">Same boat. What'd you switch to?</div>
-        </div>
+
+      <div class="gap-viz" id="gap-viz">
+        <div class="empty-note">No competitor mention data yet.</div>
       </div>
-      <div class="tm-comment nested planted">
-        <div class="avatar"></div>
-        <div class="tm-body">
-          <div class="tm-meta">u/[relevant answer] · 61 upvotes</div>
-          <div class="tm-text">Ended up trying a lighter tool that skips the setup overhead — worth a look if approvals are your bottleneck.</div>
-          <div class="tm-planted-tag">Placed by Flintel · still ranking</div>
+    </div>
+
+    <!-- Section 04: How Flintel closes the gap (static explainer — no backend data source) -->
+    <div class="report-section">
+      <div class="rs-label">Section 04</div>
+      <div class="rs-title">How Flintel closes the gap</div>
+      <div class="rs-desc">Once you activate a plan, Flintel keeps matching new Reddit activity against your keywords automatically — this report is a live snapshot of that tracking, not a one-off scan.</div>
+      <div class="step-cards">
+        <div class="step-card">
+          <div class="step-card-head"><div class="step-number">1</div><div class="step-card-title">Continuous matching</div></div>
+          <div class="step-card-body">
+            <p class="step-desc">Flintel keeps checking newly tracked Reddit activity against your discovery keywords in the background, so this report keeps improving the longer your domain is tracked.</p>
+          </div>
+        </div>
+        <div class="step-card">
+          <div class="step-card-head"><div class="step-number">2</div><div class="step-card-title">Competitor tracking</div></div>
+          <div class="step-card-body">
+            <p class="step-desc">Every competitor named in your analysis is tracked against the same matched signals, so the gap chart above updates as new mentions come in.</p>
+          </div>
+        </div>
+        <div class="step-card">
+          <div class="step-card-head"><div class="step-number">3</div><div class="step-card-title">You stay in control</div></div>
+          <div class="step-card-body">
+            <p class="step-desc">Nothing is posted anywhere automatically from this report — it's read-only market intelligence built from what Flintel has already matched for your domain.</p>
+          </div>
         </div>
       </div>
     </div>
-  </header>
 
-  <section class="section" id="how">
-    <div class="container">
-      <div class="section-head">
-        <span class="eyebrow">How it works</span>
-        <h2>Four steps, running continuously in the background</h2>
-        <p>You give Flintel your website. It does the reading, the searching, and the scoring — you just review what it finds.</p>
-      </div>
-      <div class="how-grid">
-        <div class="card how-card">
-          <div class="how-num">01</div>
-          <h3>Read your site</h3>
-          <p>Flintel reads your homepage and key pages to work out who buys from you, what they're frustrated by, and who they're comparing you against.</p>
-        </div>
-        <div class="card how-card">
-          <div class="how-num">02</div>
-          <h3>Scan for threads</h3>
-          <p>It continuously watches Reddit for threads that match those buyer questions — and checks which of them already rank on Google.</p>
-        </div>
-        <div class="card how-card">
-          <div class="how-num">03</div>
-          <h3>Match to your keywords</h3>
-          <p>Every thread is matched against the discovery keywords from your report, so your dashboard only ever shows what's relevant to you.</p>
-        </div>
-        <div class="card how-card">
-          <div class="how-num">04</div>
-          <h3>Track and review</h3>
-          <p>New matches land in your signal feed as they're found. Mark the ones you've reviewed and keep an eye on competitor mention volume.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" id="for-who">
-    <div class="container">
-      <div class="section-head">
-        <span class="eyebrow">Who it's for</span>
-        <h2>Any business whose buyers research before they buy</h2>
-        <p>If your customers have ever landed on a Reddit thread while deciding what to buy, this is built for you.</p>
-      </div>
-      <div class="for-who">
-        <span class="for-chip">SaaS founders</span>
-        <span class="for-chip">E-commerce &amp; DTC brands</span>
-        <span class="for-chip">Agencies &amp; consultants</span>
-        <span class="for-chip">Local service businesses</span>
-        <span class="for-chip">Coaches &amp; course creators</span>
-        <span class="for-chip">Professional services firms</span>
-      </div>
-    </div>
-  </section>
-
-  <section class="section" id="pricing">
-    <div class="container">
-      <div class="section-head">
-        <span class="eyebrow">Pricing</span>
-        <h2>Start with a free analysis, upgrade when you're ready</h2>
-        <p>Every plan starts with the market intelligence report. Paid tiers add ongoing placement volume.</p>
-      </div>
+    <!-- CTA -->
+    <div class="report-cta-section">
+      <div class="rcta-label">Ready to activate</div>
+      <h2 class="rcta-h">Choose your plan.<br>We start this week.</h2>
+      <p class="rcta-sub">Account creation and onboarding are coming soon — for now, this report reflects your domain's real, live-tracked data.</p>
       <div class="pricing-grid">
-        <div class="card plan">
-          <div class="plan-name">Starter</div>
-          <div class="plan-price">$799<span>/month</span></div>
-          <p class="plan-desc">For testing the channel.</p>
-          <ul class="plan-features">
-            <li>5 placements per month</li>
-            <li>Day-one market intelligence report</li>
-            <li>Continuous thread monitoring</li>
-            <li>Monthly reporting</li>
-          </ul>
-          <button class="btn btn-ghost btn-block" data-open-auth="signup">Get started</button>
+        <div class="price-card" onclick="comingSoon('Starter plan checkout')">
+          <div class="pc-tier">Starter</div>
+          <div class="pc-price">$799 <span class="pc-per">/ mo</span></div>
+          <div class="pc-placement">5 comment placements per month</div>
+          <div class="pc-feats">
+            <div class="pc-feat"><div class="pc-feat-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>Monthly market report</div>
+            <div class="pc-feat"><div class="pc-feat-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>5 comments placed in top threads</div>
+            <div class="pc-feat"><div class="pc-feat-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>You approve before we post</div>
+          </div>
+          <button class="pc-btn">Get started</button>
         </div>
-        <div class="card plan featured">
-          <div class="plan-name">Growth</div>
-          <div class="plan-price">$1,999<span>/month</span></div>
-          <p class="plan-desc">Recommended for most customers.</p>
-          <ul class="plan-features">
-            <li>15 placements per month</li>
-            <li>Day-one market intelligence report</li>
-            <li>Continuous thread monitoring</li>
-            <li>Monthly reporting</li>
-          </ul>
-          <button class="btn btn-primary btn-block" data-open-auth="signup">Get started</button>
+        <div class="price-card featured" onclick="comingSoon('Growth plan checkout')">
+          <div class="pc-popular">Most chosen</div>
+          <div class="pc-tier">Growth</div>
+          <div class="pc-price">$1,999 <span class="pc-per">/ mo</span></div>
+          <div class="pc-placement">15 placements + upvote boost on each</div>
+          <div class="pc-feats">
+            <div class="pc-feat"><div class="pc-feat-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>Everything in Starter</div>
+            <div class="pc-feat"><div class="pc-feat-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>15 comments placed monthly</div>
+            <div class="pc-feat"><div class="pc-feat-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>Competitor intelligence dashboard</div>
+          </div>
+          <button class="pc-btn">Get started</button>
         </div>
-        <div class="card plan">
-          <div class="plan-name">Scale</div>
-          <div class="plan-price">$3,999<span>/month</span></div>
-          <p class="plan-desc">For high-volume categories.</p>
-          <ul class="plan-features">
-            <li>40 placements per month</li>
-            <li>Day-one market intelligence report</li>
-            <li>Continuous thread monitoring</li>
-            <li>Monthly reporting</li>
-          </ul>
-          <button class="btn btn-ghost btn-block" data-open-auth="signup">Get started</button>
+        <div class="price-card" onclick="comingSoon('Scale plan checkout')">
+          <div class="pc-tier">Scale</div>
+          <div class="pc-price">$3,999 <span class="pc-per">/ mo</span></div>
+          <div class="pc-placement">40 placements + upvotes + strategy call</div>
+          <div class="pc-feats">
+            <div class="pc-feat"><div class="pc-feat-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>Everything in Growth</div>
+            <div class="pc-feat"><div class="pc-feat-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>40 comments placed monthly</div>
+            <div class="pc-feat"><div class="pc-feat-check"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>Dedicated account manager</div>
+          </div>
+          <button class="pc-btn">Talk to sales</button>
         </div>
       </div>
-      <div class="limits-note">
-        <div class="card">
-          <h4>Time to first result</h4>
-          <p>Your report and first matched signals appear immediately after analysis. Placements typically take 2–4 weeks to generate an attributable lead.</p>
-        </div>
-        <div class="card">
-          <h4>Category fit</h4>
-          <p>Categories with limited Reddit discussion or low search intent may not surface enough high-quality threads to fill every placement.</p>
-        </div>
-      </div>
+      <button class="btn-ghost-sm" style="background:var(--g6);color:var(--ink);border:none;font-size:13.5px;font-weight:500;padding:10px 18px;border-radius:980px;cursor:pointer;" onclick="goHome()">Run another report</button>
     </div>
-  </section>
-
-  <section class="section">
-    <div class="container">
-      <div class="cta-band">
-        <div class="cta-band-glow"></div>
-        <span class="eyebrow" style="justify-content:center;margin-bottom:var(--sp-4)">Free, no card required</span>
-        <h2>See what your buyers are reading right now</h2>
-        <button class="btn btn-primary" data-open-auth="signup">Analyze my website</button>
-      </div>
-    </div>
-  </section>
-
-  <footer class="footer">
-    <div class="container footer-inner">
-      <div class="logo"><span class="logo-mark"></span> Flintel</div>
-      <span class="muted">© 2026 Flintel. Not affiliated with Reddit, Inc.</span>
-    </div>
-  </footer>
-
-  <div class="modal-overlay" id="auth-overlay">
-    <div class="card modal">
-      <div class="modal-head">
-        <h3 id="auth-title">Log in</h3>
-        <button class="modal-close" id="auth-close" aria-label="Close">&times;</button>
-      </div>
-
-      <div class="form-error" id="auth-error"></div>
-
-      <a class="btn btn-google" href="/auth/google/login">
-        <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true"><path fill="#FFB020" d="M15.68 8.18c0-.58-.05-1.13-.15-1.66H8v3.14h4.3a3.68 3.68 0 0 1-1.6 2.42v2h2.58c1.51-1.39 2.4-3.44 2.4-5.9Z"/><path fill="#ECE9E2" d="M8 16c2.16 0 3.97-.72 5.29-1.92l-2.58-2c-.72.48-1.63.77-2.71.77-2.08 0-3.85-1.41-4.48-3.3H.85v2.07A8 8 0 0 0 8 16Z"/><path fill="#888D97" d="M3.52 9.55A4.8 4.8 0 0 1 3.27 8c0-.54.09-1.06.25-1.55V4.38H.85a8 8 0 0 0 0 7.24l2.67-2.07Z"/><path fill="#5C6069" d="M8 3.15c1.18 0 2.23.4 3.06 1.2l2.29-2.29A7.9 7.9 0 0 0 8 0a8 8 0 0 0-7.15 4.38l2.67 2.07C4.15 4.56 5.92 3.15 8 3.15Z"/></svg>
-        Continue with Google
-      </a>
-
-      <div class="divider-or">or with email</div>
-
-      <form id="auth-form">
-        <div class="field" id="name-field" style="display:none">
-          <label class="label" for="auth-name">Name</label>
-          <input class="input" type="text" id="auth-name" placeholder="Jane Doe" autocomplete="name">
-        </div>
-        <div class="field">
-          <label class="label" for="auth-email">Email</label>
-          <input class="input" type="email" id="auth-email" placeholder="you@company.com" autocomplete="email" required>
-        </div>
-        <div class="field">
-          <label class="label" for="auth-password">Password</label>
-          <input class="input" type="password" id="auth-password" placeholder="••••••••" autocomplete="current-password" required minlength="8">
-        </div>
-        <button class="btn btn-primary btn-block" id="auth-submit" type="submit">
-          <span id="auth-submit-label">Log in</span>
-        </button>
-      </form>
-
-      <div class="modal-switch">
-        <span id="auth-switch-prompt">Don't have an account?</span>
-        <button id="auth-switch-btn" type="button">Sign up</button>
-      </div>
-    </div>
-  </div>
-
-</div>
-
-<!-- ======================================================================
-     PAGE: DASHBOARD  (shown at "/dashboard")
-     ====================================================================== -->
-<div id="page-dashboard" style="display:none">
-  <div class="app-shell">
-    <aside class="sidebar">
-      <div class="logo"><span class="logo-mark" style="width:18px;height:18px;background:var(--ember);border-radius:4px;display:inline-block;margin-right:8px;vertical-align:-3px"></span>Flintel</div>
-
-      <div class="domain-switcher" id="domain-switcher-wrap" style="display:none">
-        <label class="label" for="domain-select">Domain</label>
-        <select id="domain-select"></select>
-      </div>
-
-      <ul class="sidebar-nav">
-        <li><a href="#overview" class="active" data-nav="overview">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 9h3v5H2V9Zm4.5-4h3v9h-3V5ZM11 2h3v12h-3V2Z" stroke="currentColor" stroke-width="1.3"/></svg>
-          Overview</a></li>
-        <li><a href="#signals" data-nav="signals">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 7h8M2 11h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-          Signals</a></li>
-        <li><a href="#report" data-nav="report">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="2.5" y="1.5" width="11" height="13" rx="1.5" stroke="currentColor" stroke-width="1.3"/><path d="M5 5h6M5 8h6M5 11h3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-          Report</a></li>
-      </ul>
-
-      <div class="sidebar-footer">
-        <div class="user-chip">
-          <div class="user-avatar" id="user-initial">·</div>
-          <div class="user-meta">
-            <div class="user-email" id="user-email">—</div>
-            <button class="logout-link" id="logout-btn">Log out</button>
-          </div>
-        </div>
-      </div>
-    </aside>
-
-    <main class="main">
-
-      <div class="card analyzer-bar" id="analyzer-bar" style="display:none">
-        <form id="analyze-form-inline">
-          <input class="input mono" id="analyze-url-inline" type="text" placeholder="Analyze another website — e.g. acme.com" required>
-          <button class="btn btn-primary" type="submit">
-            <span id="analyze-inline-label">Analyze</span>
-          </button>
-        </form>
-        <div class="analyze-progress" id="analyze-progress-inline">
-          <span class="spinner"></span> Reading site, scoring signals…
-        </div>
-      </div>
-
-      <div class="card analyzer-empty" id="empty-state">
-        <div class="thread-icon">
-          <svg width="20" height="20" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 7h8M2 11h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-        </div>
-        <h2>Find out where your buyers are talking</h2>
-        <p>Paste your website below. Flintel will read it, work out what your buyers search for, and show you the Reddit threads already ranking on Google for those questions.</p>
-        <form class="analyze-form" id="analyze-form-empty">
-          <input class="input mono" id="analyze-url-empty" type="text" placeholder="e.g. acme.com" required>
-          <button class="btn btn-primary" type="submit">
-            <span id="analyze-empty-label">Analyze</span>
-          </button>
-        </form>
-      </div>
-
-      <section id="section-overview" style="display:none">
-        <div class="page-head">
-          <div>
-            <h1>Overview</h1>
-            <div class="sub" id="overview-domain-sub">—</div>
-          </div>
-        </div>
-
-        <div class="stat-strip" id="stat-strip"></div>
-
-        <div class="momentum-section">
-          <div class="report-sub-label">Your market is moving</div>
-          <div class="momentum-grid" id="momentum-grid"></div>
-        </div>
-      </section>
-
-      <section id="section-signals" style="display:none">
-        <div class="page-head">
-          <div>
-            <h1>Signals</h1>
-            <div class="sub">Reddit threads matched to your discovery keywords</div>
-          </div>
-        </div>
-        <div class="feed-head">
-          <div class="feed-filters">
-            <button class="filter-chip active" data-filter="all">All</button>
-            <button class="filter-chip" data-filter="unreviewed">Unreviewed</button>
-          </div>
-        </div>
-        <div class="signal-list" id="signal-list"></div>
-        <div class="load-more-wrap" id="load-more-wrap" style="display:none">
-          <button class="btn btn-ghost btn-sm" id="load-more-btn">Load more</button>
-        </div>
-      </section>
-
-      <section id="section-report" style="display:none">
-        <div class="page-head">
-          <div>
-            <h1>Market intelligence report</h1>
-            <div class="sub" id="report-domain-sub">—</div>
-          </div>
-        </div>
-        <div class="report-grid" id="report-grid"></div>
-      </section>
-
-    </main>
   </div>
 </div>
 
-<div class="toast" id="toast"></div>
+<!-- ═══════════════ TOAST ═══════════════ -->
+<div id="toast">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+  <span id="toast-text">Done.</span>
+</div>
 
 <script>
-/* ==========================================================================
-   SHARED HELPERS
-   ========================================================================== */
+'use strict';
+/* ═══════════════════════════════════════════════════════════════════
+   FLINTEL — CLIENT APPLICATION (real backend, no mocks)
+   ───────────────────────────────────────────────────────────────────
+   Flow kept intentionally small per current scope:
+     s-home → s-scan → s-report
+   Signup / onboarding / dashboard are SKIPPED for now.
 
-const Flintel = (() => {
-  async function api(path, options = {}) {
-    const res = await fetch(path, {
-      headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
-      credentials: 'same-origin',
-      ...options,
+   /api/analyze requires a logged-in session (get_current_user reads
+   request.session["user_email"]). Since there is no signup screen in
+   this build yet, ensureSession() transparently creates a lightweight
+   guest account behind the scenes on first analyze — so the "no signup"
+   promise on the homepage still holds from the user's point of view.
+   This is a stopgap: once a real signup/login screen is built, this
+   should be replaced with an actual auth flow.
+═══════════════════════════════════════════════════════════════════ */
+
+const CONFIG = Object.freeze({
+  TOAST_MS: 3200,
+  STORAGE_KEY: 'flintel_report_state_v1',
+});
+
+const store = {
+  domain: '',
+  company: '',
+  url: '',
+  report: null,      // report object returned by /api/analyze
+  matches: [],        // matches array returned by /api/analyze
+  matchesFound: 0,
+  momentum: null,      // /api/report/market-momentum response
+};
+
+const $ = (id) => document.getElementById(id);
+
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({
+  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+}[c]));
+
+function normalizeDomain(raw) {
+  let v = String(raw || '').trim().toLowerCase()
+    .replace(/^https?:\/\//, '').replace(/^www\./, '')
+    .split(/[/?#]/)[0];
+  const DOMAIN_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/;
+  return DOMAIN_RE.test(v) ? v : null;
+}
+const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+/* ── SESSION (guest, stopgap until real auth UI exists) ───────────── */
+async function ensureSession() {
+  const meRes = await fetch('/api/me', { credentials: 'include' });
+  const me = await meRes.json().catch(() => ({ logged_in: false }));
+  if (me.logged_in) return;
+
+  const rid = Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
+  const email = `guest_${rid}@guest.flintel.local`;
+  const password = rid + rid.split('').reverse().join('') + '!Aa1';
+
+  const res = await fetch('/auth/signup', {
+    method: 'POST', credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Could not start a session with the backend.');
+  }
+}
+
+/* ── API LAYER — talks to the real FastAPI backend ────────────────── */
+const api = {
+  async analyze(url) {
+    const res = await fetch('/api/analyze', {
+      method: 'POST', credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
     });
-    let body = null;
-    try { body = await res.json(); } catch (_) { /* no body */ }
     if (!res.ok) {
-      const message = (body && body.detail) || `Request failed (${res.status})`;
-      throw new Error(message);
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.detail || `Analyze failed (${res.status})`);
     }
-    return body;
-  }
-
-  function toast(message, isError = false) {
-    const el = document.getElementById('toast');
-    if (!el) return;
-    el.textContent = message;
-    el.classList.toggle('error', isError);
-    el.classList.add('show');
-    clearTimeout(el._timer);
-    el._timer = setTimeout(() => el.classList.remove('show'), 3200);
-  }
-
-  function fmtNum(n) {
-    if (n === null || n === undefined) return '—';
-    return new Intl.NumberFormat('en-US', { notation: n >= 10000 ? 'compact' : 'standard' }).format(n);
-  }
-
-  function fmtPct(n) {
-    if (n === null || n === undefined) return '—';
-    const sign = n > 0 ? '+' : '';
-    return `${sign}${n}%`;
-  }
-
-  function timeAgo(iso) {
-    if (!iso) return '';
-    const diffMs = Date.now() - new Date(iso).getTime();
-    const mins = Math.floor(diffMs / 60000);
-    if (mins < 1) return 'just now';
-    if (mins < 60) return `${mins}m ago`;
-    const hrs = Math.floor(mins / 60);
-    if (hrs < 24) return `${hrs}h ago`;
-    const days = Math.floor(hrs / 24);
-    if (days < 30) return `${days}d ago`;
-    return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-  }
-
-  function escapeHtml(str) {
-    if (!str) return '';
-    return str.replace(/[&<>"']/g, (c) => ({
-      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-    }[c]));
-  }
-
-  return { api, toast, fmtNum, fmtPct, timeAgo, escapeHtml };
-})();
-
-/* ==========================================================================
-   LANDING PAGE LOGIC
-   ========================================================================== */
-
-function initLandingPage() {
-  const overlay = document.getElementById('auth-overlay');
-  const form = document.getElementById('auth-form');
-  const title = document.getElementById('auth-title');
-  const nameField = document.getElementById('name-field');
-  const errorBox = document.getElementById('auth-error');
-  const submitLabel = document.getElementById('auth-submit-label');
-  const submitBtn = document.getElementById('auth-submit');
-  const switchPrompt = document.getElementById('auth-switch-prompt');
-  const switchBtn = document.getElementById('auth-switch-btn');
-
-  let mode = 'login';
-
-  function setMode(next) {
-    mode = next;
-    errorBox.classList.remove('show');
-    form.reset();
-    if (mode === 'login') {
-      title.textContent = 'Log in';
-      nameField.style.display = 'none';
-      submitLabel.textContent = 'Log in';
-      switchPrompt.textContent = "Don't have an account?";
-      switchBtn.textContent = 'Sign up';
-    } else {
-      title.textContent = 'Create your account';
-      nameField.style.display = '';
-      submitLabel.textContent = 'Create account';
-      switchPrompt.textContent = 'Already have an account?';
-      switchBtn.textContent = 'Log in';
-    }
-  }
-
-  function openModal(initialMode) {
-    setMode(initialMode || 'login');
-    overlay.classList.add('open');
-    document.getElementById('auth-email').focus();
-  }
-  function closeModal() { overlay.classList.remove('open'); }
-
-  document.querySelectorAll('[data-open-auth]').forEach((el) => {
-    el.addEventListener('click', (e) => {
-      e.preventDefault();
-      openModal(el.dataset.openAuth);
-    });
-  });
-  document.getElementById('auth-close').addEventListener('click', closeModal);
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeModal(); });
-  switchBtn.addEventListener('click', () => setMode(mode === 'login' ? 'signup' : 'login'));
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    errorBox.classList.remove('show');
-    const email = document.getElementById('auth-email').value.trim();
-    const password = document.getElementById('auth-password').value;
-    const name = document.getElementById('auth-name').value.trim();
-
-    submitBtn.disabled = true;
-    const originalLabel = submitLabel.textContent;
-    submitLabel.innerHTML = '<span class="spinner"></span>';
-
+    return res.json();
+  },
+  async marketMomentum() {
     try {
-      if (mode === 'login') {
-        await Flintel.api('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
-      } else {
-        await Flintel.api('/auth/signup', { method: 'POST', body: JSON.stringify({ email, password, name: name || null }) });
-      }
-      window.location.href = '/dashboard';
-    } catch (err) {
-      errorBox.textContent = err.message;
-      errorBox.classList.add('show');
-      submitBtn.disabled = false;
-      submitLabel.textContent = originalLabel;
-    }
-  });
+      const res = await fetch('/api/report/market-momentum', { credentials: 'include' });
+      if (!res.ok) return null;
+      return res.json();
+    } catch { return null; }
+  },
+};
 
-  (async () => {
-    try {
-      const data = await Flintel.api('/api/stats/public');
-      const el = document.getElementById('proof-domains');
-      if (data && data.domains_analyzed !== null && data.domains_analyzed !== undefined) {
-        el.textContent = Flintel.fmtNum(data.domains_analyzed);
-      } else {
-        el.closest('.proof-stat').style.display = 'none';
-      }
-    } catch (_) {
-      document.getElementById('proof-domains').closest('.proof-stat').style.display = 'none';
-    }
-  })();
+/* ── ROUTER ──────────────────────────────────────────────────────── */
+const SCREENS = ['s-home', 's-scan', 's-report'];
 
-  (async () => {
-    try {
-      const me = await Flintel.api('/api/me');
-      if (me && me.logged_in) {
-        const signup = document.getElementById('nav-signup');
-        const login = document.getElementById('nav-login');
-        signup.textContent = 'Go to dashboard';
-        signup.removeAttribute('data-open-auth');
-        signup.addEventListener('click', () => (window.location.href = '/dashboard'));
-        login.style.display = 'none';
-      }
-    } catch (_) { /* not logged in */ }
-  })();
+function showScreen(id) {
+  SCREENS.forEach((s) => { const el = $(s); if (el) el.classList.remove('active'); });
+  const target = $(id);
+  if (!target) return console.error(`[router] unknown screen "${id}"`);
+  target.classList.add('active');
+  window.scrollTo(0, 0);
+  updateNav(id);
 }
 
-/* ==========================================================================
-   DASHBOARD LOGIC
-   ========================================================================== */
-
-function initDashboardPage() {
-  const state = {
-    domains: [],
-    currentDomain: null,
-    signalFilter: 'all',
-    signalLimit: 20,
-  };
-
-  const els = {
-    emptyState: document.getElementById('empty-state'),
-    analyzerBar: document.getElementById('analyzer-bar'),
-    domainSwitcherWrap: document.getElementById('domain-switcher-wrap'),
-    domainSelect: document.getElementById('domain-select'),
-    sections: {
-      overview: document.getElementById('section-overview'),
-      signals: document.getElementById('section-signals'),
-      report: document.getElementById('section-report'),
-    },
-  };
-
-  (async function init() {
-    let me;
-    try {
-      me = await Flintel.api('/api/me');
-    } catch (_) {
-      window.location.href = '/';
-      return;
-    }
-    if (!me.logged_in) { window.location.href = '/'; return; }
-
-    document.getElementById('user-email').textContent = me.email;
-    document.getElementById('user-initial').textContent = (me.name || me.email || '?').charAt(0).toUpperCase();
-    document.getElementById('logout-btn').addEventListener('click', async () => {
-      await Flintel.api('/auth/logout', { method: 'POST' });
-      window.location.href = '/';
-    });
-
-    bindAnalyzeForms();
-    bindNav();
-    bindSignalFilters();
-
-    await loadDomains();
-  })();
-
-  async function loadDomains() {
-    const data = await Flintel.api('/api/my-domains');
-    state.domains = data.domains || [];
-
-    if (state.domains.length === 0) {
-      els.emptyState.style.display = '';
-      els.analyzerBar.style.display = 'none';
-      els.domainSwitcherWrap.style.display = 'none';
-      Object.values(els.sections).forEach((s) => (s.style.display = 'none'));
-      return;
-    }
-
-    els.emptyState.style.display = 'none';
-    els.analyzerBar.style.display = '';
-    els.domainSwitcherWrap.style.display = '';
-    state.currentDomain = state.domains[0];
-    renderDomainSelect();
-    showNav('overview');
-    await loadAllForDomain(state.currentDomain);
-  }
-
-  function renderDomainSelect() {
-    els.domainSelect.innerHTML = state.domains
-      .map((d) => `<option value="${Flintel.escapeHtml(d)}">${Flintel.escapeHtml(d)}</option>`)
-      .join('');
-    els.domainSelect.value = state.currentDomain;
-    els.domainSelect.onchange = async (e) => {
-      state.currentDomain = e.target.value;
-      state.signalLimit = 20;
-      await loadAllForDomain(state.currentDomain);
-    };
-  }
-
-  async function loadAllForDomain(domain) {
-    document.getElementById('overview-domain-sub').textContent = domain;
-    document.getElementById('report-domain-sub').textContent = domain;
-    await Promise.all([
-      loadStats(),
-      loadMomentum(),
-      loadReport(domain),
-      loadSignals(),
-    ]);
-  }
-
-  function bindNav() {
-    document.querySelectorAll('[data-nav]').forEach((a) => {
-      a.addEventListener('click', (e) => {
-        e.preventDefault();
-        showNav(a.dataset.nav);
-      });
-    });
-  }
-  function showNav(name) {
-    document.querySelectorAll('[data-nav]').forEach((a) => a.classList.toggle('active', a.dataset.nav === name));
-    Object.entries(els.sections).forEach(([key, el]) => (el.style.display = key === name ? '' : 'none'));
-  }
-
-  function bindAnalyzeForms() {
-    document.getElementById('analyze-form-empty').addEventListener('submit', (e) => {
-      e.preventDefault();
-      runAnalyze(document.getElementById('analyze-url-empty').value, 'empty');
-    });
-    document.getElementById('analyze-form-inline').addEventListener('submit', (e) => {
-      e.preventDefault();
-      runAnalyze(document.getElementById('analyze-url-inline').value, 'inline');
-    });
-  }
-
-  async function runAnalyze(url, mode) {
-    if (!url || !url.trim()) return;
-    const isInline = mode === 'inline';
-    const label = document.getElementById(isInline ? 'analyze-inline-label' : 'analyze-empty-label');
-    const progress = document.getElementById('analyze-progress-inline');
-    const originalLabel = label.textContent;
-    label.innerHTML = '<span class="spinner"></span>';
-    if (isInline) progress.classList.add('show');
-
-    try {
-      const data = await Flintel.api('/api/analyze', {
-        method: 'POST',
-        body: JSON.stringify({ url: url.trim() }),
-      });
-      Flintel.toast(`Analysis complete for ${data.domain} — ${data.matches_found} signal${data.matches_found === 1 ? '' : 's'} found.`);
-      if (isInline) document.getElementById('analyze-url-inline').value = '';
-      state.currentDomain = data.domain;
-      await loadDomains();
-      showNav('report');
-    } catch (err) {
-      Flintel.toast(err.message, true);
-    } finally {
-      label.textContent = originalLabel;
-      progress.classList.remove('show');
-    }
-  }
-
-  async function loadStats() {
-    const strip = document.getElementById('stat-strip');
-    strip.innerHTML = renderSkeletonCards(4);
-    try {
-      const s = await Flintel.api('/api/dashboard-stats');
-      strip.innerHTML = `
-        ${statCard('Signals tracked', Flintel.fmtNum(s.signals_total), `${Flintel.fmtNum(s.signals_this_week)} this week`)}
-        ${statCard('New since last visit', Flintel.fmtNum(s.new_since_last_visit), null)}
-        ${statCard('Unreviewed', Flintel.fmtNum(s.unreviewed_count), null)}
-        ${statCard('Estimated reach', Flintel.fmtNum(s.estimated_reach), 'combined upvotes across matches')}
-      `;
-    } catch (err) {
-      strip.innerHTML = `<div class="card stat-card"><div class="label">Error</div><p style="font-size:13px;color:var(--muted)">${Flintel.escapeHtml(err.message)}</p></div>`;
-    }
-  }
-
-  function statCard(label, value, note) {
-    return `
-      <div class="card stat-card">
-        <span class="label">${label}</span>
-        <div class="stat-value">${value}</div>
-        ${note ? `<div class="stat-note">${note}</div>` : ''}
-      </div>`;
-  }
-
-  function renderSkeletonCards(n) {
-    return Array.from({ length: n }).map(() => `<div class="card stat-card"><div class="skeleton" style="height:14px;width:60%;margin-bottom:14px"></div><div class="skeleton" style="height:28px;width:40%"></div></div>`).join('');
-  }
-
-  async function loadMomentum() {
-    const grid = document.getElementById('momentum-grid');
-    grid.innerHTML = `<div class="card momentum-card"><div class="skeleton" style="height:120px"></div></div><div class="card momentum-card"><div class="skeleton" style="height:120px"></div></div>`;
-    try {
-      const m = await Flintel.api('/api/report/market-momentum');
-
-      const bars = (m.competitor_bar_chart && m.competitor_bar_chart.bars) || [];
-      const maxMentions = Math.max(1, ...bars.map((b) => b.mentions));
-      const multiple = m.competitor_bar_chart && m.competitor_bar_chart.talked_about_multiple;
-
-      const barChartHtml = `
-        <div class="card momentum-card">
-          <h3>Who's being talked about</h3>
-          <div class="bar-chart">
-            ${bars.map((b) => `
-              <div class="bar-row ${b.is_you ? 'is-you' : ''}">
-                <div class="bar-label" title="${Flintel.escapeHtml(b.name)}">${Flintel.escapeHtml(b.name)}</div>
-                <div class="bar-track"><div class="bar-fill" style="width:${(b.mentions / maxMentions) * 100}%"></div></div>
-                <div class="bar-count">${Flintel.fmtNum(b.mentions)}</div>
-              </div>
-            `).join('') || emptyRow('No competitor data yet')}
-          </div>
-          ${multiple ? `<div class="multiple-callout">Competitors are mentioned <span class="mono">${multiple}×</span> more often than you across matched threads.</div>` : ''}
-        </div>`;
-
-      const complaintTrend = m.competitor_complaint_volume || {};
-      const intentTrend = m.intent_search_phrases || {};
-
-      const trendCardHtml = `
-        <div class="card momentum-card">
-          <h3>Competitor complaint volume</h3>
-          ${trendBlock(complaintTrend)}
-          <hr class="hairline" style="margin:var(--sp-5) 0">
-          <h3>"Anyone use X?" search phrases</h3>
-          ${trendBlock(intentTrend)}
-          ${(intentTrend.matched_phrases && intentTrend.matched_phrases.length)
-            ? `<div class="phrase-list" style="margin-top:var(--sp-3)">${intentTrend.matched_phrases.map((p) => `<div class="phrase-item"><span>${Flintel.escapeHtml(p)}</span></div>`).join('')}</div>`
-            : ''}
-          <div class="stat-note" style="margin-top:var(--sp-4)">${Flintel.escapeHtml(m.page_one_threads_reason || '')}</div>
-        </div>`;
-
-      grid.innerHTML = barChartHtml + trendCardHtml;
-    } catch (err) {
-      grid.innerHTML = `<div class="card momentum-card"><p style="font-size:13px;color:var(--muted)">${Flintel.escapeHtml(err.message)}</p></div>`;
-    }
-  }
-
-  function trendBlock(t) {
-    const dir = t.pct_change_vs_prior_period > 0 ? 'up' : t.pct_change_vs_prior_period < 0 ? 'down' : 'flat';
-    return `
-      <div class="stat-value" style="font-size:var(--step-2)">${Flintel.fmtNum(t.current_period_count)}</div>
-      <div class="stat-delta ${dir}">${Flintel.fmtPct(t.pct_change_vs_prior_period)} vs. prior period</div>`;
-  }
-
-  function emptyRow(msg) {
-    return `<div class="stat-note">${Flintel.escapeHtml(msg)}</div>`;
-  }
-
-  async function loadReport(domain) {
-    const grid = document.getElementById('report-grid');
-    grid.innerHTML = `<div class="card report-main"><div class="skeleton" style="height:200px"></div></div><div class="report-side"><div class="card"><div class="skeleton" style="height:120px"></div></div></div>`;
-    try {
-      const data = await Flintel.api(`/api/reports/${encodeURIComponent(domain)}`);
-      const r = (data.reports && data.reports[0]) || null;
-      if (!r) {
-        grid.innerHTML = emptyStateHtml('No report yet for this domain.');
-        return;
-      }
-
-      const targetAudience = r.target_audience || [];
-
-      grid.innerHTML = `
-        <div class="card report-main">
-          <div class="report-sub-label">Company summary</div>
-          <p class="company-summary">${Flintel.escapeHtml(r.company_summary || '')}</p>
-
-          <div class="report-sub-label">Buyer pain points</div>
-          <div class="pain-points">
-            ${(r.buyer_pain_points || []).map((p) => `<div class="pain-point">"${Flintel.escapeHtml(p)}"</div>`).join('') || emptyRow('No pain points captured.')}
-          </div>
-
-          <div class="report-sub-label">Buyer personas</div>
-          <div class="personas">
-            ${(targetAudience || []).map((p) => `
-              <div class="persona-item">
-                <div class="persona-name">${Flintel.escapeHtml(p.persona || '')}</div>
-                <div class="persona-desc">${Flintel.escapeHtml(p.description || '')}</div>
-              </div>`).join('') || emptyRow('No personas captured.')}
-          </div>
-        </div>
-
-        <div class="report-side">
-          <div class="card uvp-card">
-            <div class="report-sub-label">Unique value proposition</div>
-            <p>${Flintel.escapeHtml(r.unique_value_prop || '—')}</p>
-          </div>
-
-          <div class="card">
-            <div class="report-sub-label">Named competitors</div>
-            ${(r.competitors || []).map((c) => `
-              <div class="competitor-row">
-                <div>
-                  <div class="competitor-name">${Flintel.escapeHtml(c.name || '')}</div>
-                  <div class="competitor-reason">${Flintel.escapeHtml(c.why_buyers_leave || '')}</div>
-                </div>
-              </div>`).join('') || emptyRow('No competitors identified.')}
-          </div>
-
-          <div class="card">
-            <div class="report-sub-label">Discovery keywords</div>
-            <div class="keyword-pills">
-              ${(r.discovery_keywords || []).map((k) => `<span class="keyword-pill">${Flintel.escapeHtml(k)}</span>`).join('') || emptyRow('None yet.')}
-            </div>
-          </div>
-
-          <div class="card">
-            <div class="report-sub-label">Recommended channels</div>
-            <ul class="channel-list">
-              ${(r.recommended_channels || []).map((c) => `<li>${Flintel.escapeHtml(c)}</li>`).join('') || emptyRow('None yet.')}
-            </ul>
-          </div>
-        </div>`;
-    } catch (err) {
-      grid.innerHTML = emptyStateHtml(err.message);
-    }
-  }
-
-  function emptyStateHtml(msg) {
-    return `<div class="card empty-state" style="grid-column:1/-1">
-      <div class="thread-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 7h8M2 11h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></div>
-      <p>${Flintel.escapeHtml(msg)}</p>
-    </div>`;
-  }
-
-  function bindSignalFilters() {
-    document.querySelectorAll('.filter-chip').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.filter-chip').forEach((b) => b.classList.remove('active'));
-        btn.classList.add('active');
-        state.signalFilter = btn.dataset.filter;
-        state.signalLimit = 20;
-        loadSignals();
-      });
-    });
-    document.getElementById('load-more-btn').addEventListener('click', () => {
-      state.signalLimit += 20;
-      loadSignals();
-    });
-  }
-
-  async function loadSignals() {
-    const list = document.getElementById('signal-list');
-    const loadMoreWrap = document.getElementById('load-more-wrap');
-    if (state.signalLimit === 20) {
-      list.innerHTML = Array.from({ length: 3 }).map(() => `<div class="card signal-item"><div class="skeleton" style="height:60px"></div></div>`).join('');
-    }
-    try {
-      const params = new URLSearchParams({
-        domain: state.currentDomain,
-        unreviewed_only: state.signalFilter === 'unreviewed' ? 'true' : 'false',
-        limit: String(state.signalLimit),
-      });
-      const data = await Flintel.api(`/api/my-signals?${params.toString()}`);
-      const signals = data.signals || [];
-
-      if (signals.length === 0) {
-        list.innerHTML = `<div class="card empty-state">
-          <div class="thread-icon"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3h12M2 7h8M2 11h5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg></div>
-          <p>${state.signalFilter === 'unreviewed' ? "You're caught up — no unreviewed signals." : 'No signals matched yet. Check back once monitoring picks up new threads.'}</p>
-        </div>`;
-        loadMoreWrap.style.display = 'none';
-        return;
-      }
-
-      list.innerHTML = signals.map(signalItem).join('');
-      loadMoreWrap.style.display = signals.length >= state.signalLimit ? '' : 'none';
-
-      list.querySelectorAll('[data-review-id]').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-          const id = btn.dataset.reviewId;
-          btn.disabled = true;
-          btn.innerHTML = '<span class="spinner"></span>';
-          try {
-            await Flintel.api(`/api/signals/${encodeURIComponent(id)}/review`, { method: 'POST' });
-            Flintel.toast('Marked as reviewed.');
-            loadSignals();
-            loadStats();
-          } catch (err) {
-            Flintel.toast(err.message, true);
-            btn.disabled = false;
-            btn.textContent = 'Mark reviewed';
-          }
-        });
-      });
-    } catch (err) {
-      list.innerHTML = emptyStateHtml(err.message);
-    }
-  }
-
-  function signalItem(s) {
-    const reviewed = !!s.reviewed;
-    const subreddit = s.subreddit_or_channel || 'reddit';
-    const engagement = s.upvotes ?? s.score ?? s.ups ?? s.num_upvotes;
-    return `
-      <div class="card signal-item ${reviewed ? '' : 'unreviewed'}">
-        <div class="signal-top">
-          <div class="signal-meta">
-            <span class="badge ${reviewed ? 'badge-muted' : 'badge-ember'}">${reviewed ? 'reviewed' : 'new'}</span>
-            <span>r/${Flintel.escapeHtml(subreddit.replace(/^r\//, ''))}</span>
-            <span>·</span>
-            <span>matched "${Flintel.escapeHtml(s.matched_keyword || '')}"</span>
-            ${engagement !== undefined ? `<span>· ${Flintel.fmtNum(engagement)} upvotes</span>` : ''}
-            <span>· ${Flintel.timeAgo(s.matched_at)}</span>
-          </div>
-          <div class="signal-actions">
-            ${reviewed ? '' : `<button class="btn btn-ghost btn-sm" data-review-id="${Flintel.escapeHtml(s.source_id || '')}">Mark reviewed</button>`}
-          </div>
-        </div>
-        <div class="signal-text">${Flintel.escapeHtml(truncate(s.text || '', 320))}</div>
-      </div>`;
-  }
-
-  function truncate(str, n) {
-    return str.length > n ? str.slice(0, n).trim() + '…' : str;
-  }
-}
-
-/* ==========================================================================
-   ROUTER — decide which page to show based on the current path.
-   Backend should render this same file for both GET / and GET /dashboard.
-   ========================================================================== */
-
-(function route() {
-  const isDashboard = window.location.pathname.startsWith('/dashboard');
-  document.getElementById('page-landing').style.display = isDashboard ? 'none' : '';
-  document.getElementById('page-dashboard').style.display = isDashboard ? '' : 'none';
-  if (isDashboard) {
-    initDashboardPage();
+function updateNav(id) {
+  const actions = $('nav-actions');
+  const links = $('nav-links');
+  links.classList.toggle('hidden', id !== 's-home');
+  if (id === 's-report') {
+    actions.innerHTML = `
+      <button class="nav-ghost" type="button" onclick="goHome()">New report</button>
+      <button class="nav-cta" type="button" onclick="document.querySelector('.report-cta-section').scrollIntoView({behavior:'smooth'})">View plans</button>`;
   } else {
-    initLandingPage();
+    actions.innerHTML = `<button class="nav-login" type="button" onclick="comingSoon('Login')">Login</button>`;
+  }
+}
+
+function goHome() {
+  const input = $('url-input');
+  if (input) input.value = '';
+  try { sessionStorage.removeItem(CONFIG.STORAGE_KEY); } catch {}
+  showScreen('s-home');
+}
+
+function comingSoon(what) {
+  showToast(`${what} isn't wired up yet — coming soon.`);
+}
+
+/* ── PERSISTENCE — survive a refresh while on the report screen ───── */
+function persistReport() {
+  try {
+    sessionStorage.setItem(CONFIG.STORAGE_KEY, JSON.stringify({
+      domain: store.domain, company: store.company, url: store.url,
+      report: store.report, matches: store.matches,
+      matchesFound: store.matchesFound, momentum: store.momentum,
+    }));
+  } catch (e) { console.warn('[persist] failed', e); }
+}
+function restoreReport() {
+  try {
+    const raw = sessionStorage.getItem(CONFIG.STORAGE_KEY);
+    if (!raw) return false;
+    const parsed = JSON.parse(raw);
+    if (!parsed || !parsed.report) return false;
+    Object.assign(store, parsed);
+    return true;
+  } catch { return false; }
+}
+
+/* ── SCAN CONTROLLER (visual only — real work happens in startAnalysis) ─ */
+let scanTimers = [];
+function clearScanTimers() { scanTimers.forEach(clearTimeout); scanTimers = []; }
+
+function runScanAnimation() {
+  clearScanTimers();
+  const fill = $('scan-fill');
+  const steps = [
+    { id: 'ss-1', detail: 'Reading homepage and secondary pages', pct: 20 },
+    { id: 'ss-2', detail: 'Extracting buyer pain phrases and competitors', pct: 40 },
+    { id: 'ss-3', detail: 'Matching discovery keywords against tracked signals', pct: 65 },
+    { id: 'ss-4', detail: 'Scoring competitor mentions', pct: 85 },
+    { id: 'ss-5', detail: 'Waiting on backend to finish analysis…', pct: 96 },
+  ];
+  const CHECK = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+  const SPIN = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>`;
+  const IDLE = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/></svg>`;
+
+  steps.forEach((s) => {
+    const el = $(s.id); el.className = 'scan-step';
+    const icon = el.querySelector('.step-icon'); icon.className = 'step-icon pending'; icon.innerHTML = IDLE;
+  });
+  fill.style.transition = 'none'; fill.style.width = '0';
+
+  let idx = 0;
+  function nextStep() {
+    if (idx >= steps.length) return; // last step just holds — real data drives the transition to s-report
+    const s = steps[idx];
+    const el = $(s.id);
+    if (idx > 0) {
+      const prev = $(steps[idx - 1].id);
+      prev.classList.remove('active'); prev.classList.add('done');
+      const pi = prev.querySelector('.step-icon'); pi.className = 'step-icon checked'; pi.innerHTML = CHECK;
+    }
+    el.classList.add('active');
+    const icon = el.querySelector('.step-icon'); icon.className = 'step-icon spinning'; icon.innerHTML = SPIN;
+    fill.style.width = s.pct + '%';
+    el.querySelector('.step-detail').textContent = s.detail;
+    idx += 1;
+    scanTimers.push(setTimeout(nextStep, 850));
+  }
+  scanTimers.push(setTimeout(() => { fill.style.transition = 'width .8s ease'; nextStep(); }, 50));
+}
+
+function finishScanAnimation() {
+  clearScanTimers();
+  const fill = $('scan-fill'); if (fill) fill.style.width = '100%';
+  document.querySelectorAll('#scan-steps .scan-step').forEach((el) => {
+    el.classList.remove('active'); el.classList.add('done');
+    const icon = el.querySelector('.step-icon');
+    icon.className = 'step-icon checked';
+    icon.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+  });
+}
+
+/* ── ANALYZE ────────────────────────────────────────────────────── */
+async function startAnalysis() {
+  const raw = $('url-input').value;
+  const domain = normalizeDomain(raw);
+  if (!domain) { $('url-input').focus(); return; }
+
+  store.domain = domain;
+  store.company = capitalize(domain.split('.')[0]);
+  const fullUrl = /^https?:\/\//i.test(raw.trim()) ? raw.trim() : ('https://' + domain);
+  store.url = fullUrl;
+
+  $('scan-url-label').textContent = domain;
+  $('rs-url').textContent = domain;
+
+  showScreen('s-scan');
+  runScanAnimation();
+
+  const btn = $('url-submit-btn');
+  if (btn) btn.disabled = true;
+
+  try {
+    await ensureSession();
+    const data = await api.analyze(fullUrl);
+    store.report = data.report || {};
+    store.matches = data.matches || [];
+    store.matchesFound = data.matches_found || (data.matches || []).length;
+    store.momentum = await api.marketMomentum();
+
+    finishScanAnimation();
+    persistReport();
+    setTimeout(renderReport, 400);
+  } catch (err) {
+    console.error('[analyze] failed', err);
+    showToast(err.message || 'Could not analyze this site — please try again.');
+    goHome();
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+/* ── helpers to turn real match rows into UI shapes ───────────────── */
+function matchScore(m) {
+  const v = m.upvotes ?? m.score ?? m.ups ?? m.num_upvotes;
+  return typeof v === 'number' ? v : 0;
+}
+
+function buildCommunities(matches) {
+  const groups = {};
+  matches.forEach((m) => {
+    const key = m.subreddit_or_channel || m.matched_keyword || 'unknown';
+    if (!groups[key]) groups[key] = { name: key, count: 0, sample: '' };
+    groups[key].count += 1;
+    if (!groups[key].sample && m.text) groups[key].sample = m.text;
+  });
+  const arr = Object.values(groups).sort((a, b) => b.count - a.count);
+  const max = arr.length ? arr[0].count : 1;
+  return arr.slice(0, 6).map((g) => {
+    const name = /^r\//i.test(g.name) ? g.name : ('r/' + String(g.name).replace(/^r\//i, ''));
+    const isHigh = g.count >= Math.max(2, Math.round(max * 0.5));
+    return {
+      name,
+      rel: isHigh ? 'HIGH' : 'MED',
+      relClass: isHigh ? 'rel-high' : 'rel-med',
+      quote: g.sample ? `"${g.sample.slice(0, 150)}${g.sample.length > 150 ? '…' : ''}"` : 'No sample text captured for this community yet.',
+      posts: `${g.count} matched signal${g.count === 1 ? '' : 's'}`,
+    };
+  });
+}
+
+function buildThreads(matches) {
+  const sorted = [...matches].sort((a, b) => matchScore(b) - matchScore(a)).slice(0, 5);
+  const maxScore = Math.max(1, ...sorted.map(matchScore));
+  return sorted.map((m) => {
+    const s = matchScore(m);
+    const norm = Math.min(98, Math.max(38, Math.round((s / maxScore) * 55) + 40));
+    const text = m.text || '';
+    return {
+      score: norm,
+      sClass: norm >= 85 ? 'ts-hot' : norm >= 65 ? 'ts-warm' : 'ts-mid',
+      platClass: 'pd-r',
+      src: `${m.subreddit_or_channel || 'reddit'} · matched "${m.matched_keyword || '—'}"`,
+      title: text ? text.slice(0, 130) : 'Untitled matched thread',
+      snippet: text ? text.slice(0, 220) : 'No text captured for this match.',
+      pills: [ s ? `${s} upvotes` : null ].filter(Boolean),
+    };
+  });
+}
+
+const SUB_COLORS = ['#FF4500','#0079D3','#7193FF','#00A6A6','#EA0027','#46A508','#8B5CF6','#F59E0B','#0F172A','#DB2777'];
+function subredditHash(name) { let h = 0; for (let i=0;i<name.length;i++) h = ((h<<5)-h+name.charCodeAt(i))|0; return Math.abs(h); }
+function subredditColor(name) { const clean = name.replace(/^r\//i,''); return SUB_COLORS[subredditHash(clean) % SUB_COLORS.length]; }
+function subredditGlyph(name) { const clean = name.replace(/^r\//i,''); return esc(clean.charAt(0).toUpperCase() || '?'); }
+
+/* ── MOMENTUM (Section 03) ────────────────────────────────────────── */
+function renderMomentum(momentum) {
+  const fmtDelta = (pct) => {
+    if (pct === null || pct === undefined) return { text: 'Building baseline', cls: 'neutral' };
+    const sign = pct > 0 ? '+' : '';
+    return { text: `${sign}${pct}% vs prior period`, cls: pct >= 0 ? '' : 'neutral' };
+  };
+
+  if (!momentum) {
+    $('viz-complaint-value').textContent = '—';
+    $('viz-intent-value').textContent = '—';
+    return;
+  }
+
+  const cv = momentum.competitor_complaint_volume || {};
+  $('viz-complaint-value').textContent = cv.current_period_count ?? 0;
+  const cd = fmtDelta(cv.pct_change_vs_prior_period);
+  const cEl = $('viz-complaint-delta'); cEl.textContent = cd.text; cEl.className = 'viz-delta ' + cd.cls;
+
+  const iv = momentum.intent_search_phrases || {};
+  $('viz-intent-value').textContent = iv.current_period_count ?? 0;
+  const id_ = fmtDelta(iv.pct_change_vs_prior_period);
+  const iEl = $('viz-intent-delta'); iEl.textContent = id_.text; iEl.className = 'viz-delta ' + id_.cls;
+
+  $('viz-serp-note').textContent = momentum.page_one_threads_reason || 'Not available yet — no SERP-ranking source is connected.';
+
+  const bars = (momentum.competitor_bar_chart && momentum.competitor_bar_chart.bars) || [];
+  const gapEl = $('gap-viz');
+  if (!bars.length) {
+    gapEl.innerHTML = '<div class="empty-note">No competitor mention data yet.</div>';
+  } else {
+    const max = Math.max(1, ...bars.map((b) => b.mentions || 0));
+    const multiple = momentum.competitor_bar_chart.talked_about_multiple;
+    const rows = bars.map((b) => `
+      <div class="gap-row">
+        <div class="gap-name ${b.is_you ? 'you' : ''}">${esc(b.name)}</div>
+        <div class="gap-bar"><div class="gap-fill ${b.is_you ? 'you' : ''}" data-w="${Math.round(((b.mentions||0)/max)*100)}"></div></div>
+        <div class="gap-count">${b.mentions || 0}</div>
+      </div>`).join('');
+    const caption = multiple
+      ? `<p class="gap-caption">Your competitors are being <b>talked about ${multiple}&times; more</b> than you across the same matched signals.</p>`
+      : `<p class="gap-caption">Not enough mentions of your own domain yet to compute a comparison — this fills in as more matches come in.</p>`;
+    gapEl.innerHTML = rows + caption;
+    requestAnimationFrame(() => {
+      gapEl.querySelectorAll('.gap-fill').forEach((el, i) => {
+        setTimeout(() => { el.style.width = el.dataset.w + '%'; }, 150 + i * 120);
+      });
+    });
+  }
+}
+
+/* ── REPORT CONTROLLER ─────────────────────────────────────────────── */
+function renderReport() {
+  const report = store.report || {};
+  const matches = store.matches || [];
+  const communities = buildCommunities(matches);
+  const threads = buildThreads(matches);
+  const competitorCount = (report.competitors || []).length;
+
+  $('rs-url').textContent = store.domain;
+  $('scan-url-label').textContent = store.domain;
+  $('rmchip-date').textContent = 'Generated ' + new Date().toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' });
+  $('rh-subs').textContent = `${communities.length} ${communities.length === 1 ? 'community' : 'communities'}`;
+  $('rh-posts').textContent = `${store.matchesFound} matched ${store.matchesFound === 1 ? 'post' : 'posts'}`;
+
+  if (report.company_summary) {
+    $('report-summary-text').innerHTML =
+      `${esc(report.company_summary)} — matched against Reddit discussions already tracked by Flintel for <b>${esc(store.domain)}</b>.`;
+  }
+
+  $('tk-matches').textContent = store.matchesFound;
+  $('tk-communities').textContent = communities.length;
+  $('tk-competitors').textContent = competitorCount;
+
+  $('subreddit-grid').innerHTML = communities.length ? communities.map((s) => `
+    <div class="sub-card">
+      <div class="sub-top">
+        <div class="sub-top-left">
+          <div class="sub-icon" style="background:${subredditColor(s.name)}">${subredditGlyph(s.name)}</div>
+          <div><div class="sub-name">${esc(s.name)}</div></div>
+        </div>
+        <div class="rel-badge ${esc(s.relClass)}">${esc(s.rel)}</div>
+      </div>
+      <div class="sub-quote">${esc(s.quote)}</div>
+      <div class="sub-stats"><div class="sub-stat"><b>${esc(s.posts)}</b></div></div>
+    </div>`).join('') : '<div class="empty-note">No community matches yet — Flintel will keep watching and these will fill in as matching signals come in.</div>';
+
+  const ringColor = (t) => (t.sClass === 'ts-hot' ? '#B6FF1E' : '#6863FC');
+  $('thread-list').innerHTML = threads.length ? threads.map((t) => `
+    <div class="thread-card">
+      <div class="thread-score-col" style="background:conic-gradient(${ringColor(t)} ${t.score * 3.6}deg, var(--g5) 0deg)">
+        <div class="tscore ${esc(t.sClass)}">${esc(t.score)}</div>
+      </div>
+      <div class="thread-body">
+        <div class="thread-plat"><div class="plat-dot ${esc(t.platClass)}"></div><div class="thread-source">${esc(t.src)}</div></div>
+        <div class="thread-title">${esc(t.title)}</div>
+        <div class="thread-snippet">${esc(t.snippet)}</div>
+        <div class="thread-pills">${t.pills.map((p) => `<div class="tpill">${esc(p)}</div>`).join('')}</div>
+      </div>
+    </div>`).join('') : '<div class="empty-note">No matched threads yet for this domain.</div>';
+
+  renderMomentum(store.momentum);
+
+  showScreen('s-report');
+}
+
+/* ── TOAST ───────────────────────────────────────────────────────── */
+let toastTimer = null;
+function showToast(msg) {
+  const t = $('toast'); $('toast-text').textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), CONFIG.TOAST_MS);
+}
+
+/* ── GLOBAL KEYBOARD ─────────────────────────────────────────────── */
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && document.activeElement === $('url-input')) startAnalysis();
+});
+
+/* ── INIT — restore report on refresh instead of bouncing to home ─── */
+(function init() {
+  if (restoreReport()) {
+    renderReport();
+  } else {
+    showScreen('s-home');
   }
 })();
 </script>
-
 </body>
 </html>

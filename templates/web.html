@@ -1,4 +1,5 @@
 
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -5204,6 +5205,17 @@ function finishScanAnimation() {
 }
 
 /* ── ANALYZE ────────────────────────────────────────────────────── */
+// The backend now caches a domain's analysis (flintel_domain_reports) and
+// returns it near-instantly on a cache hit, instead of always re-scraping
+// + re-calling Claude on every request. A brand-new domain still takes
+// several real seconds (or, rarely, longer if it's queued behind another
+// in-flight request for the same domain — the backend handles that by
+// waiting server-side, not by erroring). MIN_SCAN_DISPLAY_MS just keeps
+// the step-by-step scan animation from flashing straight to "done" when
+// the response comes back in well under a second; it never delays a
+// response that was already slower than this.
+const MIN_SCAN_DISPLAY_MS = 1500;
+
 let analyzeInFlight = false;
 async function startAnalysis() {
   if (analyzeInFlight) return; // guards against double-fire (Enter + click, double-click, etc.)
@@ -5222,6 +5234,7 @@ async function startAnalysis() {
 
   showScreen('s-scan');
   runScanAnimation();
+  const scanStartedAt = Date.now();
 
   const btn = $('url-submit-btn');
   if (btn) btn.disabled = true;
@@ -5233,6 +5246,11 @@ async function startAnalysis() {
     store.matches = data.matches || [];
     store.matchesFound = data.matches_found || (data.matches || []).length;
     store.momentum = await api.marketMomentum();
+
+    const elapsed = Date.now() - scanStartedAt;
+    if (elapsed < MIN_SCAN_DISPLAY_MS) {
+      await new Promise((resolve) => setTimeout(resolve, MIN_SCAN_DISPLAY_MS - elapsed));
+    }
 
     finishScanAnimation();
     persistReport();

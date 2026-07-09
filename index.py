@@ -1257,7 +1257,7 @@ async def dashboard_stats(user: dict = Depends(get_current_user)):
 
 
 @app.get("/api/report/market-momentum")
-async def market_momentum(user: dict = Depends(get_current_user)):
+async def market_momentum(user: dict = Depends(get_current_user)): 
     momentum = await compute_market_momentum(user["email"])
     return JSONResponse(momentum)
 

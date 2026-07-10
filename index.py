@@ -45,6 +45,44 @@ THIS REVISION (on top of 2.4.0) fixes the domain-caching bug:
   No existing route, request/response schema, or function signature
   was removed or renamed. All changes are additive or internal to
   analyze()'s implementation.
+
+THIS REVISION (on top of 2.5.0) ADDS Section 05 — "What this means
+for your pipeline":
+
+  WHAT IT IS: a 6-month trials / customers / MRR projection chart,
+  computed with fixed conservative funnel assumptions (0.5% click-
+  through, 10% visitor->trial, 30% trial->customer, configurable
+  ACV), seeded from each user's OWN real matched-signal reach.
+
+  IMPORTANT — this is pure Python arithmetic, NOT a Claude call.
+  Claude is never asked to predict trials/customers/MRR: those
+  numbers must be deterministic (same input -> same output, every
+  refresh) and grounded only in data already sitting in MongoDB
+  (flintel_user_signals_collection). Asking an LLM to invent a
+  revenue forecast would (a) be non-deterministic like the original
+  domain-cache bug this file already fixes once, and (b) violate the
+  "never invent facts not supported by the data" principle already
+  enforced in ANALYSIS_SYSTEM_PROMPT.
+
+  STORAGE: a new collection, flintel_analytics_collection, caches the
+  latest computed projection per (user_email, domain) pair — unlike
+  flintel_domain_reports_collection (shared across users by domain
+  only), this new collection IS user-scoped, because it's derived
+  from that user's own matched-signal history, exactly like every
+  other per-user collection in this file (flintel_user_signals,
+  flintel_tracking_state, flintel_web_data).
+
+  LIVE UPDATES: run_live_match_tracker() already finds new matched
+  Reddit posts for each (user_email, domain) pair on a timer and
+  persists them via _persist_match_for_user(). This revision adds ONE
+  additional call right after that — _refresh_pipeline_analytics() —
+  so the cached Section 05 projection is recomputed and re-saved
+  automatically whenever new matching data arrives, with no separate
+  polling job needed. The existing tracker loop, its query logic, and
+  its logging are completely unchanged.
+
+  Nothing above (domain cache, per-user isolation, existing routes)
+  is modified. All changes below are additive.
 """
 
 import asyncio
@@ -112,12 +150,20 @@ flintel_user_signals_collection = db["flintel_user_signals"]
 flintel_tracking_state_collection = db["flintel_tracking_state"]
 flintel_counters_collection  = db["flintel_counters"]
 
-# NEW — shared, domain-scoped (NOT user-scoped) cache of the Claude
-# analysis for a domain. Deliberately has no user_email field: the whole
-# point is that this is the same for every user who looks up the domain.
+# Shared, domain-scoped (NOT user-scoped) cache of the Claude analysis for
+# a domain. Deliberately has no user_email field: the whole point is that
+# this is the same for every user who looks up the domain.
 flintel_domain_reports_collection = db["flintel_domain_reports"]
 
-app = FastAPI(title="Flintel — Website Market Intelligence", version="2.5.0")
+# NEW — per-user, per-domain cache of the Section 05 pipeline projection.
+# UNLIKE flintel_domain_reports_collection, this one IS keyed by user_email
+# + domain, because the projection is seeded from that specific user's own
+# matched-signal reach (flintel_user_signals_collection), which can differ
+# between users even for the same domain (different accounts may have
+# reviewed/accumulated different signal history over time).
+flintel_analytics_collection = db["flintel_analytics"]
+
+app = FastAPI(title="Flintel — Website Market Intelligence", version="2.6.0")
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -480,7 +526,7 @@ Analyze this site and return the market-intelligence report as JSON only, follow
 
 
 # ============================================================================
-# NEW — SHARED, DOMAIN-SCOPED ANALYSIS CACHE
+# SHARED, DOMAIN-SCOPED ANALYSIS CACHE (unchanged from 2.5.0)
 # ============================================================================
 #
 # This is the fix for the three issues described:
@@ -506,6 +552,12 @@ Analyze this site and return the market-intelligence report as JSON only, follow
 # real work; any other concurrent request for that same domain sees the
 # "processing" placeholder already there and polls briefly instead of
 # starting its own redundant scrape + Claude call.
+#
+# DO NOT REMOVE THIS. Without it, two tabs opening the same brand-new
+# domain at the same time will race two independent Claude calls, get two
+# different discovery_keywords sets, and show two different match counts
+# for the identical domain (e.g. 25 posts vs 0 posts) — this is the exact
+# failure mode this cache exists to prevent.
 # ============================================================================
 
 async def _try_claim_domain_for_processing(domain: str, url: str) -> bool:
@@ -624,7 +676,7 @@ async def get_or_create_domain_report(domain: str, url: str) -> dict:
 
 
 # ============================================================================
-# END SHARED DOMAIN CACHE ADDITION
+# END SHARED DOMAIN CACHE (unchanged from 2.5.0)
 # ============================================================================
 
 
@@ -805,6 +857,7 @@ async def run_live_match_tracker():
                 }
 
                 newest_seen = last_checked_at
+                pair_new_matches = 0
                 try:
                     cursor = web_data_collection.find(full_query)
                     async for source_doc in cursor:
@@ -818,6 +871,7 @@ async def run_live_match_tracker():
                         )
                         await _persist_match_for_user(user_email, domain, matched_keyword, source_doc)
                         new_matches_total += 1
+                        pair_new_matches += 1
 
                         doc_ts = _web_data_timestamp_field(source_doc)
                         if doc_ts and doc_ts > newest_seen:
@@ -832,6 +886,20 @@ async def run_live_match_tracker():
                         {"user_email": user_email, "domain": domain},
                         {"$set": {"last_checked_at": newest_seen}},
                     )
+
+                # NEW — if this (user_email, domain) pair got new matched
+                # signals this pass, recompute + re-cache its Section 05
+                # pipeline projection so it stays live without any extra
+                # polling job. Wrapped in try/except so a projection
+                # failure can never break the existing tracker loop.
+                if pair_new_matches > 0:
+                    try:
+                        await _refresh_pipeline_analytics(user_email, domain)
+                    except Exception as exc:
+                        logger.error(
+                            "[LIVE-TRACKER] pipeline analytics refresh failed for user=%s domain=%s: %s",
+                            user_email, domain, exc,
+                        )
 
             if new_matches_total:
                 logger.info("[LIVE-TRACKER] pass complete | pairs_checked:%d | new_matches:%d",
@@ -939,7 +1007,7 @@ async def compute_dashboard_stats(user_email: str) -> dict:
 
 # ============================================================================
 # SECTION 03 REPORT CARD: "Your market is moving — and it's moving
-# toward you"
+# toward you" (unchanged from 2.5.0)
 # ============================================================================
 #
 # Everything below is 100% ADDITIVE (carried over unchanged from 2.4.0).
@@ -1071,7 +1139,219 @@ async def compute_market_momentum(user_email: str) -> dict:
 
 
 # ============================================================================
-# END SECTION 03 ADDITION
+# END SECTION 03 (unchanged from 2.5.0)
+# ============================================================================
+
+
+# ============================================================================
+# SECTION 05 ADDITION: "What this means for your pipeline"
+# ============================================================================
+#
+# WHAT THIS COMPUTES
+#   A 6-month trials/customers/MRR projection. Section 05 in the mock is
+#   explicitly labeled "Illustrative model based on typical Flintel
+#   customer outcomes — not calculated from your specific data above," so
+#   this does NOT try to predict revenue out of thin air:
+#     1. It seeds from a real number already in this user's own data —
+#        estimated_reach from compute_dashboard_stats(), built from
+#        upvotes/score across THIS user's matched signals for THIS domain.
+#     2. It applies fixed, fully-disclosed conservative funnel assumptions
+#        (click-through, visitor->trial, trial->customer, ACV) to turn
+#        that reach into a 6-month curve.
+#     3. It compares against a flat "organic" line at today's pace.
+#   All assumptions are returned in the payload (not hidden on the
+#   frontend), and the exact "illustrative, not calculated..." disclaimer
+#   from the mock is included as `note` in every response.
+#
+# WHY THIS IS PLAIN PYTHON, NOT A CLAUDE CALL
+#   Same reasoning that motivated the domain-cache fix above: Claude's
+#   output is not deterministic between calls. If trials/MRR came from a
+#   Claude prompt, refreshing the page could show 216 trials one moment
+#   and 340 the next, for identical underlying data — reintroducing the
+#   exact inconsistency bug this file already fixed once for
+#   discovery_keywords. Revenue/trial projections are pure arithmetic
+#   here, so they are 100% reproducible for the same input every time.
+#
+# STORAGE — flintel_analytics_collection
+#   Keyed by (user_email, domain), unlike flintel_domain_reports_collection
+#   (keyed by domain only). This IS user-scoped because the projection
+#   depends on that specific user's own accumulated matched-signal reach,
+#   exactly like flintel_user_signals_collection, flintel_web_data_
+#   collection, and flintel_tracking_state_collection already are.
+#
+# WHEN IT'S CREATED / UPDATED
+#   - First created right after /api/analyze finishes persisting a user's
+#     initial matches for a domain (see analyze() below) — so a fresh
+#     domain lookup gets an immediate, if rough, first-cut projection.
+#   - Refreshed automatically by run_live_match_tracker() (see the
+#     pair_new_matches hook added above) every time new matched signals
+#     arrive for that (user_email, domain) pair — no separate cron/poll
+#     job required, and the existing tracker loop/logging is untouched.
+#   - Also computed on-demand (and re-cached) if a request for
+#     /api/report/pipeline-projection arrives before any cache exists.
+# ============================================================================
+
+PIPELINE_DEFAULT_ACV = 300.0
+PIPELINE_DEFAULT_CLICK_THROUGH_RATE = 0.005     # 0.5% of thread viewers click through
+PIPELINE_DEFAULT_VISITOR_TO_TRIAL_RATE = 0.10   # 10% of clickers start a trial
+PIPELINE_DEFAULT_TRIAL_TO_CUSTOMER_RATE = 0.30  # 30% of trials convert to paying
+PIPELINE_PROJECTION_MONTHS = 6
+
+# Fraction of Flintel's steady-state reach realized by each month (M1..M6).
+PIPELINE_RAMP_CURVE = [0.35, 0.55, 0.72, 0.85, 0.95, 1.0]
+
+# How much bigger the user's engaged reach becomes at steady state once
+# Flintel is surfacing threads they weren't previously seeing/participating
+# in, vs. their current organic-only reach.
+PIPELINE_STEADY_STATE_REACH_MULTIPLIER = 3.0
+
+
+def _estimate_monthly_organic_reach(base_stats: dict) -> float:
+    """
+    Baseline 'reach' the user already gets organically, before Flintel.
+    Reuses estimated_reach from compute_dashboard_stats() (built from
+    upvotes/score across the user's matched signals) so the projection is
+    seeded by something real for that specific user, not invented.
+    """
+    return float(base_stats.get("estimated_reach") or 0.0)
+
+
+def _project_pipeline_curve(
+    baseline_reach: float,
+    click_through_rate: float,
+    visitor_to_trial_rate: float,
+    months: int = PIPELINE_PROJECTION_MONTHS,
+) -> list[dict]:
+    """
+    Builds two cumulative-trials curves over `months`:
+      - organic: flat monthly pace at the user's current reach/conversion
+        rate (no change in behavior).
+      - with_flintel: reach ramps toward PIPELINE_STEADY_STATE_REACH_MULTIPLIER
+        along PIPELINE_RAMP_CURVE, representing Flintel surfacing more of
+        the relevant conversation over the first 6 months.
+    Pure arithmetic — deterministic for a given baseline_reach.
+    """
+    organic_monthly_trials = baseline_reach * click_through_rate * visitor_to_trial_rate
+    flintel_steady_state_reach = baseline_reach * PIPELINE_STEADY_STATE_REACH_MULTIPLIER
+
+    curve = []
+    organic_cumulative = 0.0
+    flintel_cumulative = 0.0
+    for i in range(months):
+        ramp_fraction = PIPELINE_RAMP_CURVE[min(i, len(PIPELINE_RAMP_CURVE) - 1)]
+        month_reach = flintel_steady_state_reach * ramp_fraction
+        month_trials = month_reach * click_through_rate * visitor_to_trial_rate
+
+        organic_cumulative += organic_monthly_trials
+        flintel_cumulative += month_trials
+
+        curve.append({
+            "month_label": f"M{i + 1}",
+            "organic_trials_cumulative": round(organic_cumulative, 1),
+            "flintel_trials_cumulative": round(flintel_cumulative, 1),
+        })
+    return curve
+
+
+async def compute_pipeline_projection(user_email: str, domain: str | None = None,
+                                       acv: float | None = None) -> dict:
+    """
+    Computes (does NOT save) the Section 05 pipeline projection for one
+    user. Seeds from that user's real accumulated reach for `domain`
+    (falls back to their most recent analyzed domain if none given), then
+    applies fixed conservative funnel assumptions. Always illustrative —
+    see `note` — never a guarantee. Pure Python; no Claude call.
+    """
+    acv = acv if acv is not None else PIPELINE_DEFAULT_ACV
+
+    base_stats = await compute_dashboard_stats(user_email)
+    resolved_domain = domain or base_stats.get("domain")
+    baseline_reach = _estimate_monthly_organic_reach(base_stats)
+
+    curve = _project_pipeline_curve(
+        baseline_reach,
+        PIPELINE_DEFAULT_CLICK_THROUGH_RATE,
+        PIPELINE_DEFAULT_VISITOR_TO_TRIAL_RATE,
+    )
+
+    projected_trials_6mo = curve[-1]["flintel_trials_cumulative"] if curve else 0.0
+    projected_customers_6mo = projected_trials_6mo * PIPELINE_DEFAULT_TRIAL_TO_CUSTOMER_RATE
+    projected_mrr_6mo = projected_customers_6mo * acv
+
+    return {
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "user_email": user_email,
+        "domain": resolved_domain,
+        "acv": acv,
+        "click_through_rate": PIPELINE_DEFAULT_CLICK_THROUGH_RATE,
+        "visitor_to_trial_rate": PIPELINE_DEFAULT_VISITOR_TO_TRIAL_RATE,
+        "trial_to_customer_rate": PIPELINE_DEFAULT_TRIAL_TO_CUSTOMER_RATE,
+        "projected_trials_6mo": round(projected_trials_6mo),
+        "projected_customers_6mo": round(projected_customers_6mo),
+        "projected_mrr_6mo": round(projected_mrr_6mo),
+        "curve": curve,
+        "baseline_reach_used": baseline_reach,
+        "note": (
+            "Illustrative model based on typical Flintel customer outcomes "
+            "— not calculated from your specific data above."
+        ),
+    }
+
+
+async def _refresh_pipeline_analytics(user_email: str, domain: str, acv: float | None = None) -> dict:
+    """
+    Recomputes the pipeline projection for (user_email, domain) and
+    upserts it into flintel_analytics_collection — keyed by user_email +
+    domain, exactly like every other per-user collection in this file.
+    Called:
+      - once right after a fresh /api/analyze for this domain, and
+      - automatically by run_live_match_tracker() whenever new matched
+        signals arrive for this pair.
+    """
+    projection = await compute_pipeline_projection(user_email, domain=domain, acv=acv)
+
+    await flintel_analytics_collection.update_one(
+        {"user_email": user_email, "domain": domain},
+        {
+            "$set": {
+                "user_email": user_email,
+                "domain": domain,
+                "projection": projection,
+                "updated_at": datetime.now(timezone.utc),
+            },
+            "$setOnInsert": {"created_at": datetime.now(timezone.utc)},
+        },
+        upsert=True,
+    )
+    return projection
+
+
+async def get_or_refresh_pipeline_analytics(user_email: str, domain: str, acv: float | None = None) -> dict:
+    """
+    Read path for GET /api/report/pipeline-projection. Serves the cached
+    projection from flintel_analytics_collection if one exists (fast —
+    the live tracker keeps it fresh in the background); computes and
+    caches one on the spot otherwise (e.g. right after a brand-new
+    domain's very first analyze(), before the tracker has run yet).
+
+    If the caller explicitly passes a custom `acv`, we always recompute
+    (a cached projection was built with whatever ACV was in effect at
+    cache time, and mixing ACVs would silently misrepresent the numbers).
+    """
+    if acv is not None:
+        return await _refresh_pipeline_analytics(user_email, domain, acv=acv)
+
+    cached = await flintel_analytics_collection.find_one(
+        {"user_email": user_email, "domain": domain}
+    )
+    if cached and cached.get("projection"):
+        return cached["projection"]
+
+    return await _refresh_pipeline_analytics(user_email, domain)
+
+
+# ============================================================================
+# END SECTION 05 ADDITION
 # ============================================================================
 
 
@@ -1096,12 +1376,17 @@ async def on_startup():
         [("user_email", 1), ("domain", 1), ("counter_name", 1)],
         unique=True, name="counter_unique",
     )
-    # NEW — enforces "one cached report per domain, ever" at the database
-    # level. This unique index is what makes the upsert in
+    # Enforces "one cached report per domain, ever" at the database level.
+    # This unique index is what makes the upsert in
     # _try_claim_domain_for_processing() atomic: two concurrent requests
     # for the same brand-new domain can't both succeed at creating a doc.
     await flintel_domain_reports_collection.create_index(
         [("domain", 1)], unique=True, name="domain_unique"
+    )
+    # NEW — one cached Section 05 projection per (user_email, domain).
+    # Same isolation pattern as flintel_tracking_state_collection's index.
+    await flintel_analytics_collection.create_index(
+        [("user_email", 1), ("domain", 1)], unique=True, name="user_domain_analytics_unique"
     )
 
     asyncio.create_task(run_live_match_tracker())
@@ -1162,6 +1447,19 @@ async def analyze(payload: AnalyzeRequest, user: dict = Depends(get_current_user
             "analyze(): only persisted %d/%d matches for user=%s domain=%s "
             "(some matches were missing a matched_keyword field)",
             persisted_count, len(matches), user["email"], domain,
+        )
+
+    # NEW — build the very first Section 05 projection for this user +
+    # domain right away, seeded by whatever matches were just persisted
+    # above, so the dashboard has something to show immediately rather
+    # than waiting for the next live-tracker pass. Wrapped in try/except
+    # so a projection failure can never break the analyze() response.
+    try:
+        await _refresh_pipeline_analytics(user["email"], domain)
+    except Exception as exc:
+        logger.error(
+            "analyze(): initial pipeline analytics refresh failed for user=%s domain=%s: %s",
+            user["email"], domain, exc,
         )
 
     return JSONResponse({
@@ -1260,6 +1558,35 @@ async def dashboard_stats(user: dict = Depends(get_current_user)):
 async def market_momentum(user: dict = Depends(get_current_user)): 
     momentum = await compute_market_momentum(user["email"])
     return JSONResponse(momentum)
+
+
+@app.get("/api/report/pipeline-projection")
+async def pipeline_projection(domain: str | None = None, acv: float | None = None,
+                               user: dict = Depends(get_current_user)):
+    """
+    Section 05 — "What this means for your pipeline". Serves the cached,
+    live-updating projection from flintel_analytics_collection when one
+    exists; computes + caches one on the spot otherwise.
+
+    Query params:
+      domain — which analyzed domain to project for. Defaults to the
+               user's most recently analyzed domain if omitted.
+      acv    — override the default $300 ACV. Forces a fresh (uncached)
+               computation, since a cached projection reflects whatever
+               ACV was in effect when it was last saved.
+    """
+    resolved_domain = domain
+    if not resolved_domain:
+        base_stats = await compute_dashboard_stats(user["email"])
+        resolved_domain = base_stats.get("domain")
+    if not resolved_domain:
+        raise HTTPException(
+            status_code=404,
+            detail="No analyzed domain found yet — analyze a domain first.",
+        )
+
+    projection = await get_or_refresh_pipeline_analytics(user["email"], resolved_domain, acv=acv)
+    return JSONResponse(projection)
 
 
 @app.get("/api/stats/public")

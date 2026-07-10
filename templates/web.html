@@ -4113,10 +4113,15 @@ html{overflow-x:clip;}
         <span class="url-prefix">https://</span>
         <input id="url-input" type="text"
           placeholder="yourwebsite.com"
-          onkeydown="if(event.key==='Enter')startAnalysis()">
+          onkeydown="if(event.key==='Enter')startAnalysis()"
+          oninput="refreshSeeReportButton()">
         <button class="url-submit" id="url-submit-btn" onclick="startAnalysis()">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           Analyze My Market
+        </button>
+        <button class="url-submit" id="see-report-btn" style="display:none;" onclick="openSeeReport()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          See Report
         </button>
       </div>
       <div class="home-note">Free market report · Ready in about a minute</div>
@@ -4954,6 +4959,7 @@ html{overflow-x:clip;}
 const CONFIG = Object.freeze({
   TOAST_MS: 3200,
   STORAGE_KEY: 'flintel_report_state_v1',
+  PENDING_KEY: 'flintel_pending_report_domain_v1',
 });
 
 const store = {
@@ -4966,6 +4972,13 @@ const store = {
   momentum: null,      // /api/report/market-momentum response
   pipeline: null,      // /api/report/pipeline-projection response
 };
+
+// Cache of the current authenticated user's own domains (from
+// /api/my-domains) — used only to decide whether to show the "See Report"
+// button on the landing page. Cleared whenever auth state changes so a
+// different logged-in user never sees a stale list.
+let knownDomainsCache = null;
+let knownDomainsForEmail = null;
 
 // Mirrors whatever /api/me last told us. Populated by refreshAuthState().
 const authState = {
@@ -4992,6 +5005,7 @@ const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /* ── GOOGLE AUTH (real, wired to existing backend routes) ─────────── */
 async function refreshAuthState() {
+  const prevEmail = authState.email;
   try {
     const res = await fetch('/api/me', { credentials: 'include' });
     const data = await res.json().catch(() => ({ logged_in: false }));
@@ -5006,7 +5020,150 @@ async function refreshAuthState() {
     authState.name = null;
     authState.authMethod = null;
   }
+  // Identity changed (login/logout/different account) — the domains cache
+  // is scoped to a single email, so drop it rather than risk showing one
+  // user's "See Report" state to another.
+  if (authState.email !== prevEmail) {
+    knownDomainsCache = null;
+    knownDomainsForEmail = null;
+  }
   updateNav(currentScreenId());
+  await maybeResumePendingReport();
+  refreshSeeReportButton();
+}
+
+/* ── "SEE REPORT" (landing page) ───────────────────────────────────
+   Only a REAL Google-authenticated user (not the transparent guest
+   account) can have a persistent report worth resurfacing, so this
+   is gated on isGoogleUser exactly like the nav login chip is. */
+async function fetchKnownDomains() {
+  const isGoogleUser = authState.loggedIn && authState.authMethod === 'google';
+  if (!isGoogleUser) { knownDomainsCache = null; knownDomainsForEmail = null; return []; }
+  if (knownDomainsCache && knownDomainsForEmail === authState.email) return knownDomainsCache;
+  try {
+    const res = await fetch('/api/my-domains', { credentials: 'include' });
+    if (!res.ok) return [];
+    const data = await res.json();
+    knownDomainsCache = Array.isArray(data.domains) ? data.domains : [];
+    knownDomainsForEmail = authState.email;
+    return knownDomainsCache;
+  } catch (e) {
+    console.warn('[see-report] /api/my-domains failed', e);
+    return [];
+  }
+}
+
+async function refreshSeeReportButton() {
+  const btn = $('see-report-btn');
+  if (!btn) return;
+  const isGoogleUser = authState.loggedIn && authState.authMethod === 'google';
+  if (!isGoogleUser) { btn.style.display = 'none'; return; }
+  const input = $('url-input');
+  const domain = normalizeDomain(input ? input.value : '');
+  if (!domain) { btn.style.display = 'none'; return; }
+  const domains = await fetchKnownDomains();
+  btn.style.display = domains.includes(domain) ? '' : 'none';
+}
+
+async function openSeeReport() {
+  const input = $('url-input');
+  const domain = normalizeDomain(input ? input.value : '');
+  if (!domain) return;
+
+  // Not authenticated (session expired between page-load and click, etc.)
+  // — never open a report directly; go through the real login flow first,
+  // remembering which domain we were trying to reach.
+  if (!(authState.loggedIn && authState.authMethod === 'google')) {
+    try { sessionStorage.setItem(CONFIG.PENDING_KEY, domain); } catch {}
+    loginWithGoogle();
+    return;
+  }
+  await loadExistingReport(domain);
+}
+
+/* Loads an EXISTING report for `domain`, belonging only to the currently
+   authenticated user, using only existing read endpoints (no new
+   analysis is triggered — this never calls /api/analyze). Guards against
+   cross-domain/cross-user mixing by re-checking the requested domain
+   against the domain actually embedded in each response before it is
+   ever written into `store` or rendered. */
+async function loadExistingReport(domain) {
+  const requestedDomain = domain;
+  try {
+    showToast('Loading your report…');
+    const [reportsRes, signalsRes, momentum] = await Promise.all([
+      fetch(`/api/reports/${encodeURIComponent(requestedDomain)}`, { credentials: 'include' }),
+      fetch(`/api/signals/${encodeURIComponent(requestedDomain)}`, { credentials: 'include' }),
+      api.marketMomentum(),
+    ]);
+
+    if (reportsRes.status === 401 || signalsRes.status === 401) {
+      try { sessionStorage.setItem(CONFIG.PENDING_KEY, requestedDomain); } catch {}
+      loginWithGoogle();
+      return;
+    }
+    if (!reportsRes.ok || !signalsRes.ok) {
+      showToast('Could not load that report — please try again.');
+      return;
+    }
+
+    const reportsData = await reportsRes.json();
+    const signalsData = await signalsRes.json();
+
+    // Hard isolation check: never render a report unless the backend
+    // itself confirms it is for the exact domain we asked for.
+    if (reportsData.domain !== requestedDomain || signalsData.domain !== requestedDomain) {
+      console.warn('[see-report] domain mismatch, refusing to render', reportsData.domain, signalsData.domain, requestedDomain);
+      showToast('Could not load that report — please try again.');
+      return;
+    }
+    const latest = (reportsData.reports || [])[0];
+    if (!latest) { showToast('No report found yet for that domain.'); return; }
+
+    store.domain = requestedDomain;
+    store.company = capitalize(requestedDomain.split('.')[0]);
+    store.url = latest.url || ('https://' + requestedDomain);
+    store.report = {
+      company_summary: latest.company_summary || '',
+      buyer_pain_points: latest.buyer_pain_points || [],
+      competitors: latest.competitors || [],
+      unique_value_prop: latest.unique_value_prop || '',
+      discovery_keywords: latest.discovery_keywords || [],
+    };
+    store.matches = signalsData.signals || [];
+    store.matchesFound = signalsData.count || (signalsData.signals || []).length;
+    // NOTE: /api/report/market-momentum is user-scoped, not domain-scoped,
+    // by the current backend contract (it always reflects the user's most
+    // recently analyzed domain). If this user has more than one tracked
+    // domain and `requestedDomain` isn't the most recent one, Section 03
+    // may show the wrong domain's competitor data — this is a backend
+    // limitation, not something the frontend can safely paper over.
+    if (momentum && momentum.domain && momentum.domain !== requestedDomain) {
+      console.warn('[see-report] market-momentum reflects domain', momentum.domain, 'not', requestedDomain, '— backend is user-scoped, not domain-scoped, for this endpoint.');
+    }
+    store.momentum = momentum;
+    store.pipeline = await api.pipelineProjection();
+
+    persistReport();
+    renderReport();
+  } catch (e) {
+    console.error('[see-report] failed', e);
+    showToast('Could not load that report — please try again.');
+  }
+}
+
+/* If we redirected out to Google login while trying to open a specific
+   report, this resumes that intent once we come back authenticated.
+   Best-effort only: /auth/google/callback (in index.py, not modified
+   here) redirects to /dashboard, not back to this page, so this only
+   fires if/when the user ends up back on this SPA afterward. */
+async function maybeResumePendingReport() {
+  let pending = null;
+  try { pending = sessionStorage.getItem(CONFIG.PENDING_KEY); } catch {}
+  if (!pending) return;
+  if (!(authState.loggedIn && authState.authMethod === 'google')) return;
+  try { sessionStorage.removeItem(CONFIG.PENDING_KEY); } catch {}
+  await loadExistingReport(pending);
 }
 
 function currentScreenId() {
@@ -5094,6 +5251,11 @@ function showScreen(id) {
   target.classList.add('active');
   window.scrollTo(0, 0);
   updateNav(id);
+
+  // Live refresh (Section 03) only runs while the Report screen is
+  // actually on screen; leaving it for any reason stops the interval.
+  if (id === 's-report') startMomentumPolling(); else stopMomentumPolling();
+  if (id === 's-home') refreshSeeReportButton();
 }
 
 const GOOGLE_ICON_SVG = `<svg viewBox="0 0 48 48"><path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3c-1.6 4.7-6.1 8-11.3 8-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6 29.6 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.7-.4-3.5z"/><path fill="#FF3D00" d="M6.3 14.7l6.6 4.8C14.6 15.6 18.9 13 24 13c3.1 0 5.9 1.2 8 3.1l5.7-5.7C34.6 6 29.6 4 24 4c-7.4 0-13.8 4.1-17.1 10.1z"/><path fill="#4CAF50" d="M24 44c5.5 0 10.4-1.9 14.3-5.1l-6.6-5.4C29.7 35 27 36 24 36c-5.2 0-9.6-3.3-11.2-7.9l-6.6 5.1C9.9 39.7 16.4 44 24 44z"/><path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.3-2.2 4.2-4.1 5.6l6.6 5.4C41.5 36 44 30.5 44 24c0-1.3-.1-2.7-.4-3.5z"/></svg>`;
@@ -5328,6 +5490,36 @@ function subredditHash(name) { let h = 0; for (let i=0;i<name.length;i++) h = ((
 function subredditColor(name) { const clean = name.replace(/^r\//i,''); return SUB_COLORS[subredditHash(clean) % SUB_COLORS.length]; }
 function subredditGlyph(name) { const clean = name.replace(/^r\//i,''); return esc(clean.charAt(0).toUpperCase() || '?'); }
 
+/* ── LIVE REFRESH — Section 03 polling lifecycle ──────────────────── */
+// Polls /api/report/market-momentum every 45s while s-report is the
+// active screen. No spinner/flicker/reset: renderMomentum() just updates
+// values and animates .gap-fill widths in place, exactly like the first
+// render. Never more than one interval running; leaving s-report always
+// clears it, and returning to it always starts a single fresh one.
+const MOMENTUM_POLL_MS = 45000;
+let momentumPollTimer = null;
+
+function stopMomentumPolling() {
+  if (momentumPollTimer) { clearInterval(momentumPollTimer); momentumPollTimer = null; }
+}
+
+function startMomentumPolling() {
+  stopMomentumPolling();
+  momentumPollTimer = setInterval(async () => {
+    if (currentScreenId() !== 's-report') { stopMomentumPolling(); return; }
+    const domainAtRequestTime = store.domain;
+    const data = await api.marketMomentum();
+    if (!data) return;
+    // If the active report changed while this request was in flight
+    // (new analysis, or a different report loaded), discard this
+    // response instead of letting it overwrite the now-current report.
+    if (store.domain !== domainAtRequestTime) return;
+    store.momentum = data;
+    renderMomentum(data);
+    persistReport();
+  }, MOMENTUM_POLL_MS);
+}
+
 /* ── MOMENTUM (Section 03) ────────────────────────────────────────── */
 function renderMomentum(momentum) {
   const fmtDelta = (pct) => {
@@ -5359,9 +5551,20 @@ function renderMomentum(momentum) {
   if (!bars.length) {
     gapEl.innerHTML = '<div class="empty-note">No competitor mention data yet.</div>';
   } else {
+    // Cap the rendered rows to the top 5 by mentions (always keeping
+    // "Your product" visible), and surface any remainder as a "+N more"
+    // note — the count is always derived from the real backend payload,
+    // never hardcoded.
+    const TOP_N = 5;
+    const youBar = bars.find((b) => b.is_you) || null;
+    const competitorBars = bars.filter((b) => !b.is_you);
+    const visibleCompetitors = competitorBars.slice(0, TOP_N);
+    const hiddenCount = Math.max(0, competitorBars.length - TOP_N);
+    const visibleBars = youBar ? [...visibleCompetitors, youBar] : visibleCompetitors;
+
     const max = Math.max(1, ...bars.map((b) => b.mentions || 0));
     const multiple = momentum.competitor_bar_chart.talked_about_multiple;
-    const rows = bars.map((b) => `
+    const rows = visibleBars.map((b) => `
       <div class="gap-row">
         <div class="gap-name ${b.is_you ? 'you' : ''}">${esc(b.name)}</div>
         <div class="gap-bar"><div class="gap-fill ${b.is_you ? 'you' : ''}" data-w="${Math.round(((b.mentions||0)/max)*100)}"></div></div>
@@ -5370,7 +5573,10 @@ function renderMomentum(momentum) {
     const caption = multiple
       ? `<p class="gap-caption">Your competitors are being <b>talked about ${multiple}&times; more</b> than you across the same matched signals.</p>`
       : `<p class="gap-caption">Not enough mentions of your own domain yet to compute a comparison — this fills in as more matches come in.</p>`;
-    gapEl.innerHTML = rows + caption;
+    const moreNote = hiddenCount > 0
+      ? `<p class="gap-caption">+${hiddenCount} more competitor${hiddenCount === 1 ? '' : 's'} tracked</p>`
+      : '';
+    gapEl.innerHTML = rows + caption + moreNote;
     requestAnimationFrame(() => {
       gapEl.querySelectorAll('.gap-fill').forEach((el, i) => {
         setTimeout(() => { el.style.width = el.dataset.w + '%'; }, 150 + i * 120);

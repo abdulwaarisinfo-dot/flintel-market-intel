@@ -4811,8 +4811,8 @@ html{overflow-x:clip;}
         <div class="proj-head">
           <div>
             <div class="proj-h-title">Projected trials from Reddit — 6 months after activating Flintel</div>
-            <div class="proj-h-value">216<span class="unit">trials</span></div>
-            <div class="proj-h-note">≈ 65 new customers · ~$19,500 MRR added at $300 ACV</div>
+            <div class="proj-h-value" id="proj-h-value">—<span class="unit">trials</span></div>
+            <div class="proj-h-note" id="proj-h-note">Building projection from your tracked signals…</div>
           </div>
           <div class="proj-legend">
             <div class="proj-leg"><div class="proj-leg-swatch now"></div>Current pace (organic)</div>
@@ -4820,7 +4820,7 @@ html{overflow-x:clip;}
           </div>
         </div>
         <div class="proj-chart">
-          <svg viewBox="0 0 600 220" preserveAspectRatio="none">
+          <svg id="proj-svg" viewBox="0 0 600 220" preserveAspectRatio="none">
             <defs>
               <linearGradient id="projGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stop-color="#B6FF1E" stop-opacity=".28"/>
@@ -4833,10 +4833,10 @@ html{overflow-x:clip;}
             <line class="proj-grid" x1="0" y1="140" x2="600" y2="140"/>
             <line class="proj-grid" x1="0" y1="190" x2="600" y2="190"/>
             <!-- y-axis labels -->
-            <text class="proj-axis-label" x="0"  y="35">250</text>
-            <text class="proj-axis-label" x="0"  y="85">150</text>
-            <text class="proj-axis-label" x="0"  y="135">75</text>
-            <text class="proj-axis-label" x="0"  y="185">0</text>
+            <text class="proj-axis-label" x="0" y="35" id="proj-axis-0">—</text>
+            <text class="proj-axis-label" x="0" y="85" id="proj-axis-1">—</text>
+            <text class="proj-axis-label" x="0" y="135" id="proj-axis-2">—</text>
+            <text class="proj-axis-label" x="0" y="185" id="proj-axis-3">0</text>
             <!-- x-axis labels -->
             <text class="proj-axis-label" x="30"  y="212" text-anchor="middle">Now</text>
             <text class="proj-axis-label" x="130" y="212" text-anchor="middle">M1</text>
@@ -4846,20 +4846,20 @@ html{overflow-x:clip;}
             <text class="proj-axis-label" x="530" y="212" text-anchor="middle">M5</text>
             <text class="proj-axis-label" x="590" y="212" text-anchor="end">M6</text>
             <!-- current pace: flat, boring -->
-            <path class="proj-line-now" stroke-dasharray="500" d="M30,178 L130,175 L230,172 L330,170 L430,168 L530,166 L590,165"/>
+            <path class="proj-line-now" id="proj-line-now" stroke-dasharray="500" d="M30,178 L130,175 L230,172 L330,170 L430,168 L530,166 L590,165"/>
             <!-- with Flintel: acceleration curve to top-right -->
-            <path class="proj-fill" d="M30,178 L130,158 L230,132 L330,102 L430,72 L530,46 L590,32 L590,190 L30,190 Z"/>
-            <path class="proj-line-after-glow" stroke-dasharray="500" d="M30,178 L130,158 L230,132 L330,102 L430,72 L530,46 L590,32"/>
-            <path class="proj-line-after" stroke-dasharray="500" d="M30,178 L130,158 L230,132 L330,102 L430,72 L530,46 L590,32"/>
+            <path class="proj-fill" id="proj-fill" d="M30,178 L130,158 L230,132 L330,102 L430,72 L530,46 L590,32 L590,190 L30,190 Z"/>
+            <path class="proj-line-after-glow" id="proj-line-after-glow" stroke-dasharray="500" d="M30,178 L130,158 L230,132 L330,102 L430,72 L530,46 L590,32"/>
+            <path class="proj-line-after" id="proj-line-after" stroke-dasharray="500" d="M30,178 L130,158 L230,132 L330,102 L430,72 L530,46 L590,32"/>
             <!-- end marker -->
             <g class="proj-marker">
-              <circle cx="590" cy="32" r="5"/>
-              <text x="580" y="20" text-anchor="end">216 trials</text>
+              <circle id="proj-marker-dot" cx="590" cy="32" r="5"/>
+              <text id="proj-marker-text" x="580" y="20" text-anchor="end">— trials</text>
             </g>
           </svg>
         </div>
       </div>
-      <p class="proj-note">Model uses the actual thread data above · conservative assumptions: 0.5% click-through, 10% visitor→trial, 30% trial→customer · at $300 ACV, this projects <b>~$19,500 in new MRR added by month 6</b>. Higher ACV products compound faster.</p>
+      <p class="proj-note" id="proj-note">Model uses the actual thread data above · conservative assumptions: 0.5% click-through, 10% visitor→trial, 30% trial→customer · at $300 ACV, this projects <b id="proj-note-mrr">~$0 in new MRR added by month 6</b>. Higher ACV products compound faster.</p>
     </div>
 
     <!-- CTA -->
@@ -4964,6 +4964,7 @@ const store = {
   matches: [],        // matches array returned by /api/analyze
   matchesFound: 0,
   momentum: null,      // /api/report/market-momentum response
+  pipeline: null,      // /api/report/pipeline-projection response
 };
 
 // Mirrors whatever /api/me last told us. Populated by refreshAuthState().
@@ -5074,6 +5075,13 @@ const api = {
       return res.json();
     } catch { return null; }
   },
+  async pipelineProjection() {
+    try {
+      const res = await fetch('/api/report/pipeline-projection', { credentials: 'include' });
+      if (!res.ok) return null;
+      return res.json();
+    } catch { return null; }
+  },
 };
 
 /* ── ROUTER ──────────────────────────────────────────────────────── */
@@ -5135,6 +5143,7 @@ function persistReport() {
       domain: store.domain, company: store.company, url: store.url,
       report: store.report, matches: store.matches,
       matchesFound: store.matchesFound, momentum: store.momentum,
+      pipeline: store.pipeline,
     }));
   } catch (e) { console.warn('[persist] failed', e); }
 }
@@ -5246,6 +5255,7 @@ async function startAnalysis() {
     store.matches = data.matches || [];
     store.matchesFound = data.matches_found || (data.matches || []).length;
     store.momentum = await api.marketMomentum();
+    store.pipeline = await api.pipelineProjection();
 
     const elapsed = Date.now() - scanStartedAt;
     if (elapsed < MIN_SCAN_DISPLAY_MS) {
@@ -5369,6 +5379,84 @@ function renderMomentum(momentum) {
   }
 }
 
+/* ── PIPELINE PROJECTION (Section 05) ─────────────────────────────── */
+function fmtMoney0(n) {
+  const v = Math.round(n || 0);
+  return '$' + v.toLocaleString('en-US');
+}
+
+function niceAxisMax(v) {
+  if (!v || v <= 0) return 10;
+  const pow = Math.pow(10, Math.floor(Math.log10(v)));
+  const norm = v / pow;
+  let step;
+  if (norm <= 1) step = 1;
+  else if (norm <= 2) step = 2;
+  else if (norm <= 5) step = 5;
+  else step = 10;
+  return step * pow;
+}
+
+// Fixed x-positions for Now, M1..M6 across the 600x220 viewBox (matches
+// the chart's gridlines/axis-label markup).
+const PROJ_X = [30, 130, 230, 330, 430, 530, 590];
+const PROJ_Y_TOP = 30;
+const PROJ_Y_BOTTOM = 190;
+
+function projPath(values, axisMax) {
+  const scale = (v) => PROJ_Y_BOTTOM - (Math.max(0, v) / axisMax) * (PROJ_Y_BOTTOM - PROJ_Y_TOP);
+  return values.map((v, i) => `${i === 0 ? 'M' : 'L'}${PROJ_X[i]},${scale(v).toFixed(1)}`).join(' ');
+}
+
+function renderPipeline(pipeline) {
+  if (!pipeline || !Array.isArray(pipeline.curve) || !pipeline.curve.length) {
+    $('proj-h-value').innerHTML = '—<span class="unit">trials</span>';
+    $('proj-h-note').textContent = 'Not enough tracked signal data yet to build a projection.';
+    return;
+  }
+
+  const curve = pipeline.curve;
+  const organicValues = [0, ...curve.map((c) => c.organic_trials_cumulative || 0)];
+  const flintelValues = [0, ...curve.map((c) => c.flintel_trials_cumulative || 0)];
+
+  const maxVal = Math.max(...organicValues, ...flintelValues, 1);
+  const axisMax = niceAxisMax(maxVal);
+
+  $('proj-axis-0').textContent = Math.round(axisMax);
+  $('proj-axis-1').textContent = Math.round(axisMax * 2 / 3);
+  $('proj-axis-2').textContent = Math.round(axisMax / 3);
+  $('proj-axis-3').textContent = '0';
+
+  const organicD = projPath(organicValues, axisMax);
+  const flintelD = projPath(flintelValues, axisMax);
+  const fillD = `${flintelD} L${PROJ_X[PROJ_X.length - 1]},${PROJ_Y_BOTTOM} L${PROJ_X[0]},${PROJ_Y_BOTTOM} Z`;
+
+  $('proj-line-now').setAttribute('d', organicD);
+  $('proj-fill').setAttribute('d', fillD);
+  $('proj-line-after-glow').setAttribute('d', flintelD);
+  $('proj-line-after').setAttribute('d', flintelD);
+
+  const lastX = PROJ_X[PROJ_X.length - 1];
+  const lastY = PROJ_Y_BOTTOM - (Math.max(0, flintelValues[flintelValues.length - 1]) / axisMax) * (PROJ_Y_BOTTOM - PROJ_Y_TOP);
+  $('proj-marker-dot').setAttribute('cx', lastX);
+  $('proj-marker-dot').setAttribute('cy', lastY.toFixed(1));
+  const markerText = $('proj-marker-text');
+  markerText.setAttribute('x', lastX - 10);
+  markerText.setAttribute('y', (lastY - 12).toFixed(1));
+  markerText.textContent = `${pipeline.projected_trials_6mo} trials`;
+
+  $('proj-h-value').innerHTML = `${pipeline.projected_trials_6mo}<span class="unit">trials</span>`;
+  $('proj-h-note').textContent =
+    `≈ ${pipeline.projected_customers_6mo} new customers · ~${fmtMoney0(pipeline.projected_mrr_6mo)} MRR added at ${fmtMoney0(pipeline.acv)} ACV`;
+
+  const ctRate = Math.round((pipeline.click_through_rate || 0) * 1000) / 10;
+  const vtRate = Math.round((pipeline.visitor_to_trial_rate || 0) * 100);
+  const tcRate = Math.round((pipeline.trial_to_customer_rate || 0) * 100);
+  $('proj-note').childNodes[0].textContent =
+    `Model uses the actual thread data above · conservative assumptions: ${ctRate}% click-through, ${vtRate}% visitor→trial, ${tcRate}% trial→customer · at ${fmtMoney0(pipeline.acv)} ACV, this projects `;
+  $('proj-note-mrr').textContent = `${fmtMoney0(pipeline.projected_mrr_6mo)} in new MRR added by month 6`;
+}
+
 /* ── REPORT CONTROLLER ─────────────────────────────────────────────── */
 function renderReport() {
   const report = store.report || {};
@@ -5420,6 +5508,7 @@ function renderReport() {
     </div>`).join('') : '<div class="empty-note">No matched threads yet for this domain.</div>';
 
   renderMomentum(store.momentum);
+  renderPipeline(store.pipeline);
 
   showScreen('s-report');
 }

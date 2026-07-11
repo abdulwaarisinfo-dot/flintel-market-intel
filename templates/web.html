@@ -5551,22 +5551,26 @@ function renderMomentum(momentum) {
   if (!bars.length) {
     gapEl.innerHTML = '<div class="empty-note">No competitor mention data yet.</div>';
   } else {
-    // Cap the rendered rows to the top 5 by mentions (always keeping
-    // "Your product" visible), and surface any remainder as a "+N more"
-    // note — the count is always derived from the real backend payload,
-    // never hardcoded.
     const TOP_N = 5;
     const youBar = bars.find((b) => b.is_you) || null;
     const competitorBars = bars.filter((b) => !b.is_you);
     const visibleCompetitors = competitorBars.slice(0, TOP_N);
     const hiddenCount = Math.max(0, competitorBars.length - TOP_N);
-    const visibleBars = youBar ? [...visibleCompetitors, youBar] : visibleCompetitors;
+
+    const LETTERS = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R','S','T','U','V','W','X','Y','Z'];
+    const relabeledCompetitors = visibleCompetitors.map((b, i) => ({
+      ...b,
+      displayName: i < LETTERS.length ? `Competitor ${LETTERS[i]}` : `Competitor ${i + 1}`,
+    }));
+    const visibleBars = youBar
+      ? [...relabeledCompetitors, { ...youBar, displayName: 'Your product' }]
+      : relabeledCompetitors;
 
     const max = Math.max(1, ...bars.map((b) => b.mentions || 0));
     const multiple = momentum.competitor_bar_chart.talked_about_multiple;
     const rows = visibleBars.map((b) => `
       <div class="gap-row">
-        <div class="gap-name ${b.is_you ? 'you' : ''}">${esc(b.name)}</div>
+        <div class="gap-name ${b.is_you ? 'you' : ''}">${esc(b.displayName)}</div>
         <div class="gap-bar"><div class="gap-fill ${b.is_you ? 'you' : ''}" data-w="${Math.round(((b.mentions||0)/max)*100)}"></div></div>
         <div class="gap-count">${b.mentions || 0}</div>
       </div>`).join('');

@@ -5544,6 +5544,29 @@ function renderMomentum(momentum) {
   const id_ = fmtDelta(iv.pct_change_vs_prior_period);
   const iEl = $('viz-intent-delta'); iEl.textContent = id_.text; iEl.className = 'viz-delta ' + id_.cls;
 
+  // ── NEW: flatten cards 1 & 2's sparklines when there's no real data yet ──
+  function flattenSparkline(cardId, hasData) {
+    const card = document.getElementById(cardId).closest('.viz-card');
+    if (!card) return;
+    const line = card.querySelector('.spark-line');
+    const fill = card.querySelector('.spark-fill');
+    const dot = card.querySelector('.spark-dot');
+    if (!line || !fill || !dot) return;
+    if (hasData) return;
+    line.setAttribute('d', 'M0,55 L200,55');
+    fill.setAttribute('d', 'M0,55 L200,55 L200,70 L0,70 Z');
+    dot.setAttribute('cx', '200');
+    dot.setAttribute('cy', '55');
+    line.style.animation = 'none';
+    fill.style.animation = 'none';
+    dot.style.animation = 'none';
+    fill.style.opacity = '0';
+    dot.style.opacity = '0';
+  }
+  flattenSparkline('viz-complaint-value', !!(cv.current_period_count));
+  flattenSparkline('viz-intent-value', !!(iv.current_period_count));
+  // ── end new code ──
+
   $('viz-serp-note').textContent = momentum.page_one_threads_reason || 'Not available yet — no SERP-ranking source is connected.';
 
   const bars = (momentum.competitor_bar_chart && momentum.competitor_bar_chart.bars) || [];

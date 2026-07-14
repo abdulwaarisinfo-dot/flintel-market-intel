@@ -208,7 +208,14 @@ flintel_domain_reports_collection = db["flintel_domain_reports"]
 # reviewed/accumulated different signal history over time).
 flintel_analytics_collection = db["flintel_analytics"]
 
-app = FastAPI(title="Flintel — Website Market Intelligence", version="2.6.0")
+app = FastAPI(
+    title="Flintel — Website Market Intelligence",
+    version="2.6.0",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None
+)
+
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 

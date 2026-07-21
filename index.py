@@ -128,12 +128,89 @@ THIS REVISION (on top of 2.6.0) FIXES the matching-scope bug:
   get_or_create_domain_report()), Section 03, Section 05, competitor
   matching, or any route/function signature. Only the keyword LIST fed
   into the existing matching functions has grown.
+
+THIS REVISION (on top of 2.7.0) ADDS the background-service keyword
+hand-off:
+
+  WHAT IT IS: this web service (Flintel) and the background discovery
+  service (Flintel's Reddit SERP + RSS pipeline) already share the
+  same MongoDB database (MONGODB_DB, "fx_signals" by default) — they
+  are two processes pointed at one database, not two databases. The
+  background service owns a collection called `flintel_keywords`: a
+  fetch-once-forever cache where every keyword it has ever been told
+  about eventually gets a real Google-rank SERP search + Reddit posts
+  discovered for it. Until now, the ONLY way a keyword got into that
+  collection was the hardcoded REDDIT_SEARCH_KEYWORDS list inside the
+  background service's own file — nothing this web service produced
+  (a domain's discovery_keywords, buyer_pain_points, competitor names)
+  ever reached it.
+
+  FIX: right after a domain gets a FRESH Claude analysis (i.e. inside
+  get_or_create_domain_report(), the same place that already writes
+  the shared flintel_domain_reports_collection cache — not on cache
+  hits, so a domain's keywords are only ever pushed to the background
+  service once, matching that function's existing "analyze once per
+  domain" guarantee), every keyword this analysis produced — the full
+  discovery_keywords list, the full buyer_pain_points list, and every
+  competitor name — is upserted into `flintel_keywords`, using the
+  EXACT SAME document shape the background service's own
+  sync_keywords_to_db() already writes:
+
+    {
+      "keyword":                 <string>,
+      "fetched":                 False,
+      "search_volume":           <random int, 300-5000>,
+      "search_volume_is_random": True,
+      "last_fetched_at":         None,
+      "created_at":              <now>,
+    }
+
+  The only difference from a background-service-native keyword is
+  search_volume: instead of being left None (waiting for that
+  service's own seed_search_volume_batch() to fill it in later), it
+  is pre-seeded here with a random placeholder in the same 300-5000
+  range and philosophy already established for random fallbacks
+  throughout this whole system — always a random number instead of a
+  gap, and always honestly flagged as random
+  (search_volume_is_random: True) rather than pretending to be a real,
+  provider-returned number. `fetched` stays False, exactly like a
+  brand-new background-service keyword — this web service NEVER marks
+  a keyword fetched, does not touch google_rank/reddit fetching in any
+  way, and does not create or write to any other background-service
+  collection (signals, flintel_pending_batch, flintel_queue_messages,
+  etc.). The background service's own discovery loop
+  (run_serp_discovery_loop() -> get_due_keywords()) picks these
+  keywords up on its very next pass exactly like any other due
+  keyword, runs its normal SERP search + Reddit RSS fetch for them,
+  and marks them fetched=True forever once done — completely
+  unmodified behavior on that side.
+
+  The upsert uses $setOnInsert (via _seed_keywords_to_background_service()
+  below), the identical pattern sync_keywords_to_db() already uses in
+  the background service, so calling this multiple times for the same
+  keyword (e.g. the same phrase appearing in two different domains'
+  discovery_keywords) is always safe — it never overwrites an
+  already-existing keyword document, whatever its current fetched/
+  search_volume state is.
+
+  This addition is wrapped in try/except and can never break
+  get_or_create_domain_report() or the /api/analyze response — a
+  failure here only means those keywords won't show up in the
+  background service's queue yet; the shared domain-report cache
+  write (the thing get_or_create_domain_report() exists for) still
+  completes normally either way.
+
+  NOT CHANGED: everything else in this file — every route, every
+  response schema, every existing collection's shape, Section 03,
+  Section 05, the shared domain cache, per-user isolation, the live
+  match tracker — is 100% as-is.
 """
 
 import asyncio
 import json
 import logging
 import os
+import random
 import re
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -181,6 +258,18 @@ MAX_COMPETITORS_FOR_GAP = 5
 DOMAIN_LOCK_POLL_INTERVAL_SECONDS = 1.0
 DOMAIN_LOCK_MAX_WAIT_SECONDS = 45.0
 
+# ── BACKGROUND-SERVICE KEYWORD HAND-OFF CONFIG ──────────────────────────────
+# Random search_volume placeholder range used ONLY when this web service
+# seeds a brand-new keyword into the background service's flintel_keywords
+# collection (see _seed_keywords_to_background_service() below). Same
+# 300-5000 default/philosophy already used by the background service's own
+# random-fallback logic for search_volume — a keyword is never left with a
+# blank/missing search_volume, it's always a plausible placeholder number,
+# always honestly flagged (search_volume_is_random: True) rather than
+# presented as real.
+WEB_KEYWORD_SEED_VOLUME_MIN = int(os.getenv("WEB_KEYWORD_SEED_VOLUME_MIN", "300"))
+WEB_KEYWORD_SEED_VOLUME_MAX = int(os.getenv("WEB_KEYWORD_SEED_VOLUME_MAX", "5000"))
+
 if not ANTHROPIC_API_KEY:
     print("WARNING: ANTHROPIC_API_KEY is not set. /api/analyze will fail until it is.")
 
@@ -208,7 +297,22 @@ flintel_domain_reports_collection = db["flintel_domain_reports"]
 # reviewed/accumulated different signal history over time).
 flintel_analytics_collection = db["flintel_analytics"]
 
-app = FastAPI(title="Flintel — Website Market Intelligence", version="2.6.0")
+# NEW — the background service's OWN collection. This web service does not
+# own this collection's schema; it only ever upserts new keyword documents
+# into it using the exact same shape the background service itself already
+# writes (see sync_keywords_to_db() in the background service). Same
+# MONGODB_DB, same physical database — no cross-service network call
+# involved, just a shared MongoDB collection both processes read/write.
+flintel_keywords_collection = db["flintel_keywords"]
+
+app = FastAPI(
+    title="Flintel — Website Market Intelligence",
+    version="2.8.0",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None
+)
+
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -571,6 +675,121 @@ Analyze this site and return the market-intelligence report as JSON only, follow
 
 
 # ============================================================================
+# BACKGROUND-SERVICE KEYWORD HAND-OFF (new in this revision)
+# ============================================================================
+#
+# Writes new keywords into the background service's OWN `flintel_keywords`
+# collection — the exact same fetch-once-forever cache its
+# sync_keywords_to_db() function maintains. This web service and the
+# background service are two separate processes pointed at the SAME
+# MongoDB database (MONGODB_DB), so this is just a normal collection
+# write, not a network call to another service.
+#
+# Document shape matches the background service's own schema exactly:
+#   keyword, fetched, search_volume, search_volume_is_random,
+#   last_fetched_at, created_at
+# The only field this web service ever sets differently from a brand-new
+# background-service-native keyword is search_volume: instead of None
+# (left for that service's own seed_search_volume_batch() to fill in
+# later), it's pre-seeded with a random placeholder in the
+# WEB_KEYWORD_SEED_VOLUME_MIN..MAX range — same random-fallback
+# philosophy used everywhere else in this system: never a permanent gap,
+# always a plausible number, always honestly flagged as random rather
+# than presented as real.
+# ============================================================================
+
+def _random_web_keyword_search_volume() -> int:
+    """Random placeholder search_volume for a keyword this web service is
+    seeding into the background service's cache — same range/behavior at
+    every call site, mirroring the background service's own
+    _random_search_volume_fallback() helper."""
+    return random.randint(WEB_KEYWORD_SEED_VOLUME_MIN, WEB_KEYWORD_SEED_VOLUME_MAX)
+
+
+def _collect_keywords_for_background_service(report: dict) -> list[str]:
+    """
+    Pulls every keyword-like string out of a fresh Claude analysis report
+    that the background service should go discover real Reddit posts
+    for: the full discovery_keywords list, the full buyer_pain_points
+    list, and every competitor name. Exact-duplicate strings are
+    deduplicated; nothing is trimmed, shortened, or rewritten; order is
+    preserved (discovery_keywords first, then buyer_pain_points, then
+    competitor names) purely for readability in the flintel_keywords
+    collection — order has no functional meaning to the background
+    service, which treats every due keyword identically regardless of
+    where it came from.
+    """
+    keywords: list[str] = []
+    seen: set[str] = set()
+
+    def _add(value: str | None):
+        if value and value not in seen:
+            seen.add(value)
+            keywords.append(value)
+
+    for kw in report.get("discovery_keywords") or []:
+        _add(kw)
+    for pain_point in report.get("buyer_pain_points") or []:
+        _add(pain_point)
+    for comp in report.get("competitors") or []:
+        name = (comp or {}).get("name") if isinstance(comp, dict) else None
+        _add(name)
+
+    return keywords
+
+
+async def _seed_keywords_to_background_service(keywords: list[str]):
+    """
+    Upserts every keyword into flintel_keywords using $setOnInsert — the
+    identical pattern the background service's own sync_keywords_to_db()
+    already uses — so this is always safe to call, even for a keyword
+    that already exists there (whatever its current fetched/search_volume
+    state is is left completely untouched; this only ever writes on
+    first-ever insert for a given keyword string).
+
+    fetched is always set to False here: this web service never marks a
+    keyword fetched, never touches google_rank or Reddit fetching in any
+    way, and never writes to any other background-service collection.
+    The background service's own discovery loop picks these keywords up
+    on its next pass exactly like any other due keyword.
+    """
+    if not keywords:
+        return
+    now = datetime.now(timezone.utc)
+    seeded_count = 0
+    for kw in keywords:
+        try:
+            result = await flintel_keywords_collection.update_one(
+                {"keyword": kw},
+                {"$setOnInsert": {
+                    "keyword":                  kw,
+                    "fetched":                  False,
+                    "search_volume":            _random_web_keyword_search_volume(),
+                    "search_volume_is_random":  True,
+                    "last_fetched_at":          None,
+                    "created_at":               now,
+                }},
+                upsert=True,
+            )
+            if result.upserted_id is not None:
+                seeded_count += 1
+        except Exception as exc:
+            logger.error("[KEYWORD-HANDOFF] failed to seed keyword=%r into flintel_keywords: %s", kw, exc)
+
+    logger.info(
+        "[KEYWORD-HANDOFF] %d/%d keyword(s) newly seeded into flintel_keywords "
+        "(already-existing keywords left untouched) | search_volume: random "
+        "%d-%d, flagged search_volume_is_random=True",
+        seeded_count, len(keywords), WEB_KEYWORD_SEED_VOLUME_MIN, WEB_KEYWORD_SEED_VOLUME_MAX,
+    )
+
+
+# ============================================================================
+# END BACKGROUND-SERVICE KEYWORD HAND-OFF
+# ============================================================================
+
+
+# ============================================================================
 # SHARED, DOMAIN-SCOPED ANALYSIS CACHE (unchanged from 2.5.0)
 # ============================================================================
 #
@@ -665,6 +884,11 @@ async def get_or_create_domain_report(domain: str, url: str) -> dict:
         shared. Per-user state (flintel_web_data_collection "my reports"
         history, flintel_user_signals, reviewed flags) is written
         separately by the caller and remains fully user-scoped.
+      - NEW: a domain's keywords (discovery_keywords + buyer_pain_points
+        + competitor names) are handed off to the background service's
+        flintel_keywords cache exactly once — right here, right after a
+        FRESH analysis completes — never on a cache hit. See the
+        BACKGROUND-SERVICE KEYWORD HAND-OFF section above.
     """
     existing = await flintel_domain_reports_collection.find_one({"domain": domain})
     if existing and existing.get("status") == "complete":
@@ -717,6 +941,21 @@ async def get_or_create_domain_report(domain: str, url: str) -> dict:
         },
         upsert=True,
     )
+
+    # NEW — hand off this domain's keywords to the background service,
+    # exactly once, right here (a fresh analysis just completed — this
+    # branch is never reached again for this domain). Wrapped in
+    # try/except so a hand-off failure can never break the domain-report
+    # cache write above or the /api/analyze response that depends on it.
+    try:
+        background_keywords = _collect_keywords_for_background_service(report)
+        await _seed_keywords_to_background_service(background_keywords)
+    except Exception as exc:
+        logger.error(
+            "get_or_create_domain_report(): background-service keyword hand-off "
+            "failed for domain=%s: %s", domain, exc,
+        )
+
     return await flintel_domain_reports_collection.find_one({"domain": domain})
 
 
@@ -1472,6 +1711,15 @@ async def on_startup():
     await flintel_analytics_collection.create_index(
         [("user_email", 1), ("domain", 1)], unique=True, name="user_domain_analytics_unique"
     )
+    # NEW — same unique index the background service itself creates on
+    # flintel_keywords ("keyword_unique" on the "keyword" field). Creating
+    # it here too is safe/idempotent (MongoDB no-ops if it already
+    # exists) — it's what makes _seed_keywords_to_background_service()'s
+    # $setOnInsert upserts race-safe regardless of which service happens
+    # to create the index first.
+    await flintel_keywords_collection.create_index(
+        [("keyword", 1)], unique=True, name="keyword_unique"
+    )
 
     asyncio.create_task(run_live_match_tracker())
     logger.info("Flintel startup complete — live tracker scheduled.")
@@ -1507,7 +1755,9 @@ async def analyze(payload: AnalyzeRequest, user: dict = Depends(get_current_user
     # and discovery_keywords are reused here — no new scrape, no new
     # Claude call, no API cost, and critically: every user gets the same
     # keywords, so matching against web_data_collection produces the same
-    # results for everyone looking at this domain.
+    # results for everyone looking at this domain. On a FRESH analysis
+    # only, this also hands the domain's keywords off to the background
+    # service's flintel_keywords cache — see the function's docstring.
     domain_doc = await get_or_create_domain_report(domain, url)
     report = domain_doc["report"]
     # ─────────────────────────────────────────────────────────────────────

@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -4069,6 +4070,134 @@ html{overflow-x:clip;}
   .hp-cost-cmp-row{padding:18px 0;}
 }
 
+
+/* ══════════════════════════════════════════════════════════════════
+   REPORT SCREEN REDESIGN — "Signal Room"
+   Visual-only overrides for #s-report. No JS-authored class names,
+   element IDs, DOM structure order, or section sequence are touched.
+   Every selector below is scoped under #s-report so #s-home / #s-scan
+   are provably unaffected. Palette stays the existing 4 tokens:
+   --ink / --blue / --lime / --white.
+   ══════════════════════════════════════════════════════════════════ */
+
+/* ── Hero: from a light dotted card to a dark "terminal" opening ── */
+#s-report .report-hero{
+  background:var(--ink);
+  background-image:
+    linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);
+  background-size:28px 28px;
+  border-bottom:none;
+  padding:64px 22px 52px;
+}
+#s-report .report-breadcrumb{color:rgba(255,255,255,.5);}
+#s-report .report-breadcrumb span:first-child{color:var(--lime);font-weight:600;}
+#s-report .report-h{color:#fff;}
+#s-report .report-h span{background:linear-gradient(100deg,var(--lime),#fff 85%);-webkit-background-clip:text;background-clip:text;color:transparent;}
+#s-report .report-summary{color:rgba(255,255,255,.62);}
+#s-report .report-summary b{color:#fff;}
+#s-report .rmchip{background:rgba(255,255,255,.06);color:rgba(255,255,255,.72);border:1px solid rgba(255,255,255,.1);}
+#s-report .rmchip svg{color:var(--lime);}
+
+/* ── Live ticker: dark strip pulled up into the hero, not a card ── */
+#s-report .live-ticker{
+  background:#000;border:1px solid rgba(255,255,255,.08);
+  border-radius:var(--r-lg);margin:36px 0 -74px;position:relative;z-index:2;
+  box-shadow:0 24px 48px rgba(0,0,0,.35);
+}
+#s-report .lt-label{color:rgba(255,255,255,.55);}
+#s-report .lt-metric span{color:rgba(255,255,255,.5);}
+#s-report .lt-metric b{color:#fff;font-family:var(--font-num);font-variant-numeric:tabular-nums;}
+#s-report .lt-sep{background:rgba(255,255,255,.12);}
+#s-report .lt-pulse{background:var(--lime);box-shadow:0 0 0 0 rgba(182,255,30,.5);}
+#s-report .report-body{padding-top:110px;}
+
+/* ── Section labels: quieter, numbered like a running log ── */
+#s-report .rs-label{background:transparent;color:var(--g3);padding:0;font-weight:600;letter-spacing:.08em;}
+#s-report .rs-label::before{content:"";display:inline-block;width:16px;height:1px;background:var(--g4);margin-right:10px;vertical-align:middle;}
+#s-report .rs-title{letter-spacing:-.03em;}
+
+/* ── Section 01 — Community Weather Map inspired: circular badges,
+   heat-graded cards (relevance drives contrast, not a new color),
+   irregular grid so it reads as a scattered map rather than a table ── */
+#s-report .subreddit-grid{
+  display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:1fr;gap:14px;
+}
+#s-report .sub-card{
+  grid-column:span 3;border-left:none;border-radius:22px;
+  padding:24px 24px 22px;background:var(--g6);
+  display:flex;flex-direction:column;
+}
+#s-report .sub-card:nth-child(6n+1){grid-column:span 4;}
+#s-report .sub-card:nth-child(6n+2){grid-column:span 2;}
+#s-report .sub-card:nth-child(6n+4){grid-column:span 2;}
+#s-report .sub-card:nth-child(6n+5){grid-column:span 4;}
+#s-report .sub-card.rel-high, #s-report .sub-card:has(.rel-high){background:var(--ink);}
+#s-report .sub-card:has(.rel-high) .sub-name{color:#fff;}
+#s-report .sub-card:has(.rel-high) .sub-quote{background:rgba(255,255,255,.06);color:rgba(255,255,255,.72);}
+#s-report .sub-card:has(.rel-high) .sub-stat b{color:#fff;}
+#s-report .sub-icon{width:46px;height:46px;font-size:17px;box-shadow:0 0 0 4px var(--g6),0 4px 10px rgba(0,0,0,.12);}
+#s-report .sub-card:has(.rel-high) .sub-icon{box-shadow:0 0 0 4px var(--ink),0 0 20px rgba(182,255,30,.25);}
+#s-report .rel-badge{border-radius:980px;font-weight:700;letter-spacing:.06em;}
+#s-report .rel-badge.rel-high{background:var(--lime);color:var(--ink);}
+#s-report .rel-badge.rel-med{background:var(--g5);color:var(--g1);}
+#s-report .sub-card:has(.rel-high) .rel-badge.rel-med{background:rgba(255,255,255,.1);color:rgba(255,255,255,.75);}
+#s-report .sub-stats{margin-top:auto;}
+
+/* ── Section 02 — thread cards: bigger score ring as the focal point ── */
+#s-report .thread-list{display:flex;flex-direction:column;gap:12px;}
+#s-report .thread-card{border-radius:18px;border:1px solid var(--g6);padding:22px 24px;position:relative;}
+#s-report .thread-card::before{content:"";position:absolute;left:0;top:16px;bottom:16px;width:3px;border-radius:0 3px 3px 0;background:transparent;transition:background .25s;}
+#s-report .thread-card:hover{border-color:var(--g5);transform:none;box-shadow:0 10px 26px rgba(0,0,0,.06);}
+#s-report .thread-card:hover::before{background:var(--lime);}
+#s-report .thread-score-col{width:56px;height:56px;padding:4px;border-radius:50%;}
+#s-report .tscore{font-family:var(--font-num);font-weight:700;}
+#s-report .thread-source{color:var(--g3);letter-spacing:.02em;}
+#s-report .tpill{background:var(--g6);border-radius:980px;}
+
+/* ── Section 03 — signal cards + gap chart ── */
+#s-report .viz-grid-3{gap:14px;}
+#s-report .viz-card{border:none;border-top:2px solid var(--g5);border-radius:0;background:transparent;padding:20px 4px;}
+#s-report .viz-card:hover{border-color:var(--g5);box-shadow:none;}
+#s-report .viz-card:nth-child(1){border-top-color:var(--lime);}
+#s-report .viz-card:nth-child(2){border-top-color:var(--blue);}
+#s-report .gap-viz{border:1px solid var(--g6);border-radius:var(--r-lg);padding:8px 22px;margin-top:36px;}
+#s-report .gap-bar{background:var(--g5);}
+
+/* ── Section 04 — closing-the-gap steps: quieter rail, no card boxes ── */
+#s-report .step-cards{gap:0;position:relative;}
+#s-report .step-cards::before{content:"";position:absolute;left:14px;top:6px;bottom:6px;width:1px;background:var(--g5);}
+#s-report .step-card{background:transparent;border-top:none;border-radius:0;padding-left:44px;position:relative;margin-bottom:8px;}
+#s-report .step-card:hover{transform:none;box-shadow:none;}
+#s-report .step-card-head{padding:22px 0 0 0;}
+#s-report .step-number{position:absolute;left:0;width:28px;height:28px;font-size:12px;box-shadow:0 0 0 5px #fff;}
+#s-report .step-card-body{padding:14px 0 30px;}
+#s-report .comment-preview{background:var(--g6);border-left:3px solid var(--lime);border-radius:var(--r-md);}
+#s-report .upvote-timeline{border-top:1px solid var(--g5);padding-top:16px;}
+
+/* ── Section 05 — pipeline projection card ── */
+#s-report .proj-viz{border:1px solid var(--g6);border-radius:var(--r-lg);padding:26px 26px 12px;background:var(--g6);}
+#s-report .proj-h-value{color:var(--ink);}
+#s-report .proj-leg-swatch.now{background:var(--g4);}
+#s-report .proj-leg-swatch.after{background:var(--lime);}
+#s-report .proj-line-now{stroke:var(--g4);}
+#s-report .proj-line-after,#s-report .proj-line-after-glow{stroke:var(--ink);}
+#s-report #proj-marker-dot{fill:var(--lime);}
+#s-report .proj-grid{stroke:var(--g5);}
+
+/* ── CTA / pricing: quieter cards, one clear featured tier ── */
+#s-report .report-cta-section{border-top:none;padding-top:56px;}
+#s-report .price-card{border-radius:var(--r-lg);border-color:var(--g6);}
+#s-report .price-card.featured{box-shadow:0 20px 44px rgba(10,10,10,.22);}
+#s-report .pc-tier{letter-spacing:.04em;}
+
+@media (max-width:860px){
+  #s-report .subreddit-grid{grid-template-columns:repeat(2,1fr);}
+  #s-report .sub-card,#s-report .sub-card:nth-child(6n+1),#s-report .sub-card:nth-child(6n+2),
+  #s-report .sub-card:nth-child(6n+4),#s-report .sub-card:nth-child(6n+5){grid-column:span 2;}
+  #s-report .live-ticker{margin:24px 0 0;}
+  #s-report .report-body{padding-top:24px;}
+}
 </style>
 </head>
 <body>

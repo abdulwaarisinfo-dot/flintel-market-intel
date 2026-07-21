@@ -104,14 +104,12 @@ THIS REVISION (on top of 2.6.0) FIXES the matching-scope bug:
   no new collection:
     1. The 6-item slice ([:MAX_KEYWORDS_TO_MATCH]) is removed from all
        three call sites — the full discovery_keywords list is used.
-    2. A new small helper, _combine_keywords_and_pain_points(), merges
-       the full discovery_keywords list with the full buyer_pain_points
-       list (deduplicating exact-string repeats only — no trimming or
-       rewriting of any phrase) into one combined list. That combined
-       list is what gets passed into match_existing_web_data() /
-       _build_keyword_query() in analyze(), get_signals(), and
-       run_live_match_tracker(). Each pain-point string is just another
-       "keyword" string as far as the matching mechanism is concerned.
+    2. A helper merges the full discovery_keywords list with the full
+       buyer_pain_points list (deduplicating exact-string repeats
+       only — no trimming or rewriting of any phrase) into one
+       combined list. Each pain-point string is just another
+       "keyword" string as far as the matching mechanism is
+       concerned.
     3. flintel_tracking_state_collection's stored "discovery_keywords"
        field (read by run_live_match_tracker() on every pass) is now
        populated with this same combined list at write time (inside
@@ -125,58 +123,111 @@ THIS REVISION (on top of 2.6.0) FIXES the matching-scope bug:
   saves both fields in their original, unmodified shape), the /api/
   analyze response JSON shape, user_email scoping/isolation anywhere,
   the shared domain cache (flintel_domain_reports_collection /
-  get_or_create_domain_report()), Section 03, Section 05, competitor
-  matching, or any route/function signature. Only the keyword LIST fed
-  into the existing matching functions has grown.
+  get_or_create_domain_report()), Section 03, Section 05, or any
+  route/function signature.
 
-THIS REVISION (on top of 2.6.1) FIXES the datetime JSON-serialization
-crash:
+THIS REVISION (on top of 2.7.0) ADDS the background-service keyword
+hand-off:
 
-  PROBLEM: match_existing_web_data() only converted `posted_at` and
-  `fetched_at` datetime fields to ISO strings before appending a doc
-  to `matches`. Any other datetime field on a `signals` document
-  (most commonly `created_at`, but this applies to ANY datetime field
-  a scraper might add in the future) was left as a raw Python
-  `datetime` object. Since /api/analyze and /api/signals/{domain}
-  return `matches` directly inside a JSONResponse, FastAPI's default
-  JSON encoder has no idea how to serialize a `datetime` and raises:
+  WHAT IT IS: this web service (Flintel) and the background discovery
+  service (Flintel's Reddit SERP + RSS pipeline) already share the
+  same MongoDB database (MONGODB_DB, "fx_signals" by default) — they
+  are two processes pointed at one database, not two databases. The
+  background service owns a collection called `flintel_keywords`: a
+  fetch-once-forever cache where every keyword it has ever been told
+  about eventually gets a real Google-rank SERP search + Reddit posts
+  discovered for it. Until now, the ONLY way a keyword got into that
+  collection was the hardcoded REDDIT_SEARCH_KEYWORDS list inside the
+  background service's own file — nothing this web service produced
+  (a domain's discovery_keywords, buyer_pain_points, competitor names)
+  ever reached it.
 
-      TypeError: Object of type datetime is not JSON serializable
+  FIX: right after a domain gets a FRESH Claude analysis (i.e. inside
+  get_or_create_domain_report(), the same place that already writes
+  the shared flintel_domain_reports_collection cache — not on cache
+  hits, so a domain's keywords are only ever pushed to the background
+  service once, matching that function's existing "analyze once per
+  domain" guarantee), every keyword this analysis produced — the full
+  discovery_keywords list, the full buyer_pain_points list, and every
+  competitor name — is upserted into `flintel_keywords`, using the
+  EXACT SAME document shape the background service's own
+  sync_keywords_to_db() already writes.
 
-  This crashed *every* /api/analyze and /api/signals/{domain} call
-  for which even a single matched signals document happened to carry
-  a datetime field other than posted_at/fetched_at.
+  The upsert uses $setOnInsert, the identical pattern
+  sync_keywords_to_db() already uses in the background service, so
+  calling this multiple times for the same keyword (e.g. the same
+  phrase appearing in two different domains' discovery_keywords) is
+  always safe — it never overwrites an already-existing keyword
+  document, whatever its current fetched/search_volume state is.
 
-  FIX: a single generic helper, _serialize_datetimes(doc), walks every
-  key in a document and ISO-formats any `datetime` value it finds —
-  instead of a hardcoded, easily-incomplete list of field names. It is
-  now used everywhere a Mongo document (or a copy of one) is placed
-  into a JSON response body:
-    - match_existing_web_data()      (was missing `created_at`, etc.)
-    - _persist_match_for_user()      (already listed 3 fields; now
-                                       future-proofed the same way)
-    - _serialize_signal()            (already listed several fields;
-                                       now future-proofed the same way)
-    - get_reports()                  (previously called
-                                       doc["created_at"].isoformat()
-                                       directly, which would itself
-                                       raise if created_at were ever
-                                       missing or already a string —
-                                       now goes through the same safe
-                                       helper)
+THIS REVISION (on top of 2.8.0) FIXES TWO BUGS:
 
-  NOT CHANGED BY THIS REVISION: matching logic, keyword combination,
-  domain caching, per-user isolation, Section 03/05 computations, or
-  any route/function signature or response JSON *shape* — every field
-  that was already being returned still is, just safely serialized
-  regardless of which datetime fields happen to be present on a given
-  document.
+  BUG 1 — datetime JSON-serialization crash (REGRESSION):
+    match_existing_web_data() only converted `posted_at` and
+    `fetched_at` datetime fields to ISO strings before appending a doc
+    to `matches`. Any other datetime field on a `signals` document
+    (most commonly `created_at`) was left as a raw Python `datetime`
+    object, and since /api/analyze and /api/signals/{domain} return
+    `matches` directly inside a JSONResponse, this raised:
+        TypeError: Object of type datetime is not JSON serializable
+    This had already been fixed in a prior revision via a generic
+    _serialize_datetimes() helper, but that fix was not present in the
+    2.7.0 -> 2.8.0 diff this file was built from, so it has regressed.
+    It is re-applied here, in the same four places as before:
+    match_existing_web_data(), _persist_match_for_user(),
+    _serialize_signal(), and get_reports().
+
+  BUG 2 — keyword-scope mismatch between background-service seeding
+  and this service's own matching:
+    get_or_create_domain_report() seeds THREE keyword sources into the
+    background service's flintel_keywords cache: discovery_keywords,
+    buyer_pain_points, AND competitor names (via
+    _collect_keywords_for_background_service()). But analyze(),
+    get_signals(), and store_flintel_web_data() (which feeds
+    run_live_match_tracker() via flintel_tracking_state_collection)
+    were still building their OWN, narrower matching-keyword list from
+    only discovery_keywords + buyer_pain_points — competitor names
+    were never included.
+
+    Practically: the background service would go fetch real Reddit
+    posts that specifically came up under a competitor-name search,
+    save them into `signals` with that competitor name as their
+    search_keyword — but this service's own matching would never
+    query `signals` using that competitor name as a keyword, so those
+    posts would only end up in a given user's flintel_user_signals
+    collection (and therefore their dashboard's competitor_gap /
+    your_mentions stats) by accident, if the post's free text also
+    happened to contain a discovery_keyword or pain-point phrase.
+    Competitor-specific signal coverage was silently incomplete.
+
+    FIX: the exact same combined list already being computed for the
+    background-service hand-off (_collect_keywords_for_background_service(),
+    which already merges discovery_keywords + buyer_pain_points +
+    competitor names) is now reused as the ONE keyword source for
+    everything downstream of a report: seeding, matching in analyze(),
+    matching in get_signals(), and the discovery_keywords field written
+    into flintel_tracking_state_collection (read by
+    run_live_match_tracker() every pass). Seeding and matching can now
+    never drift apart again, because they are built from the same
+    function call rather than two independently-maintained lists.
+
+    The old discovery_keywords-plus-buyer_pain_points-only combiner is
+    left in place (still correct on its own terms, still used nowhere
+    that would break anything) for reference / possible future narrower
+    use, but no route or background-hand-off call site still calls it
+    directly — everything now goes through the single, wider combiner.
+
+  NOT CHANGED BY THIS REVISION: every route's request/response shape,
+  the shared domain cache, per-user isolation, Section 03, Section 05,
+  the live match tracker's loop/logging, or any other collection's
+  document shape.
 """
 
 import asyncio
 import json
 import logging
 import os
+import random
 import re
 import secrets
 from datetime import datetime, timedelta, timezone
@@ -224,6 +275,18 @@ MAX_COMPETITORS_FOR_GAP = 5
 DOMAIN_LOCK_POLL_INTERVAL_SECONDS = 1.0
 DOMAIN_LOCK_MAX_WAIT_SECONDS = 45.0
 
+# ── BACKGROUND-SERVICE KEYWORD HAND-OFF CONFIG ──────────────────────────────
+# Random search_volume placeholder range used ONLY when this web service
+# seeds a brand-new keyword into the background service's flintel_keywords
+# collection (see _seed_keywords_to_background_service() below). Same
+# 300-5000 default/philosophy already used by the background service's own
+# random-fallback logic for search_volume — a keyword is never left with a
+# blank/missing search_volume, it's always a plausible placeholder number,
+# always honestly flagged (search_volume_is_random: True) rather than
+# presented as real.
+WEB_KEYWORD_SEED_VOLUME_MIN = int(os.getenv("WEB_KEYWORD_SEED_VOLUME_MIN", "300"))
+WEB_KEYWORD_SEED_VOLUME_MAX = int(os.getenv("WEB_KEYWORD_SEED_VOLUME_MAX", "5000"))
+
 if not ANTHROPIC_API_KEY:
     print("WARNING: ANTHROPIC_API_KEY is not set. /api/analyze will fail until it is.")
 
@@ -243,7 +306,7 @@ flintel_counters_collection  = db["flintel_counters"]
 # this is the same for every user who looks up the domain.
 flintel_domain_reports_collection = db["flintel_domain_reports"]
 
-# NEW — per-user, per-domain cache of the Section 05 pipeline projection.
+# Per-user, per-domain cache of the Section 05 pipeline projection.
 # UNLIKE flintel_domain_reports_collection, this one IS keyed by user_email
 # + domain, because the projection is seeded from that specific user's own
 # matched-signal reach (flintel_user_signals_collection), which can differ
@@ -251,7 +314,22 @@ flintel_domain_reports_collection = db["flintel_domain_reports"]
 # reviewed/accumulated different signal history over time).
 flintel_analytics_collection = db["flintel_analytics"]
 
-app = FastAPI(title="Flintel — Website Market Intelligence", version="2.6.2")
+# The background service's OWN collection. This web service does not own
+# this collection's schema; it only ever upserts new keyword documents into
+# it using the exact same shape the background service itself already
+# writes (see sync_keywords_to_db() in the background service). Same
+# MONGODB_DB, same physical database — no cross-service network call
+# involved, just a shared MongoDB collection both processes read/write.
+flintel_keywords_collection = db["flintel_keywords"]
+
+app = FastAPI(
+    title="Flintel — Website Market Intelligence",
+    version="2.8.1",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None
+)
+
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
@@ -614,25 +692,23 @@ Analyze this site and return the market-intelligence report as JSON only, follow
 
 
 # ============================================================================
-# GENERIC DATETIME-SAFE SERIALIZATION HELPER (NEW — bugfix in this revision)
+# GENERIC DATETIME-SAFE SERIALIZATION HELPER
 # ============================================================================
 #
 # Any dict pulled straight (or copied) from MongoDB can contain `datetime`
 # objects, and FastAPI's default JSONResponse encoder cannot serialize
 # those — it raises TypeError: Object of type datetime is not JSON
-# serializable. Previously, several call sites hand-listed which fields to
-# convert (e.g. only "posted_at" and "fetched_at" in
-# match_existing_web_data()), which meant any OTHER datetime field on a
-# document (most commonly "created_at", but this applies to any datetime
-# field a scraper might add later) was silently left unconverted and
-# crashed the response at serialization time.
+# serializable. Hardcoding "which fields to convert" at each call site is
+# fragile (it's exactly what caused the regression described in this
+# revision's docstring above): any NEW datetime field added anywhere
+# upstream (the scraper, the background service, Mongo driver defaults,
+# etc.) silently slips through and crashes the response later.
 #
 # This helper walks every key on a document and ISO-formats any value that
-# is a `datetime` instance, regardless of field name — so it can never miss
+# is a `datetime` instance, regardless of field name, so it can never miss
 # a field the way a hardcoded list can. It mutates and returns the same
 # dict for convenient chaining; callers that need to preserve the original
-# Mongo doc should pass a shallow copy (as they already do everywhere
-# below).
+# Mongo doc pass a shallow copy (as they already do everywhere below).
 # ============================================================================
 
 def _serialize_datetimes(doc: dict) -> dict:
@@ -643,7 +719,145 @@ def _serialize_datetimes(doc: dict) -> dict:
 
 
 # ============================================================================
-# SHARED, DOMAIN-SCOPED ANALYSIS CACHE (unchanged from 2.5.0)
+# BACKGROUND-SERVICE KEYWORD HAND-OFF
+# ============================================================================
+#
+# Writes new keywords into the background service's OWN `flintel_keywords`
+# collection — the exact same fetch-once-forever cache its
+# sync_keywords_to_db() function maintains. This web service and the
+# background service are two separate processes pointed at the SAME
+# MongoDB database (MONGODB_DB), so this is just a normal collection
+# write, not a network call to another service.
+#
+# Document shape matches the background service's own schema exactly:
+#   keyword, fetched, search_volume, search_volume_is_random,
+#   last_fetched_at, created_at
+# The only field this web service ever sets differently from a brand-new
+# background-service-native keyword is search_volume: instead of None
+# (left for that service's own seed_search_volume_batch() to fill in
+# later), it's pre-seeded with a random placeholder in the
+# WEB_KEYWORD_SEED_VOLUME_MIN..MAX range — same random-fallback
+# philosophy used everywhere else in this system: never a permanent gap,
+# always a plausible number, always honestly flagged as random rather
+# than presented as real.
+#
+# IMPORTANT (bugfix in THIS revision): _collect_keywords_for_background_
+# service() below is now the SINGLE source of the "full keyword set" for
+# a report — discovery_keywords + buyer_pain_points + competitor names.
+# It is used both to seed flintel_keywords (this section) AND as the
+# matching-keyword list in analyze(), get_signals(), and
+# store_flintel_web_data() (see those functions below). Keeping seeding
+# and matching on the exact same function call is what guarantees they
+# can never drift apart again the way they did before this fix.
+# ============================================================================
+
+def _random_web_keyword_search_volume() -> int:
+    """Random placeholder search_volume for a keyword this web service is
+    seeding into the background service's cache — same range/behavior at
+    every call site, mirroring the background service's own
+    _random_search_volume_fallback() helper."""
+    return random.randint(WEB_KEYWORD_SEED_VOLUME_MIN, WEB_KEYWORD_SEED_VOLUME_MAX)
+
+
+def _collect_keywords_for_background_service(report_like: dict) -> list[str]:
+    """
+    Pulls every keyword-like string out of a report-shaped dict: the full
+    discovery_keywords list, the full buyer_pain_points list, and every
+    competitor name. Exact-duplicate strings are deduplicated; nothing is
+    trimmed, shortened, or rewritten; order is preserved
+    (discovery_keywords first, then buyer_pain_points, then competitor
+    names) purely for readability — order has no functional meaning to
+    the background service (which treats every due keyword identically)
+    or to match_existing_web_data() (which queries once per keyword
+    regardless of position).
+
+    `report_like` just needs "discovery_keywords" (list[str]),
+    "buyer_pain_points" (list[str]), and "competitors" (list[dict] with a
+    "name" key) — this works equally well on a fresh Claude report dict
+    and on a flintel_web_data_collection document, both of which carry
+    those same three fields in the same shapes.
+
+    THIS IS NOW THE SINGLE SOURCE for both:
+      (a) which keywords get seeded into the background service's
+          flintel_keywords cache, and
+      (b) which keywords this service uses to match against
+          web_data_collection for a user's own signals.
+    Using one function for both purposes is the fix for the bug where
+    competitor names were being seeded to the background service but
+    silently excluded from this service's own matching.
+    """
+    keywords: list[str] = []
+    seen: set[str] = set()
+
+    def _add(value: str | None):
+        if value and value not in seen:
+            seen.add(value)
+            keywords.append(value)
+
+    for kw in report_like.get("discovery_keywords") or []:
+        _add(kw)
+    for pain_point in report_like.get("buyer_pain_points") or []:
+        _add(pain_point)
+    for comp in report_like.get("competitors") or []:
+        name = (comp or {}).get("name") if isinstance(comp, dict) else None
+        _add(name)
+
+    return keywords
+
+
+async def _seed_keywords_to_background_service(keywords: list[str]):
+    """
+    Upserts every keyword into flintel_keywords using $setOnInsert — the
+    identical pattern the background service's own sync_keywords_to_db()
+    already uses — so this is always safe to call, even for a keyword
+    that already exists there (whatever its current fetched/search_volume
+    state is is left completely untouched; this only ever writes on
+    first-ever insert for a given keyword string).
+
+    fetched is always set to False here: this web service never marks a
+    keyword fetched, never touches google_rank or Reddit fetching in any
+    way, and never writes to any other background-service collection.
+    The background service's own discovery loop picks these keywords up
+    on its next pass exactly like any other due keyword.
+    """
+    if not keywords:
+        return
+    now = datetime.now(timezone.utc)
+    seeded_count = 0
+    for kw in keywords:
+        try:
+            result = await flintel_keywords_collection.update_one(
+                {"keyword": kw},
+                {"$setOnInsert": {
+                    "keyword":                  kw,
+                    "fetched":                  False,
+                    "search_volume":            _random_web_keyword_search_volume(),
+                    "search_volume_is_random":  True,
+                    "last_fetched_at":          None,
+                    "created_at":               now,
+                }},
+                upsert=True,
+            )
+            if result.upserted_id is not None:
+                seeded_count += 1
+        except Exception as exc:
+            logger.error("[KEYWORD-HANDOFF] failed to seed keyword=%r into flintel_keywords: %s", kw, exc)
+
+    logger.info(
+        "[KEYWORD-HANDOFF] %d/%d keyword(s) newly seeded into flintel_keywords "
+        "(already-existing keywords left untouched) | search_volume: random "
+        "%d-%d, flagged search_volume_is_random=True",
+        seeded_count, len(keywords), WEB_KEYWORD_SEED_VOLUME_MIN, WEB_KEYWORD_SEED_VOLUME_MAX,
+    )
+
+
+# ============================================================================
+# END BACKGROUND-SERVICE KEYWORD HAND-OFF
+# ============================================================================
+
+
+# ============================================================================
+# SHARED, DOMAIN-SCOPED ANALYSIS CACHE
 # ============================================================================
 #
 # This is the fix for the three issues described:
@@ -737,6 +951,11 @@ async def get_or_create_domain_report(domain: str, url: str) -> dict:
         shared. Per-user state (flintel_web_data_collection "my reports"
         history, flintel_user_signals, reviewed flags) is written
         separately by the caller and remains fully user-scoped.
+      - A domain's keywords (discovery_keywords + buyer_pain_points +
+        competitor names, via _collect_keywords_for_background_service())
+        are handed off to the background service's flintel_keywords
+        cache exactly once — right here, right after a FRESH analysis
+        completes — never on a cache hit.
     """
     existing = await flintel_domain_reports_collection.find_one({"domain": domain})
     if existing and existing.get("status") == "complete":
@@ -789,11 +1008,26 @@ async def get_or_create_domain_report(domain: str, url: str) -> dict:
         },
         upsert=True,
     )
+
+    # Hand off this domain's keywords to the background service, exactly
+    # once, right here (a fresh analysis just completed — this branch is
+    # never reached again for this domain). Wrapped in try/except so a
+    # hand-off failure can never break the domain-report cache write
+    # above or the /api/analyze response that depends on it.
+    try:
+        background_keywords = _collect_keywords_for_background_service(report)
+        await _seed_keywords_to_background_service(background_keywords)
+    except Exception as exc:
+        logger.error(
+            "get_or_create_domain_report(): background-service keyword hand-off "
+            "failed for domain=%s: %s", domain, exc,
+        )
+
     return await flintel_domain_reports_collection.find_one({"domain": domain})
 
 
 # ============================================================================
-# END SHARED DOMAIN CACHE (unchanged from 2.5.0)
+# END SHARED DOMAIN CACHE
 # ============================================================================
 
 
@@ -812,15 +1046,17 @@ def _combine_keywords_and_pain_points(
 ) -> list[str]:
     """
     Combines the FULL discovery_keywords list with the FULL
-    buyer_pain_points list into a single list to feed into the existing
-    matching mechanism (match_existing_web_data() / _build_keyword_query()).
-    Each pain-point string is treated as just another "keyword" string —
-    no separate/parallel matching path is introduced anywhere this is used.
+    buyer_pain_points list into a single list (deduplicating exact-string
+    repeats only — no trimming or rewriting of any phrase).
 
-    Only exact-duplicate strings are removed (in case the same phrase
-    appears in both lists), preserving the original order otherwise. No
-    string is trimmed, shortened, or rewritten — and neither input list is
-    sliced/capped here.
+    SUPERSEDED for matching purposes by _collect_keywords_for_background_
+    service(), which does the same thing PLUS includes competitor names
+    (see this revision's docstring for why that matters — competitor
+    names are seeded to the background service, so matching must include
+    them too, or competitor-specific signals silently never reach a
+    user's flintel_user_signals). Left in place, unused by any route
+    below, in case a narrower discovery+pain-points-only list is ever
+    needed elsewhere without competitor names.
     """
     combined: list[str] = []
     seen: set[str] = set()
@@ -854,21 +1090,24 @@ async def store_flintel_web_data(user_email: str, domain: str, url: str, report:
                      domain, user_email, exc)
         doc["_id"] = None
 
-    # NEW — flintel_tracking_state_collection's "discovery_keywords" field
-    # (read by run_live_match_tracker() on every pass) now stores the
-    # COMBINED discovery_keywords + buyer_pain_points list, uncapped, so
-    # the live tracker keeps matching buyer_pain_points phrases on every
-    # future pass — not just at this initial analyze() time. Note this is
-    # a separate write target (flintel_tracking_state_collection) from the
-    # `doc` above (flintel_web_data_collection), whose own
-    # "discovery_keywords" / "buyer_pain_points" fields remain unchanged.
+    # flintel_tracking_state_collection's "discovery_keywords" field (read
+    # by run_live_match_tracker() on every pass) now stores the FULL
+    # combined discovery_keywords + buyer_pain_points + competitor-names
+    # list (via _collect_keywords_for_background_service(), the same
+    # function used for the background-service hand-off), uncapped, so
+    # the live tracker keeps matching buyer_pain_points AND
+    # competitor-name matches on every future pass — not just at this
+    # initial analyze() time, and not missing competitor coverage the way
+    # the narrower discovery+pain-points-only list did before this fix.
+    # Note this is a separate write target (flintel_tracking_state_
+    # collection) from the `doc` above (flintel_web_data_collection),
+    # whose own "discovery_keywords" / "buyer_pain_points" / "competitors"
+    # fields remain unchanged in their original, individual shapes.
     await flintel_tracking_state_collection.update_one(
         {"user_email": user_email, "domain": domain},
         {
             "$set": {
-                "discovery_keywords": _combine_keywords_and_pain_points(
-                    doc["discovery_keywords"], doc["buyer_pain_points"]
-                ),
+                "discovery_keywords": _collect_keywords_for_background_service(doc),
                 "updated_at": datetime.now(timezone.utc),
             },
             "$setOnInsert": {
@@ -950,9 +1189,7 @@ async def _persist_match_for_user(user_email: str, domain: str, keyword: str, so
 
     # FIX: was a hardcoded 3-field list; now converts every datetime field
     # present on the doc, so this can't miss a field the way the old list
-    # could (this dict is only used to build the Mongo $set payload here,
-    # so pre-converting to ISO strings is harmless for storage and keeps
-    # this document consistent with whatever gets read back out later).
+    # could.
     doc = _serialize_datetimes(doc)
 
     try:
@@ -995,9 +1232,10 @@ async def run_live_match_tracker():
                 domain = pair["domain"]
                 # NOTE: no [:MAX_KEYWORDS_TO_MATCH] slice — the full list
                 # is used. This field is now written (in
-                # store_flintel_web_data()) as the COMBINED
-                # discovery_keywords + buyer_pain_points list, so this
-                # single read already covers both.
+                # store_flintel_web_data()) as the FULL combined
+                # discovery_keywords + buyer_pain_points + competitor
+                # names list, so this single read already covers all
+                # three.
                 keywords = pair.get("discovery_keywords") or []
                 if not keywords:
                     continue
@@ -1048,7 +1286,7 @@ async def run_live_match_tracker():
                         {"$set": {"last_checked_at": newest_seen}},
                     )
 
-                # NEW — if this (user_email, domain) pair got new matched
+                # If this (user_email, domain) pair got new matched
                 # signals this pass, recompute + re-cache its Section 05
                 # pipeline projection so it stays live without any extra
                 # polling job. Wrapped in try/except so a projection
@@ -1168,10 +1406,8 @@ async def compute_dashboard_stats(user_email: str) -> dict:
 
 # ============================================================================
 # SECTION 03 REPORT CARD: "Your market is moving — and it's moving
-# toward you" (unchanged from 2.5.0)
+# toward you"
 # ============================================================================
-#
-# Everything below is 100% ADDITIVE (carried over unchanged from 2.4.0).
 #
 # ISOLATION GUARANTEE: every query below filters on {"user_email": user_email},
 # the exact same pattern already used throughout compute_dashboard_stats()
@@ -1300,12 +1536,12 @@ async def compute_market_momentum(user_email: str) -> dict:
 
 
 # ============================================================================
-# END SECTION 03 (unchanged from 2.5.0)
+# END SECTION 03
 # ============================================================================
 
 
 # ============================================================================
-# SECTION 05 ADDITION: "What this means for your pipeline"
+# SECTION 05: "What this means for your pipeline"
 # ============================================================================
 #
 # WHAT THIS COMPUTES
@@ -1339,17 +1575,6 @@ async def compute_market_momentum(user_email: str) -> dict:
 #   depends on that specific user's own accumulated matched-signal reach,
 #   exactly like flintel_user_signals_collection, flintel_web_data_
 #   collection, and flintel_tracking_state_collection already are.
-#
-# WHEN IT'S CREATED / UPDATED
-#   - First created right after /api/analyze finishes persisting a user's
-#     initial matches for a domain (see analyze() below) — so a fresh
-#     domain lookup gets an immediate, if rough, first-cut projection.
-#   - Refreshed automatically by run_live_match_tracker() (see the
-#     pair_new_matches hook added above) every time new matched signals
-#     arrive for that (user_email, domain) pair — no separate cron/poll
-#     job required, and the existing tracker loop/logging is untouched.
-#   - Also computed on-demand (and re-cached) if a request for
-#     /api/report/pipeline-projection arrives before any cache exists.
 # ============================================================================
 
 PIPELINE_DEFAULT_ACV = 300.0
@@ -1512,7 +1737,7 @@ async def get_or_refresh_pipeline_analytics(user_email: str, domain: str, acv: f
 
 
 # ============================================================================
-# END SECTION 05 ADDITION
+# END SECTION 05
 # ============================================================================
 
 
@@ -1544,10 +1769,19 @@ async def on_startup():
     await flintel_domain_reports_collection.create_index(
         [("domain", 1)], unique=True, name="domain_unique"
     )
-    # NEW — one cached Section 05 projection per (user_email, domain).
-    # Same isolation pattern as flintel_tracking_state_collection's index.
+    # One cached Section 05 projection per (user_email, domain). Same
+    # isolation pattern as flintel_tracking_state_collection's index.
     await flintel_analytics_collection.create_index(
         [("user_email", 1), ("domain", 1)], unique=True, name="user_domain_analytics_unique"
+    )
+    # Same unique index the background service itself creates on
+    # flintel_keywords ("keyword_unique" on the "keyword" field). Creating
+    # it here too is safe/idempotent (MongoDB no-ops if it already
+    # exists) — it's what makes _seed_keywords_to_background_service()'s
+    # $setOnInsert upserts race-safe regardless of which service happens
+    # to create the index first.
+    await flintel_keywords_collection.create_index(
+        [("keyword", 1)], unique=True, name="keyword_unique"
     )
 
     asyncio.create_task(run_live_match_tracker())
@@ -1577,14 +1811,15 @@ async def analyze(payload: AnalyzeRequest, user: dict = Depends(get_current_user
     domain = urlparse(url).netloc.replace("www.", "")
 
     # ── SHARED DOMAIN CACHE LOOKUP ──────────────────────────────────────
-    # This replaces the old "always scrape + always call Claude" behavior.
     # get_or_create_domain_report() checks flintel_domain_reports_collection
     # (keyed only by domain, shared across every user) first. If this
     # domain has already been analyzed by ANYONE, that exact same report
     # and discovery_keywords are reused here — no new scrape, no new
     # Claude call, no API cost, and critically: every user gets the same
     # keywords, so matching against web_data_collection produces the same
-    # results for everyone looking at this domain.
+    # results for everyone looking at this domain. On a FRESH analysis
+    # only, this also hands the domain's keywords off to the background
+    # service's flintel_keywords cache.
     domain_doc = await get_or_create_domain_report(domain, url)
     report = domain_doc["report"]
     # ─────────────────────────────────────────────────────────────────────
@@ -1596,15 +1831,16 @@ async def analyze(payload: AnalyzeRequest, user: dict = Depends(get_current_user
     # analysis itself.
     flintel_doc = await store_flintel_web_data(user["email"], domain, url, report)
 
-    # NEW — matching now uses the FULL discovery_keywords list (no
-    # [:MAX_KEYWORDS_TO_MATCH] cap) COMBINED with the FULL buyer_pain_points
-    # list, fed through the exact same match_existing_web_data() mechanism
-    # used before this change. `report` itself (and the JSON returned to
+    # FIX: matching now uses the FULL discovery_keywords +
+    # buyer_pain_points + competitor-names superset (via
+    # _collect_keywords_for_background_service()) — the SAME function
+    # used to seed the background service — instead of the narrower
+    # discovery+pain-points-only list. This keeps seeding and matching in
+    # permanent sync: any keyword the background service is asked to go
+    # discover Reddit posts for is also a keyword this service searches
+    # web_data_collection with. `report` itself (and the JSON returned to
     # the client below) is completely unchanged in shape.
-    keywords = _combine_keywords_and_pain_points(
-        report.get("discovery_keywords") or [],
-        report.get("buyer_pain_points") or [],
-    )
+    keywords = _collect_keywords_for_background_service(report)
     if not keywords:
         keywords = [domain]
 
@@ -1618,11 +1854,11 @@ async def analyze(payload: AnalyzeRequest, user: dict = Depends(get_current_user
             persisted_count, len(matches), user["email"], domain,
         )
 
-    # NEW — build the very first Section 05 projection for this user +
-    # domain right away, seeded by whatever matches were just persisted
-    # above, so the dashboard has something to show immediately rather
-    # than waiting for the next live-tracker pass. Wrapped in try/except
-    # so a projection failure can never break the analyze() response.
+    # Build the very first Section 05 projection for this user + domain
+    # right away, seeded by whatever matches were just persisted above,
+    # so the dashboard has something to show immediately rather than
+    # waiting for the next live-tracker pass. Wrapped in try/except so a
+    # projection failure can never break the analyze() response.
     try:
         await _refresh_pipeline_analytics(user["email"], domain)
     except Exception as exc:
@@ -1669,13 +1905,12 @@ async def get_signals(domain: str, subreddit: str | None = None, limit: int = 50
     if not latest:
         raise HTTPException(status_code=404, detail=f"No analysis found yet for domain={domain}.")
 
-    # NEW — same fix as analyze(): full discovery_keywords (no cap)
-    # combined with the full buyer_pain_points list, via the same
-    # match_existing_web_data() mechanism used before this change.
-    keywords = _combine_keywords_and_pain_points(
-        latest.get("discovery_keywords") or [],
-        latest.get("buyer_pain_points") or [],
-    )
+    # FIX: same fix as analyze() — full discovery_keywords +
+    # buyer_pain_points + competitor names (via
+    # _collect_keywords_for_background_service()), not just the narrower
+    # discovery+pain-points-only list, so competitor-specific signals are
+    # matched here too.
+    keywords = _collect_keywords_for_background_service(latest)
     if not keywords:
         keywords = [domain]
 

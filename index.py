@@ -221,6 +221,56 @@ THIS REVISION (on top of 2.8.0) FIXES TWO BUGS:
   the shared domain cache, per-user isolation, Section 03, Section 05,
   the live match tracker's loop/logging, or any other collection's
   document shape.
+
+THIS REVISION (on top of 2.8.1) FIXES Section 03's "Threads ranking on
+Google Page 1" card — it was hardcoded to page_one_threads=None with a
+"not wired up yet" reason string, even though a real data source for
+this HAS existed the whole time:
+
+  WHERE THE DATA ACTUALLY COMES FROM: the background discovery service
+  (the separate Reddit SERP + RSS pipeline process, sharing this same
+  MongoDB database) performs real Google SERP lookups via RapidAPI for
+  every tracked keyword (search_google_for_keyword() in that service),
+  and stamps the resulting per-post Google rank onto every signals
+  document it saves, in save_new_signal():
+
+      doc = {
+          ...
+          "google_rank": item.get("google_rank"),
+          ...
+      }
+
+  That `signals` collection is exactly what this web service's own
+  web_data_collection variable already points at (db["signals"]) — so
+  every document match_existing_web_data() returns already carries a
+  real google_rank field (an integer rank, or None if the background
+  service could not determine one for that result). _persist_match_
+  for_user() copies the ENTIRE source_doc into flintel_user_signals_
+  collection, so google_rank rides along automatically into each
+  user's own per-user signal history — nothing needed to change there
+  to make this field available; it was already present, just never
+  queried by this file.
+
+  FIX (additive only): a new helper, _page_one_thread_count(), counts
+  this user's own matched signals (flintel_user_signals_collection,
+  filtered by user_email + domain — same isolation pattern as every
+  other per-user query in this file) whose google_rank falls in the
+  1-10 range (i.e. genuinely on Google's first page of results).
+  compute_market_momentum() now calls this and returns the real count
+  under "page_one_threads" instead of a hardcoded None, with
+  "page_one_threads_reason" set to None to match (the frontend already
+  falls back to a generic message only when the reason string is
+  truthy, so a None reason plus a real integer count renders correctly
+  with no frontend changes required). The only case this still returns
+  None + an honest reason string is when the user has no analyzed
+  domain yet at all — never a fabricated number.
+
+  NOT CHANGED BY THIS REVISION: every other field Section 03 returns,
+  every other route, the shared domain cache, per-user isolation,
+  Section 05, the live match tracker's loop/logging, any collection's
+  document shape (this only ever reads google_rank, never writes it),
+  or any function signature other than the addition of the one new
+  helper described above.
 """
 
 import asyncio
@@ -287,6 +337,14 @@ DOMAIN_LOCK_MAX_WAIT_SECONDS = 45.0
 WEB_KEYWORD_SEED_VOLUME_MIN = int(os.getenv("WEB_KEYWORD_SEED_VOLUME_MIN", "300"))
 WEB_KEYWORD_SEED_VOLUME_MAX = int(os.getenv("WEB_KEYWORD_SEED_VOLUME_MAX", "5000"))
 
+# ── PAGE-ONE (GOOGLE SERP) THREAD COUNT CONFIG ──────────────────────────────
+# A matched signal counts as "page one" when its google_rank (stamped by
+# the background service from a real RapidAPI SERP lookup) falls within
+# this inclusive range. Google's first results page is conventionally the
+# top 10 organic results.
+PAGE_ONE_MIN_RANK = 1
+PAGE_ONE_MAX_RANK = 10
+
 if not ANTHROPIC_API_KEY:
     print("WARNING: ANTHROPIC_API_KEY is not set. /api/analyze will fail until it is.")
 
@@ -324,7 +382,7 @@ flintel_keywords_collection = db["flintel_keywords"]
 
 app = FastAPI(
     title="Flintel — Website Market Intelligence",
-    version="2.8.1",
+    version="2.9.0",
     docs_url=None,
     redoc_url=None,
     openapi_url=None
@@ -1418,13 +1476,15 @@ async def compute_dashboard_stats(user_email: str) -> dict:
 # already can't mix users: the filter is applied at the database-query level,
 # not reconstructed or trusted from anything the client sends.
 #
-# HONESTY GUARANTEE: "Threads ranking on Google Page 1" has no underlying
-# data source anywhere in this codebase — nothing here queries Google or
-# stores SERP-ranking history. Rather than fabricate a number for it (which
-# would violate the same "never invent facts" principle already applied in
-# ANALYSIS_SYSTEM_PROMPT and in public_stats()'s fail-soft-to-null pattern),
-# it is returned as null with an explicit "not yet available" reason string,
-# so the frontend can hide/skip that card instead of rendering a fake number.
+# "Threads ranking on Google Page 1" NOW HAS A REAL DATA SOURCE (see
+# _page_one_thread_count() below) — the background discovery service
+# stamps a real google_rank (from a RapidAPI SERP lookup) onto every
+# signals document it saves, and that field rides along into each user's
+# flintel_user_signals_collection doc automatically (since
+# _persist_match_for_user() copies the entire source_doc). The only
+# remaining "honesty" case is when the user has no analyzed domain at all
+# yet — that still returns null + an explicit reason, never a fabricated
+# number.
 # ============================================================================
 
 INTENT_PHRASE_MARKERS = [
@@ -1508,6 +1568,40 @@ def _build_competitor_bar_chart(competitor_gap: list[dict], your_mentions: int) 
     return {"bars": bars, "talked_about_multiple": multiple}
 
 
+async def _page_one_thread_count(user_email: str, domain: str) -> dict:
+    """
+    Counts this user's matched signals (flintel_user_signals_collection,
+    filtered by user_email + domain — the same isolation pattern used by
+    every other per-user query in this file) whose google_rank places
+    them on Google's first results page (PAGE_ONE_MIN_RANK..
+    PAGE_ONE_MAX_RANK inclusive, i.e. rank 1-10).
+
+    google_rank is not something this web service computes or writes
+    anywhere — it is stamped by the background discovery service via a
+    real RapidAPI Google SERP lookup (search_google_for_keyword() /
+    save_new_signal() in that service), landing on every `signals`
+    document (web_data_collection here). _persist_match_for_user()
+    already copies the ENTIRE source_doc into flintel_user_signals_
+    collection, so google_rank is already present on every matched
+    signal doc for this user — nothing upstream of this function needed
+    to change to make this data available; it simply was not being
+    queried before.
+
+    A signal with google_rank == None (background service could not
+    resolve a rank for that result) is correctly excluded by the
+    $gte/$lte range query below rather than needing a separate
+    $ne-null check, since None never satisfies a numeric range
+    comparison in MongoDB.
+    """
+    filt = {
+        "user_email": user_email,
+        "domain": domain,
+        "google_rank": {"$gte": PAGE_ONE_MIN_RANK, "$lte": PAGE_ONE_MAX_RANK},
+    }
+    count = await flintel_user_signals_collection.count_documents(filt)
+    return {"count": count}
+
+
 async def compute_market_momentum(user_email: str) -> dict:
     base_stats = await compute_dashboard_stats(user_email)
     competitor_gap = base_stats["competitor_gap"]
@@ -1524,13 +1618,25 @@ async def compute_market_momentum(user_email: str) -> dict:
     intent_volume = await _intent_phrase_volume(user_email, discovery_keywords)
     bar_chart = _build_competitor_bar_chart(competitor_gap, your_mentions)
 
+    # Real page-one count, scoped to this user + their analyzed domain.
+    # Only falls back to null + an honest reason when there is no
+    # analyzed domain at all yet to scope the query to — never a
+    # fabricated number.
+    if domain:
+        page_one = await _page_one_thread_count(user_email, domain)
+        page_one_threads = page_one["count"]
+        page_one_threads_reason = None
+    else:
+        page_one_threads = None
+        page_one_threads_reason = "Not available yet — analyze a domain first."
+
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(),
         "domain": domain,
         "competitor_complaint_volume": complaint_volume,
         "intent_search_phrases": intent_volume,
-        "page_one_threads": None,
-        "page_one_threads_reason": "Not available — no SERP-ranking data source is wired up yet.",
+        "page_one_threads": page_one_threads,
+        "page_one_threads_reason": page_one_threads_reason,
         "competitor_bar_chart": bar_chart,
     }
 
@@ -1751,6 +1857,12 @@ async def on_startup():
     )
     await flintel_user_signals_collection.create_index(
         [("user_email", 1), ("reviewed", 1)], name="user_reviewed"
+    )
+    # NEW — supports _page_one_thread_count()'s (user_email, domain,
+    # google_rank range) query. Purely additive; does not affect any
+    # existing query plan or index.
+    await flintel_user_signals_collection.create_index(
+        [("user_email", 1), ("domain", 1), ("google_rank", 1)], name="user_domain_google_rank"
     )
     await flintel_tracking_state_collection.create_index(
         [("user_email", 1), ("domain", 1)], unique=True, name="user_domain_unique"

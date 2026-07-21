@@ -190,7 +190,7 @@ db = mongo_client[MONGODB_DB_NAME]
 
 users_collection             = db["users"]
 flintel_web_data_collection  = db["flintel_web_data"]
-web_data_collection          = db["web_data"]
+web_data_collection          = db["flintel"]
 flintel_user_signals_collection = db["flintel_user_signals"]
 flintel_tracking_state_collection = db["flintel_tracking_state"]
 flintel_counters_collection  = db["flintel_counters"]
